@@ -11,10 +11,11 @@ public sealed class UserRequestHandler : IMappableRequestHandler<GetCrossCutting
         CancellationToken cancellationToken = default)
     {
         await Task.Yield();
+        var users = StaticData.StaticDataTest.Users.Where(a => request.SelectorIds.Contains(a.Id));
         List<CrossCuttingDataResponse> result =
         [
-            ..request.SelectorIds.Select((a, index) => new CrossCuttingDataResponse
-                { Id = a.ToString(), Value = index.ToString() })
+            ..users.Select(a => new CrossCuttingDataResponse
+                { Id = a.Id, Value = a.Name })
         ];
         return new CollectionResponse<CrossCuttingDataResponse>(result);
     }

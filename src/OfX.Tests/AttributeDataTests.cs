@@ -21,21 +21,26 @@ public class AttributeDataTests : ServicesBuilding
             .InstallAllServices();
     }
 
-    [Fact]
-    public async Task User_Attribute_Should_Be_0()
+    [Theory]
+    [InlineData("1")]
+    [InlineData("2")]
+    [InlineData("3")]
+    public async Task Member_Must_Be_Matches_With_User(string userId)
     {
-        var member = new Member { UserId = "123" };
+        var member = new Member { UserId = userId };
+        var userName = StaticData.StaticDataTest.Users.FirstOrDefault(a => a.Id == userId)?.Name;
         var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
         await dataMappableService.MapDataAsync(member, CancellationToken.None);
-        Assert.Equal("0", member.UserName);
+        Assert.Equal(userName, member.UserName);
     }
 
-    [Fact]
-    public async Task User_Attribute_Should_Not_Be_1()
+    [Theory]
+    [InlineData("4")]
+    public async Task Member_Must_Not_Match_With_User_When_Id_Not_Found(string userId)
     {
-        var member = new Member { UserId = "123" };
+        var member = new Member { UserId = userId };
         var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
         await dataMappableService.MapDataAsync(member, CancellationToken.None);
-        Assert.NotEqual("1", member.UserName);
+        Assert.Null(member.UserName);
     }
 }
