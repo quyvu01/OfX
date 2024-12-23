@@ -13,12 +13,16 @@ public class AttributeDataTests : ServicesBuilding
     private void InstallServices()
     {
         var assembly = typeof(AttributeDataTests).Assembly;
-        InstallService((serviceCollection, _) => serviceCollection.AddOfX([assembly], [assembly]))
+        InstallService((serviceCollection, _) => serviceCollection.AddOfX(r =>
+            {
+                r.MapForContractsContainsAssemblies([assembly]);
+                r.HandlerContainsAssemblies([assembly]);
+            }))
             .InstallAllServices();
     }
 
     [Fact]
-    public async Task User_Attribute_Should_Be_Return_0()
+    public async Task User_Attribute_Should_Be_0()
     {
         var member = new Member { UserId = "123" };
         var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
