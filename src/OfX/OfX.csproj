@@ -10,7 +10,7 @@
         <Description>The high performance and easiest way to play with microservice for .NET</Description>
         <PackageTags>OfX;mappable;open-source</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
-        <PackageIcon>OfX.webp</PackageIcon>
+        <PackageIcon>OfX.png</PackageIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,9 +18,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="OfX.webp">
+      <None Include="..\..\OfX.png">
         <Pack>True</Pack>
         <PackagePath></PackagePath>
+        <Link>OfX.png</Link>
       </None>
     </ItemGroup>
 
