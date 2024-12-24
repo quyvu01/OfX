@@ -8,14 +8,11 @@
         <Authors>Quy Vu</Authors>
         <PackageId>OfX.EntityFramework</PackageId>
         <Description>EntityFramework is used for OfX</Description>
-        <PackageTags>OfX;mappable;open-source</PackageTags>
+        <PackageTags>OfX;mappable;open-source;entity-framework</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\OfX\OfX.csproj" />
-    </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
@@ -27,6 +24,10 @@
         <PackagePath></PackagePath>
         <Link>OfX.png</Link>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\OfX\OfX.csproj" />
     </ItemGroup>
 
 </Project>

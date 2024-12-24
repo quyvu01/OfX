@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
     <metadata>
-        <id>OfX</id>
+        <id>OfX.EntityFramework</id>
         <version>1.0.1</version>
         <authors>Quy Vu</authors>
         <description>EntityFramework is used for OfX</description>
