@@ -9,12 +9,9 @@ namespace OfX.Tests.EfHandlers;
 public class UserOfXHandler(IServiceProvider serviceProvider)
     : EfQueryOfXHandler<User, GetCrossCuttingUsersQuery>(serviceProvider)
 {
-    protected override (Func<GetCrossCuttingUsersQuery, Expression<Func<User, bool>>>,
-        Expression<Func<User, OfXDataResponse>>) SetFilterAndFetchData()
-    {
-        Expression<Func<User, OfXDataResponse>> howToGetDefaultResponse =
-            u => new OfXDataResponse { Id = u.Id, Value = u.Name };
-        return (DefaultFilter, howToGetDefaultResponse);
-        Expression<Func<User, bool>> DefaultFilter(GetCrossCuttingUsersQuery q) => c => q.SelectorIds.Contains(c.Id);
-    }
+    protected override Func<GetCrossCuttingUsersQuery, Expression<Func<User, bool>>> SetFilter() =>
+        q => c => q.SelectorIds.Contains(c.Id);
+
+    protected override Expression<Func<User, OfXDataResponse>> SetHowToGetDefaultData() =>
+        u => new OfXDataResponse { Id = u.Id, Value = u.Name };
 }

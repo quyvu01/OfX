@@ -34,17 +34,17 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
 
     protected EfQueryOfXHandler(IServiceProvider serviceProvider)
     {
-        var (filterFunction, howToGetDefaultData) = SetFilterAndFetchData();
-        ExceptionHelpers.ThrowIfNull(filterFunction);
-        ExceptionHelpers.ThrowIfNull(howToGetDefaultData);
-        _filterFunction = filterFunction;
-        _howToGetDefaultData = howToGetDefaultData;
+        _filterFunction = SetFilter();
+        _howToGetDefaultData = SetHowToGetDefaultData();
+        ExceptionHelpers.ThrowIfNull(_filterFunction);
+        ExceptionHelpers.ThrowIfNull(_howToGetDefaultData);
         _idAlias = SetIdAlias();
         _collection = serviceProvider.GetRequiredService<IOfXModel>().GetCollection<TModel>();
     }
 
-    protected abstract (Func<TQuery, Expression<Func<TModel, bool>>>, Expression<Func<TModel, OfXDataResponse>>)
-        SetFilterAndFetchData();
+    protected abstract Func<TQuery, Expression<Func<TModel, bool>>> SetFilter();
+
+    protected abstract Expression<Func<TModel, OfXDataResponse>> SetHowToGetDefaultData();
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(TQuery query, CancellationToken cancellationToken)
     {
@@ -64,7 +64,7 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
         return LazyStorage.Value.GetOrAdd(new QueryExpressionData(request.Expression, typeof(TModel)), expressionData =>
         {
             var expression = expressionData.Expression;
-            var parameter = Expression.Parameter(typeof(TModel), "x"); 
+            var parameter = Expression.Parameter(typeof(TModel), "x");
 
             // Access the Id property on the model
             var idProperty = Expression.Property(parameter, _idAlias);
@@ -118,12 +118,13 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
 
             // Serialize the final value expression using JsonSerializer.Serialize
             var serializeObjectMethod =
-                typeof(JsonSerializer).GetMethod(nameof(JsonSerializer.Serialize), [typeof(object), typeof(Type), typeof(JsonSerializerOptions)]);
+                typeof(JsonSerializer).GetMethod(nameof(JsonSerializer.Serialize),
+                    [typeof(object), typeof(Type), typeof(JsonSerializerOptions)]);
             var serializeCall = Expression.Call(
                 serializeObjectMethod!,
                 Expression.Convert(currentExpression, typeof(object)),
                 Expression.Constant(typeof(object)),
-                Expression.Constant(null, typeof(JsonSerializerOptions))); 
+                Expression.Constant(null, typeof(JsonSerializerOptions)));
 
             // Create member bindings for Id and serialized Value
             var bindings = new List<MemberBinding>
