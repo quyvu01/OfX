@@ -4,6 +4,13 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
+        <Version>1.0.1</Version>
+        <Authors>Quy Vu</Authors>
+        <PackageId>OfX.EntityFramework</PackageId>
+        <Description>EntityFramework is used for OfX</Description>
+        <PackageTags>OfX;mappable;open-source</PackageTags>
+        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
+        <PackageIcon>OfX.png</PackageIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,6 +19,14 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\..\OfX.png">
+        <Pack>True</Pack>
+        <PackagePath></PackagePath>
+        <Link>OfX.png</Link>
+      </None>
     </ItemGroup>
 
 </Project>

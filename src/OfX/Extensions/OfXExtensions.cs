@@ -8,7 +8,7 @@ namespace OfX.Extensions;
 
 public static class OfXExtensions
 {
-    public static void AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> action)
+    public static OfXServiceInjector AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> action)
     {
         var newOfRegister = new OfXRegister();
         action.Invoke(newOfRegister);
@@ -27,5 +27,6 @@ public static class OfXExtensions
                     var parentType = targetInterface.MakeGenericType(args);
                     serviceCollection.TryAddScoped(parentType, handler);
                 }));
+        return new OfXServiceInjector(serviceCollection);
     }
 }

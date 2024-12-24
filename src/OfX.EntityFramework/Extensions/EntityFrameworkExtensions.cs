@@ -7,14 +7,16 @@ using OfX.EntityFramework.Abstractions;
 using OfX.EntityFramework.Exceptions;
 using OfX.EntityFramework.Services;
 using OfX.Extensions;
+using OfX.Registries;
 
 namespace OfX.EntityFramework.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    public static void RegisterOfXEntityFramework<TDbContext>(this IServiceCollection serviceCollection,
+    public static OfXServiceInjector RegisterOfXEntityFramework<TDbContext>(this OfXServiceInjector ofXServiceInjector,
         params Assembly[] handlerAssemblies) where TDbContext : DbContext
     {
+        var serviceCollection = ofXServiceInjector.Collection;
         serviceCollection.TryAddScoped<IOfXModel>(sp =>
         {
             var dbContext = sp.GetService<TDbContext>();
@@ -37,5 +39,6 @@ public static class EntityFrameworkExtensions
                     var parentType = targetInterface.MakeGenericType(args);
                     serviceCollection.TryAddScoped(parentType, handler);
                 }));
+        return ofXServiceInjector;
     }
 }
