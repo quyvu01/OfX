@@ -12,6 +12,8 @@
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,6 +30,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\OfX\OfX.csproj"/>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
