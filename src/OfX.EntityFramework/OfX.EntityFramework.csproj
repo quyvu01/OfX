@@ -4,30 +4,30 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>1.0.1</Version>
+        <Version>1.0.2</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX.EntityFramework</PackageId>
         <Description>EntityFramework is used for OfX</Description>
-        <PackageTags>OfX;mappable;open-source;entity-framework</PackageTags>
+        <PackageTags>OfX;mappable;open-source;entity-framework;ORM</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0"/>
     </ItemGroup>
 
     <ItemGroup>
-      <None Include="..\..\OfX.png">
-        <Pack>True</Pack>
-        <PackagePath></PackagePath>
-        <Link>OfX.png</Link>
-      </None>
+        <None Include="..\..\OfX.png">
+            <Pack>True</Pack>
+            <PackagePath/>
+            <Link>OfX.png</Link>
+        </None>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\OfX\OfX.csproj" />
+        <ProjectReference Include="..\OfX\OfX.csproj"/>
     </ItemGroup>
 
 </Project>
