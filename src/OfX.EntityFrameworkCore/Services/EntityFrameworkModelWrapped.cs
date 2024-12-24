@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using OfX.EntityFramework.Abstractions;
+using OfX.EntityFrameworkCore.Abstractions;
 
-namespace OfX.EntityFramework.Services;
+namespace OfX.EntityFrameworkCore.Services;
 
 public sealed class EntityFrameworkModelWrapped(DbContext dbContext) : IOfXModel
 {

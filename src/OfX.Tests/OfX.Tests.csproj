@@ -26,7 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\OfX.EntityFramework\OfX.EntityFramework.csproj" />
+      <ProjectReference Include="..\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\OfX\OfX.csproj" />
     </ItemGroup>
 

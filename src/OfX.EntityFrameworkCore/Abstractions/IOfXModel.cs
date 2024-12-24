@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace OfX.EntityFramework.Abstractions;
+namespace OfX.EntityFrameworkCore.Abstractions;
 
 public interface IOfXModel
 {

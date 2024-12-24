@@ -3,13 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
-using OfX.EntityFramework.Abstractions;
-using OfX.EntityFramework.Exceptions;
-using OfX.EntityFramework.Services;
+using OfX.EntityFrameworkCore.Abstractions;
+using OfX.EntityFrameworkCore.Exceptions;
+using OfX.EntityFrameworkCore.Services;
 using OfX.Extensions;
 using OfX.Registries;
 
-namespace OfX.EntityFramework.Extensions;
+namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {

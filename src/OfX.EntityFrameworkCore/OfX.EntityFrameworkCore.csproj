@@ -6,7 +6,7 @@
         <LangVersion>default</LangVersion>
         <Version>1.0.4</Version>
         <Authors>Quy Vu</Authors>
-        <PackageId>OfX.EntityFramework</PackageId>
+        <PackageId>OfXe.EntityFrameworkCore</PackageId>
         <Description>EntityFramework is used for OfX</Description>
         <PackageTags>OfX;mappable;open-source;entity-framework;ORM</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>

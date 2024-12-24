@@ -4,13 +4,13 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
-using OfX.EntityFramework.Abstractions;
-using OfX.EntityFramework.ApplicationModels;
+using OfX.EntityFrameworkCore.Abstractions;
+using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.Helpers;
 using OfX.Queries.CrossCuttingQueries;
 using OfX.Responses;
 
-namespace OfX.EntityFramework;
+namespace OfX.EntityFrameworkCore;
 
 public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel, TQuery>
     where TModel : class

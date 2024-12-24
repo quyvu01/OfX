@@ -1,4 +1,4 @@
-namespace OfX.EntityFramework.Exceptions;
+namespace OfX.EntityFrameworkCore.Exceptions;
 
 public static class OfXEntityFrameworkException
 {

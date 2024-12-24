@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
-using OfX.EntityFramework.Extensions;
+using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;

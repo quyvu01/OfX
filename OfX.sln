@@ -4,7 +4,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX", "src\OfX\OfX.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.Tests", "src\OfX.Tests\OfX.Tests.csproj", "{D5882EA1-B021-4AC3-9F33-EA29B2B0D343}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.EntityFramework", "src\OfX.EntityFramework\OfX.EntityFramework.csproj", "{FAD1D6ED-BD28-4A92-A164-28CC796B0541}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.EntityFrameworkCore", "src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj", "{FAD1D6ED-BD28-4A92-A164-28CC796B0541}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

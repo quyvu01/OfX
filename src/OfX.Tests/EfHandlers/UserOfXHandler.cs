@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using OfX.EntityFramework;
+using OfX.EntityFrameworkCore;
 using OfX.Responses;
 using OfX.Tests.Contracts;
 using OfX.Tests.Models;
