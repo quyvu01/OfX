@@ -4,10 +4,10 @@
         <id>OfX</id>
         <version>1.0.1</version>
         <authors>Quy Vu</authors>
-        <description>The high performance and easiest way to play with microservice for .NET</description>
+        <description>EntityFramework is used for OfX</description>
         <projectUrl>https://github.com/quyvu01/OfX</projectUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <tags>OfX;mappable;open-source</tags>
+        <tags>OfX;mappable;open-source;entity-framework</tags>
     </metadata>
     <files>
         <file src="bin/Debug/net8.0/*" target="lib/net8.0/" />
