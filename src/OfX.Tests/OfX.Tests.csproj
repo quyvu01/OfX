@@ -4,15 +4,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>1.0.0</Version>
-        <Authors>Your Name</Authors>
-        <PackageId>OfX</PackageId>
-        <Description>The high performance and easiest way to play with microservice for .NET</Description>
-        <PackageTags>OfX;mappable;open-source</PackageTags>
-        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
@@ -31,6 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\OfX.EntityFramework\OfX.EntityFramework.csproj" />
       <ProjectReference Include="..\OfX\OfX.csproj" />
     </ItemGroup>
 

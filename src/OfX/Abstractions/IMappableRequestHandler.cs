@@ -6,6 +6,6 @@ public interface IMappableRequestHandler<in TRequest, TAttribute> where TRequest
     where TAttribute : OfXAttribute
 
 {
-    Task<CollectionResponse<CrossCuttingDataResponse>> RequestAsync(TRequest request,
+    Task<ItemsResponse<OfXDataResponse>> RequestAsync(TRequest request,
         CancellationToken cancellationToken = default);
 }

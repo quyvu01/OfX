@@ -100,8 +100,7 @@ public static class ReflectionHelpers
                     d.Key.Order));
 
     public static void MapResponseData(IEnumerable<CrossCuttingDataProperty> allPropertyDatas,
-        List<(Type CrossCuttingType, string Expression, CollectionResponse<CrossCuttingDataResponse> Response)>
-            dataTasks)
+        List<(Type CrossCuttingType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
     {
         allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
             dt => (dt.CrossCuttingType, dt.Expression),

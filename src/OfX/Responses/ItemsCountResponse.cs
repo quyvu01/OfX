@@ -1,6 +1,6 @@
 namespace OfX.Responses;
 
-public class CountingResponse
+public class ItemsCountResponse
 {
     public long Count { get; set; }
 }

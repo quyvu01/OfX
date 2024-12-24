@@ -54,7 +54,7 @@ public sealed class DataMappableService(
 
             var tasks = orderedCrossCutting.Select(async x =>
             {
-                var emptyCollection = new CollectionResponse<CrossCuttingDataResponse>([]);
+                var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
                 var emptyResponse = (x.CrossCuttingType, x.Expression, Response: emptyCollection);
                 var propertyCalledStorages = x.PropertyCalledLaters.ToList();
                 if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
@@ -100,7 +100,7 @@ public sealed class DataMappableService(
                 {
                     object[] arguments = [query, token];
                     // Invoke the method and get the result
-                    var requestTask = ((Task<CollectionResponse<CrossCuttingDataResponse>>)genericMethod
+                    var requestTask = ((Task<ItemsResponse<OfXDataResponse>>)genericMethod
                         .Invoke(handler, arguments))!;
                     var response = await requestTask;
                     return (x.CrossCuttingType, x.Expression, Response: response);

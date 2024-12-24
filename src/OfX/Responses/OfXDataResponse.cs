@@ -1,6 +1,6 @@
 namespace OfX.Responses;
 
-public class CrossCuttingDataResponse
+public class OfXDataResponse
 {
     public string Id { get; set; }
     public string Value { get; set; }
