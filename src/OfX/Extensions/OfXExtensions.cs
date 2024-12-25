@@ -12,7 +12,7 @@ public static class OfXExtensions
     {
         var newOfRegister = new OfXRegister();
         action.Invoke(newOfRegister);
-        serviceCollection.AddSingleton<IDataMappableService>(sp =>
+        serviceCollection.AddScoped<IDataMappableService>(sp =>
             new DataMappableService(sp, newOfRegister.ContractsRegister));
 
         var targetInterface = typeof(IMappableRequestHandler<,>);
