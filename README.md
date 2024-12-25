@@ -1,11 +1,8 @@
-
 # OfX
 
 OfX is an open-source, which focus on Attribute-based Data Mapping, simplifying data handling across services and enhancing maintainability.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
-
-
 ## Project Highlights
 Attribute-based Data Mapping in OfX is a feature that lets developers annotate properties in their data models with custom attributes. These attributes define how and from where data should be fetched, eliminating repetitive code and automating data retrieval.
 For example, imagine a scenario where Service A needs a user’s name stored in Service B. With Attribute-based Data Mapping, Service A can define a UserName property annotated with [UserAttribute(nameof(UserId))]. This tells the system to automatically retrieve the UserName based on UserId, without writing custom code each time.
@@ -91,3 +88,8 @@ public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
 ```
 
 Enjoy your moment!
+
+| Package Name | Description | .NET Verson | Document |
+|--| ---| --- | --- |
+|[OfX](https://www.nuget.org/packages/OfX/)| OfX core | 8.0, 9.0| [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md) |
+|[OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/)| This is the OfX extension package using EntityFramework to fetch data | 8.0, 9.0| [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
