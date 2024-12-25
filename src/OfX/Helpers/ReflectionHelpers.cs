@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
+using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Extensions;
@@ -112,7 +113,7 @@ public static class ReflectionHelpers
 
                 try
                 {
-                    var valueSet = JsonSerializer.Deserialize(value, ap.PropertyInfo.PropertyType);
+                    var valueSet = JsonConvert.DeserializeObject(value, ap.PropertyInfo.PropertyType);
                     ap.PropertyInfo.SetValue(ap.Model, valueSet);
                 }
                 catch (Exception)

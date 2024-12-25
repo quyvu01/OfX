@@ -16,9 +16,8 @@ public static class OfXExtensions
             new DataMappableService(sp, newOfRegister.ContractsRegister));
 
         var targetInterface = typeof(IMappableRequestHandler<,>);
-        newOfRegister.HandlersRegister
-            .SelectMany(a => a.ExportedTypes)
-            .Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Any(i =>
+        newOfRegister.HandlersRegister.ExportedTypes
+            .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(i =>
                 i.IsGenericType && i.GetGenericTypeDefinition() == targetInterface))
             .ForEach(handler => handler.GetInterfaces().Where(i => i.GetGenericTypeDefinition() == targetInterface)
                 .ForEach(i =>

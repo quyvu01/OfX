@@ -13,8 +13,8 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    public static OfXServiceInjector RegisterOfXEntityFramework<TDbContext>(this OfXServiceInjector ofXServiceInjector,
-        params Assembly[] handlerAssemblies) where TDbContext : DbContext
+    public static OfXServiceInjector RegisterOfXEntityFramework<TDbContext, TAssemblyMarker>(
+        this OfXServiceInjector ofXServiceInjector) where TDbContext : DbContext
     {
         var serviceCollection = ofXServiceInjector.Collection;
         serviceCollection.TryAddScoped<IOfXModel>(sp =>
@@ -27,10 +27,9 @@ public static class EntityFrameworkExtensions
         });
 
         var targetInterface = typeof(IQueryOfHandler<,>);
-        
-        handlerAssemblies
-            .SelectMany(a => a.ExportedTypes)
-            .Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Any(i =>
+
+        typeof(TAssemblyMarker).Assembly.ExportedTypes
+            .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(i =>
                 i.IsGenericType && i.GetGenericTypeDefinition() == targetInterface))
             .ForEach(handler => handler.GetInterfaces().Where(i => i.GetGenericTypeDefinition() == targetInterface)
                 .ForEach(i =>

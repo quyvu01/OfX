@@ -22,8 +22,8 @@ public class OfXEntityFrameworkTest : ServicesBuilding
                 serviceCollection.AddOfX(r =>
                 {
                     r.RegisterContractsContainsAssemblies(assembly);
-                    r.RegisterHandlersContainsAssemblies(assembly);
-                }).RegisterOfXEntityFramework<TestDbContext>(assembly);
+                    r.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
+                }).RegisterOfXEntityFramework<TestDbContext, ITestAssemblyMarker>();
             })
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();

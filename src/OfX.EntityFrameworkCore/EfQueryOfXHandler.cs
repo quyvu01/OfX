@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
@@ -116,15 +116,11 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
                 }
             }
 
-            // Serialize the final value expression using JsonSerializer.Serialize
+            // Serialize the final value expression using Newtonsoft.Json
             var serializeObjectMethod =
-                typeof(JsonSerializer).GetMethod(nameof(JsonSerializer.Serialize),
-                    [typeof(object), typeof(Type), typeof(JsonSerializerOptions)]);
-            var serializeCall = Expression.Call(
-                serializeObjectMethod!,
-                Expression.Convert(currentExpression, typeof(object)),
-                Expression.Constant(typeof(object)),
-                Expression.Constant(null, typeof(JsonSerializerOptions)));
+                typeof(JsonConvert).GetMethod(nameof(JsonConvert.SerializeObject), [typeof(object)]);
+            var serializeCall = Expression.Call(serializeObjectMethod!,
+                Expression.Convert(currentExpression, typeof(object)));
 
             // Create member bindings for Id and serialized Value
             var bindings = new List<MemberBinding>

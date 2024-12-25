@@ -4,10 +4,10 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>1.0.5</Version>
+        <Version>1.0.6</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX</PackageId>
-        <Description>The high performance and easiest way to play with microservice for .NET</Description>
+        <Description>The high performance and easiest way to play with microservices for .NET</Description>
         <PackageTags>OfX;mappable;open-source</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
@@ -17,6 +17,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0"/>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     </ItemGroup>
 
     <ItemGroup>
