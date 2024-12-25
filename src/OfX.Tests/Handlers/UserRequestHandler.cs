@@ -6,12 +6,12 @@ using OfX.Tests.Models;
 
 namespace OfX.Tests.Handlers;
 
-public sealed class UserRequestHandler(IQueryOfHandler<User, GetCrossCuttingUsersQuery> userQueryOf) : IMappableRequestHandler<GetCrossCuttingUsersQuery, UserOfAttribute>
+public sealed class UserRequestHandler(IQueryOfHandler<User, GetCrossCuttingUsersQuery> userQueryOf)
+    : IMappableRequestHandler<GetCrossCuttingUsersQuery, UserOfAttribute>
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(GetCrossCuttingUsersQuery request,
-        CancellationToken cancellationToken = default)
+    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<GetCrossCuttingUsersQuery> request)
     {
-        var data = await userQueryOf.GetDataAsync(request, cancellationToken);
+        var data = await userQueryOf.GetDataAsync(request);
         return data;
     }
 }

@@ -39,7 +39,7 @@ public sealed class DataMappableService(
             }).ToDictionary(k => k.CrossCuttingConcernType, v => v.QueryType);
     });
 
-    public async Task MapDataAsync(object value, CancellationToken token = default)
+    public async Task MapDataAsync(object value, IContext context = null)
     {
         var allPropertyDatas = ReflectionHelpers.GetCrossCuttingProperties(value).ToList();
         var crossCuttingTypeWithIds = ReflectionHelpers
@@ -86,19 +86,17 @@ public sealed class DataMappableService(
                 if (query is null) return emptyResponse;
                 var handler = serviceProvider.GetRequiredService(
                     typeof(IMappableRequestHandler<,>).MakeGenericType(queryType!, x.CrossCuttingType));
-                var genericMethod = MethodInfoStorage.Value.GetOrAdd(queryType, _ =>
-                {
-                    var getResponseMethod = handler.GetType().GetMethods()
-                        .FirstOrDefault(m =>
-                            m.Name == RequestAsync && m.GetParameters() is { Length: 2 } parameters &&
-                            parameters[0].ParameterType == queryType &&
-                            parameters[1].ParameterType == typeof(CancellationToken));
-                    return getResponseMethod;
-                });
+                var genericMethod = MethodInfoStorage.Value.GetOrAdd(queryType, q => handler.GetType().GetMethods()
+                    .FirstOrDefault(m =>
+                        m.Name == RequestAsync && m.GetParameters() is { Length: 1 } parameters &&
+                        parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
 
                 try
                 {
-                    object[] arguments = [query, token];
+                    var requestContextType = typeof(RequestContextImplemented<>).MakeGenericType(queryType);
+                    var requestContext = Activator
+                        .CreateInstance(requestContextType, query, context?.Headers, context?.CancellationToken);
+                    object[] arguments = [requestContext];
                     // Invoke the method and get the result
                     var requestTask = ((Task<ItemsResponse<OfXDataResponse>>)genericMethod
                         .Invoke(handler, arguments))!;

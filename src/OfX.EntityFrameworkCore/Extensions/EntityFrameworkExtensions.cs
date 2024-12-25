@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
+using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
 using OfX.Extensions;
@@ -12,7 +13,7 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    public static OfXServiceInjector RegisterOfXEntityFramework<TDbContext, TAssemblyMarker>(
+    public static OfXEfCoreServiceInjector AddOfXEFCore<TDbContext>(
         this OfXServiceInjector ofXServiceInjector) where TDbContext : DbContext
     {
         var serviceCollection = ofXServiceInjector.Collection;
@@ -24,10 +25,14 @@ public static class EntityFrameworkExtensions
                     "DbContext must be registered first!");
             return new EntityFrameworkModelWrapped(dbContext);
         });
+        return new OfXEfCoreServiceInjector(ofXServiceInjector.Collection);
+    }
 
+    public static void AddOfXHandlers<THandlersAssemblyMarker>(this OfXEfCoreServiceInjector serviceInjector)
+    {
         var targetInterface = typeof(IQueryOfHandler<,>);
 
-        typeof(TAssemblyMarker).Assembly.ExportedTypes
+        typeof(THandlersAssemblyMarker).Assembly.ExportedTypes
             .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(i =>
                 i.IsGenericType && i.GetGenericTypeDefinition() == targetInterface))
             .ForEach(handler => handler.GetInterfaces().Where(i => i.GetGenericTypeDefinition() == targetInterface)
@@ -35,8 +40,7 @@ public static class EntityFrameworkExtensions
                 {
                     var args = i.GetGenericArguments();
                     var parentType = targetInterface.MakeGenericType(args);
-                    serviceCollection.TryAddScoped(parentType, handler);
+                    serviceInjector.Collection.TryAddScoped(parentType, handler);
                 }));
-        return ofXServiceInjector;
     }
 }

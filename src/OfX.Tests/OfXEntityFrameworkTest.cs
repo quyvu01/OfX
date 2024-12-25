@@ -20,10 +20,12 @@ public class OfXEntityFrameworkTest : ServicesBuilding
             .InstallService((serviceCollection, _) =>
             {
                 serviceCollection.AddOfX(r =>
-                {
-                    r.RegisterContractsContainsAssemblies(assembly);
-                    r.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
-                }).RegisterOfXEntityFramework<TestDbContext, ITestAssemblyMarker>();
+                    {
+                        r.RegisterContractsContainsAssemblies(assembly);
+                        r.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
+                    })
+                    .AddOfXEFCore<TestDbContext>()
+                    .AddOfXHandlers<ITestAssemblyMarker>();
             })
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
@@ -41,7 +43,7 @@ public class OfXEntityFrameworkTest : ServicesBuilding
         var member = new Member { UserId = userId };
         var user = await dbContext.Users.FirstOrDefaultAsync(a => a.Id == userId);
         var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
-        await dataMappableService.MapDataAsync(member, CancellationToken.None);
+        await dataMappableService.MapDataAsync(member);
         Assert.Equal(user?.Name, member.UserName);
         Assert.Equal(user?.Email, member.UserEmail);
     }
