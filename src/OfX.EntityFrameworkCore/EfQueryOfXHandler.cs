@@ -46,14 +46,17 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
 
     protected abstract Expression<Func<TModel, OfXDataResponse>> SetHowToGetDefaultData();
 
-    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TQuery> request)
+    protected virtual Task HandleContextAsync(RequestContext<TQuery> context) => Task.CompletedTask;
+
+    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TQuery> context)
     {
-        var filter = _filterFunction.Invoke(request.Query);
+        await HandleContextAsync(context);
+        var filter = _filterFunction.Invoke(context.Query);
         var data = await _collection
             .AsNoTracking()
             .Where(filter)
-            .Select(BuildResponse(request.Query))
-            .ToListAsync(request.CancellationToken);
+            .Select(BuildResponse(context.Query))
+            .ToListAsync(context.CancellationToken);
         return new ItemsResponse<OfXDataResponse>(data);
     }
 

@@ -6,5 +6,5 @@ public interface IMappableRequestHandler<in TRequest, TAttribute> where TRequest
     where TAttribute : OfXAttribute
 
 {
-    Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TRequest> request);
+    Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TRequest> context);
 }
