@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.Cached;
 using OfX.Helpers;
 using OfX.Queries.CrossCuttingQueries;
 using OfX.Responses;
@@ -19,8 +20,6 @@ public sealed class DataMappableService(
 
     private static readonly Lazy<ConcurrentDictionary<Type, MethodInfo>> MethodInfoStorage =
         new(() => new ConcurrentDictionary<Type, MethodInfo>());
-
-    private static readonly Lazy<ConcurrentDictionary<Type, Func<object[], object>>> ConstructorCache = new(() => []);
 
     private readonly Lazy<Dictionary<Type, Type>> _attributeQueryLazyStorage = new(() =>
     {
@@ -82,7 +81,7 @@ public sealed class DataMappableService(
                 var selectorsByType = selectorsByTypeFunc();
                 if (selectorsByType is null)
                     return (x.CrossCuttingType, x.Expression, Response: emptyCollection);
-                var query = CreateInstanceWithCache(queryType, selectorsByType, x.Expression);
+                var query = OfXCached.CreateInstanceWithCache(queryType, selectorsByType, x.Expression);
                 if (query is null) return emptyResponse;
                 var handler = serviceProvider.GetRequiredService(
                     typeof(IMappableRequestHandler<,>).MakeGenericType(queryType!, x.CrossCuttingType));
@@ -111,24 +110,5 @@ public sealed class DataMappableService(
             var orderedTasks = await Task.WhenAll(tasks);
             ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks.ToList());
         }
-    }
-
-    private static object CreateInstanceWithCache(Type type, params object[] args)
-    {
-        if (ConstructorCache.Value.TryGetValue(type, out var factory)) return factory(args);
-        var constructor = type.GetConstructors()[0];
-        if (constructor == null) throw new InvalidOperationException("No matching constructor found.");
-        var parameters = Expression.Parameter(typeof(object[]), "args");
-        var arguments = constructor
-            .GetParameters()
-            .Select((p, index) => Expression
-                .Convert(Expression.ArrayIndex(parameters, Expression.Constant(index)), p.ParameterType))
-            .ToArray<Expression>();
-        var newExpression = Expression.New(constructor, arguments);
-        var lambda = Expression.Lambda<Func<object[], object>>(newExpression, parameters);
-        factory = lambda.Compile();
-        ConstructorCache.Value[type] = factory;
-
-        return factory(args);
     }
 }

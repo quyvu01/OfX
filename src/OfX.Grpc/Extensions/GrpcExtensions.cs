@@ -1,4 +1,6 @@
 using Grpc.Core;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
@@ -6,6 +8,7 @@ using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Exceptions;
+using OfX.Grpc.Servers;
 using OfX.Helpers;
 using OfX.Registries;
 using OfX.Responses;
@@ -60,5 +63,10 @@ public static class GrpcExtensions
                 ..result.Items.Select(x => new OfXDataResponse { Id = x.Id, Value = x.Value })
             ]);
         });
+    }
+
+    public static void MapOfXGrpcService(this IEndpointRouteBuilder builder)
+    {
+        builder.MapGrpcService<OfXGrpcServer>();
     }
 }

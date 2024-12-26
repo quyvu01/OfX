@@ -1,8 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Registries;
+using OfX.Statics;
 
 namespace OfX.Extensions;
 
@@ -24,6 +26,8 @@ public static class OfXExtensions
                 {
                     var args = i.GetGenericArguments();
                     var parentType = targetInterface.MakeGenericType(args);
+                    if (!OfXStatics.InternalQueryMapHandler.TryAdd(args[1], parentType))
+                        throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
                     serviceCollection.TryAddScoped(parentType, handler);
                 }));
         return new OfXServiceInjector(serviceCollection);
