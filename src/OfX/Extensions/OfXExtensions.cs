@@ -10,7 +10,7 @@ public static class OfXExtensions
 {
     public static OfXServiceInjector AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> action)
     {
-        var newOfRegister = new OfXRegister();
+        var newOfRegister = new OfXRegister(serviceCollection);
         action.Invoke(newOfRegister);
         serviceCollection.AddScoped<IDataMappableService>(sp =>
             new DataMappableService(sp, newOfRegister.ContractsRegister));

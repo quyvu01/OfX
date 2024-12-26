@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Grpc.Extensions;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
 using Xunit;
@@ -23,6 +24,10 @@ public class OfXEntityFrameworkTest : ServicesBuilding
                     {
                         r.RegisterContractsContainsAssemblies(assembly);
                         r.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
+                        r.RegisterClients(c =>
+                        {
+                            c.RegisterForAssembly<ITestAssemblyMarker>("localhost:5001");
+                        });
                     })
                     .AddOfXEFCore<TestDbContext>()
                     .AddOfXHandlers<ITestAssemblyMarker>();

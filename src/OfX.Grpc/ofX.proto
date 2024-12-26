@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+option csharp_namespace = "OfX.Grpc";
+
+package OfXTransport;
+
+service OfXTransportService{
+  rpc GetItems (GetOfXGrpcQuery) returns (OfXItemsGrpcResponse);
+}
+
+message GetOfXGrpcQuery{
+  repeated string selector_ids = 1;
+  string expression = 2;
+  string query_assembly_type = 3;
+}
+
+message OfXItemsGrpcResponse{
+  repeated ItemGrpc items = 1;
+}
+
+message ItemGrpc{
+  string id = 1;
+  string value = 2;
+}

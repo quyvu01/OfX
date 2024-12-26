@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.Tests", "src\OfX.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.EntityFrameworkCore", "src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj", "{FAD1D6ED-BD28-4A92-A164-28CC796B0541}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.Grpc", "src\OfX.Grpc\OfX.Grpc.csproj", "{36F9049C-6A77-4EF7-9CE0-86A22CA36DEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{FAD1D6ED-BD28-4A92-A164-28CC796B0541}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FAD1D6ED-BD28-4A92-A164-28CC796B0541}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FAD1D6ED-BD28-4A92-A164-28CC796B0541}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36F9049C-6A77-4EF7-9CE0-86A22CA36DEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36F9049C-6A77-4EF7-9CE0-86A22CA36DEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36F9049C-6A77-4EF7-9CE0-86A22CA36DEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36F9049C-6A77-4EF7-9CE0-86A22CA36DEA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
