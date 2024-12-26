@@ -41,7 +41,9 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
     cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
     cfg.RegisterHandlersContainsAssembly<SomeHandlerAssemblyMarker>();
-}).RegisterOfXEntityFramework<ServiceDbContext, IHandlerAssemblyMarker>();
+})
+.AddOfXEFCore<ServiceDbContext>()
+.AddOfXHandlers<IHandlerAssemblyMarker>();
 ```
 
 After installing the package OfX-EFCore, you can use the extension method `RegisterOfXEntityFramework()`, which takes two arguments: the `DbContext` and the handlers assembly.
