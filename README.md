@@ -54,7 +54,7 @@ Registers assemblies that contain the contracts (queries) used by OfX for data m
 
 Contracts define the structure and logic for retrieving data.
 
-Parameters: 
+Parameters:
 `Assembly`: The assembly containing the contract definitions.
 
 Example:
@@ -123,5 +123,6 @@ Enjoy your moment!
 
 | Package Name                                             | Description                                                           | .NET Version | Document                                                                                 |
 |----------------------------------------------------------|-----------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
-| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                              | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                              | 8.0, 9.0     | This Document                             |
 | [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/) | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.| 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md) |

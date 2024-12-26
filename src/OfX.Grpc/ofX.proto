@@ -12,8 +12,8 @@ service OfXTransportService{
 
 message GetOfXGrpcQuery{
   repeated string selector_ids = 1;
-  string expression = 2;
-  string query_assembly_type = 3;
+  google.protobuf.StringValue expression = 2;
+  google.protobuf.StringValue query_assembly_type = 3;
 }
 
 message OfXItemsGrpcResponse{
@@ -22,5 +22,5 @@ message OfXItemsGrpcResponse{
 
 message ItemGrpc{
   string id = 1;
-  string value = 2;
+  google.protobuf.StringValue value = 2;
 }
