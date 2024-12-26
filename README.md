@@ -111,7 +111,7 @@ public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
     : IMappableRequestHandler<GetUserOfXQuery, UserOfAttribute>
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(
-        GetUserOfXQuery request,
+        RequestContext<GetUserOfXQuery> request,
         CancellationToken cancellationToken = default)
     {
         // Implement data fetching logic here (e.g., via REST, RPC, or gRPC)
