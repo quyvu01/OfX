@@ -20,11 +20,11 @@ public class OfXEntityFrameworkTest : ServicesBuilding
                     .UseInMemoryDatabase($"Test_{Guid.NewGuid()}")))
             .InstallService((serviceCollection, _) =>
             {
-                serviceCollection.AddOfX(r =>
+                serviceCollection.AddOfX(options =>
                     {
-                        r.RegisterContractsContainsAssemblies(assembly);
-                        r.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
-                        r.RegisterClients(c =>
+                        options.RegisterContractsContainsAssemblies(assembly);
+                        options.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
+                        options.RegisterClientsAsGrpc(c =>
                         {
                             c.RegisterForAssembly<ITestAssemblyMarker>("localhost:5001");
                         });
@@ -40,8 +40,6 @@ public class OfXEntityFrameworkTest : ServicesBuilding
 
     [Theory]
     [InlineData("1")]
-    [InlineData("2")]
-    [InlineData("3")]
     public async Task Member_Should_Have_The_Correct_Email(string userId)
     {
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();

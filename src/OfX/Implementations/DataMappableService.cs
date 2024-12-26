@@ -82,10 +82,10 @@ public sealed class DataMappableService(
                 if (selectorsByType is null)
                     return (x.CrossCuttingType, x.Expression, Response: emptyCollection);
                 var query = OfXCached.CreateInstanceWithCache(queryType, selectorsByType, x.Expression);
-                if (query is null) return emptyResponse;
-                var handler = serviceProvider.GetRequiredService(
-                    typeof(IMappableRequestHandler<,>).MakeGenericType(queryType!, x.CrossCuttingType));
-                var genericMethod = MethodInfoStorage.Value.GetOrAdd(queryType, q => handler.GetType().GetMethods()
+                if (query is null || queryType is null) return emptyResponse;
+                var serviceType = typeof(IMappableRequestHandler<,>).MakeGenericType(queryType, x.CrossCuttingType);
+                var handler = serviceProvider.GetRequiredService(serviceType);
+                var genericMethod = MethodInfoStorage.Value.GetOrAdd(queryType, q => serviceType.GetMethods()
                     .FirstOrDefault(m =>
                         m.Name == RequestAsync && m.GetParameters() is { Length: 1 } parameters &&
                         parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));

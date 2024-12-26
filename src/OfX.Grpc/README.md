@@ -8,7 +8,7 @@ OfX.Grpc is an extension package for OfX that uses gRPC to transport data.
 
 ## Introduction
 
-OfX.EntityFrameworkCore extends the core OfX library by providing seamless integration with Entity Framework Core. This enables developers to automatically map and retrieve data directly from a database, leveraging the power of EF Core along with attribute-based data mapping.
+OfX.Grpc extends the core OfX library by providing seamless integration with Entity Framework Core. This enables developers to automatically map and retrieve data directly from a database, leveraging the power of EF Core along with attribute-based data mapping.
 
 For example, suppose you have a `UserId` property in your model, and you want to fetch the corresponding `UserName` and `Email` fields from the database. By using OfX.EntityFrameworkCore, you can annotate your model with attributes, and the library will handle data fetching for you.
 

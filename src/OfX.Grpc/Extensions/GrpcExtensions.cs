@@ -1,4 +1,5 @@
 using Grpc.Core;
+using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Exceptions;
+using OfX.Grpc.HandlersInstaller;
 using OfX.Grpc.Servers;
 using OfX.Helpers;
 using OfX.Registries;
@@ -19,11 +21,8 @@ public static class GrpcExtensions
 {
     private static readonly Lazy<Dictionary<Type, string>> queryWithHostStorage = new(() => []);
 
-    public static void RegisterClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
+    public static void RegisterClientsAsGrpc(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
-        ofXRegister.ServiceCollection
-            .AddGrpcClient<OfXTransportService.OfXTransportServiceClient>();
-
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
         var assembliesHostLookup = newClientsRegister.AssembliesHostLookup;
@@ -47,8 +46,8 @@ public static class GrpcExtensions
         {
             if (!queryWithHostStorage.Value.TryGetValue(requestType, out var serverHost))
                 throw new OfXGrpcExceptions.GrpcClientQueryTypeNotRegistered(requestType);
-            var client = sp.GetRequiredService<OfXTransportService.OfXTransportServiceClient>();
-            client.WithHost(serverHost);
+            using var channel = GrpcChannel.ForAddress(serverHost);
+            var client = new OfXTransportService.OfXTransportServiceClient(channel);
             var metadata = new Metadata();
             context?.Headers?.ForEach(h => metadata.Add(h.Key, h.Value));
             var grpcQuery = new GetOfXGrpcQuery();
@@ -63,6 +62,9 @@ public static class GrpcExtensions
                 ..result.Items.Select(x => new OfXDataResponse { Id = x.Id, Value = x.Value })
             ]);
         });
+
+        DefaultHandlersInstaller.InstallerServices(ofXRegister.ServiceCollection, ofXRegister.HandlersRegister,
+            [..newClientsRegister.AssembliesHostLookup.Keys]);
     }
 
     public static void MapOfXGrpcService(this IEndpointRouteBuilder builder)
