@@ -6,8 +6,10 @@ using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Registries;
+using OfX.Statics;
 
 namespace OfX.EntityFrameworkCore.Extensions;
 
@@ -40,6 +42,8 @@ public static class EntityFrameworkExtensions
                 {
                     var args = i.GetGenericArguments();
                     var parentType = targetInterface.MakeGenericType(args);
+                    if (!OfXStatics.InternalQueryMapHandler.TryAdd(args[1], parentType))
+                        throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
                     serviceInjector.Collection.TryAddScoped(parentType, handler);
                 }));
     }
