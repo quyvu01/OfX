@@ -93,7 +93,7 @@ public sealed class DataMappableService(
 
                 try
                 {
-                    var requestContextType = typeof(RequestContextImplemented<>).MakeGenericType(queryType);
+                    var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(queryType);
                     var requestContext = Activator
                         .CreateInstance(requestContextType, query, context?.Headers, context?.CancellationToken);
                     object[] arguments = [requestContext];

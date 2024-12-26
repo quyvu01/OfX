@@ -9,7 +9,7 @@ For example, imagine a scenario where Service A needs a user’s name stored in 
 
 Example:
 
-```C#
+```csharp
 public sealed class SomeDataResponse
 {
     public string Id { get; set; }
@@ -39,7 +39,7 @@ Install-Package OfX
 ### 1. Register OfX in the Dependency Injection Container
 Add the OfX to your service configuration to register OfX:
 
-```C#
+```csharp
 builder.Services.AddOfX(cfg =>
 {
     cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
@@ -82,13 +82,13 @@ Here, `SomeHandlerAssemblyMarker` is a type within the assembly where your handl
 ### 2. Create a Relevant Attribute Based on Your Use Case
 Define a custom attribute, such as UserOfAttribute, to suit your specific purpose:
 
-```C#
+```csharp
 public sealed class UserOfAttribute(string propertyName) : OfXAttribute(propertyName);
 ```
 
 ### 3. Integrate the Attribute into Your Model, Entity, or DTO
 Apply the attribute to your properties like this:
-```C#
+```csharp
 public sealed class SomeDataResponse
 {
     public string Id { get; set; }
@@ -106,7 +106,7 @@ public sealed class SomeDataResponse
 
 ### 4. Write a Handler in Your Service to Fetch the Data
 Implement a handler to process data requests. For example:
-```C#
+```csharp
 public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
     : IMappableRequestHandler<GetUserOfXQuery, UserOfAttribute>
 {
@@ -121,7 +121,7 @@ public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
 
 Enjoy your moment!
 
-| Package Name | Description | .NET Verson | Document |
-|--| ---| --- | --- |
-|[OfX](https://www.nuget.org/packages/OfX/)| OfX core | 8.0, 9.0| [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md) |
-|[OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/)| This is the OfX extension package using EntityFramework to fetch data | 8.0, 9.0| [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| Package Name                                             | Description                                                           | .NET Version | Document                                                                                 |
+|----------------------------------------------------------|-----------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                              | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
+| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
