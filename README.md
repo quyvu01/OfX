@@ -42,8 +42,8 @@ Add the OfX to your service configuration to register OfX:
 ```csharp
 builder.Services.AddOfX(cfg =>
 {
-    cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.RegisterHandlersContainsAssembly<SomeHandlerAssemblyMarker>();
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 });
 ```
 
@@ -59,7 +59,7 @@ Parameters:
 
 Example:
 ```csharp
-cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
+cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
 ```
 
 In this example, `SomeContractAssemblyMarker` is a type within the assembly containing your contract definitions.
@@ -74,10 +74,10 @@ Parameters:
 `Type`: A marker type within the assembly that includes the handler implementations.
 Example:
 ```csharp
-cfg.RegisterHandlersContainsAssembly<SomeHandlerAssemblyMarker>();
+cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 ```
 
-Here, `SomeHandlerAssemblyMarker` is a type within the assembly where your handler logic resides.
+Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
 ### 2. Create a Relevant Attribute Based on Your Use Case
 Define a custom attribute, such as UserOfAttribute, to suit your specific purpose:
@@ -121,8 +121,8 @@ public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
 
 Enjoy your moment!
 
-| Package Name                                             | Description                                                           | .NET Version | Document                                                                                 |
-|----------------------------------------------------------|-----------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
-| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                              | 8.0, 9.0     | This Document                             |
-| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/) | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.| 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md) |
+| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                                 |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | This Document                                                                            |
+| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |

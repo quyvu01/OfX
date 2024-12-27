@@ -39,11 +39,10 @@ Add OfX.EntityFrameworkCore to your service configuration during application sta
 ```csharp
 builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
-    cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.RegisterHandlersContainsAssembly<SomeHandlerAssemblyMarker>();
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 })
-.AddOfXEFCore<ServiceDbContext>()
-.AddOfXHandlers<IHandlerAssemblyMarker>();
+.AddOfXEFCore<ServiceDbContext>();
 ```
 
 After installing the package OfX-EFCore, you can use the extension method `RegisterOfXEntityFramework()`, which takes two arguments: the `DbContext` and the handlers assembly.
@@ -88,5 +87,11 @@ Here, `SetHowToGetDefaultData` maps the `Id` and `Name` of the `User` entity to 
 
 By overriding these functions, you can customize the filtering logic and data mapping behavior to suit your application's requirements.
 
----
 
+| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                  |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------|
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)              |
+| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | This Document                                                             |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md) |
+
+---
