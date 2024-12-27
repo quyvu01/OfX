@@ -39,9 +39,9 @@ For Client:
 ```csharp
 builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
-    cfg.RegisterContractsContainsAssemblies(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.RegisterHandlersContainsAssembly<SomeHandlerAssemblyMarker>();
-    cfg.RegisterClientsAsGrpc(config => config.RegisterForAssembly<SomeContractAssemblyMarker>("http://localhost:5001")); //gRPC server host
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
+    cfg.AddGrpcClients(config => config.RegisterContractsFromNamespaceContainning<SomeContractAssemblyMarker>("http://localhost:5001")); //gRPC server host
 
 });
 ```
