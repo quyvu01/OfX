@@ -22,15 +22,14 @@ public class OfXEntityFrameworkTest : ServicesBuilding
             {
                 serviceCollection.AddOfX(options =>
                     {
-                        options.RegisterContractsContainsAssemblies(assembly);
-                        options.RegisterHandlersContainsAssembly<ITestAssemblyMarker>();
-                        options.RegisterClientsAsGrpc(c =>
+                        options.AddContractsContainNamespaces(assembly);
+                        options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
+                        options.AddGrpcClients(c =>
                         {
-                            c.RegisterForAssembly<ITestAssemblyMarker>("localhost:5001");
+                            c.RegisterContractsFromNamespaceContainning<ITestAssemblyMarker>("localhost:5001");
                         });
                     })
-                    .AddOfXEFCore<TestDbContext>()
-                    .AddOfXHandlers<ITestAssemblyMarker>();
+                    .AddOfXEFCore<TestDbContext>();
             })
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();

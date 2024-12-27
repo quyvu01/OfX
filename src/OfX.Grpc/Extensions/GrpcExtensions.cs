@@ -21,7 +21,7 @@ public static class GrpcExtensions
 {
     private static readonly Lazy<Dictionary<Type, string>> queryWithHostStorage = new(() => []);
 
-    public static void RegisterClientsAsGrpc(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
+    public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);

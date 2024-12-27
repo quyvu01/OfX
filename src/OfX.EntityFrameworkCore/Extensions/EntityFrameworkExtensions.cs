@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
-using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
 using OfX.Exceptions;
@@ -15,7 +14,7 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    public static OfXEfCoreServiceInjector AddOfXEFCore<TDbContext>(
+    public static OfXServiceInjector AddOfXEFCore<TDbContext>(
         this OfXServiceInjector ofXServiceInjector) where TDbContext : DbContext
     {
         var serviceCollection = ofXServiceInjector.Collection;
@@ -27,24 +26,30 @@ public static class EntityFrameworkExtensions
                     "DbContext must be registered first!");
             return new EntityFrameworkModelWrapped(dbContext);
         });
-        return new OfXEfCoreServiceInjector(ofXServiceInjector.Collection);
+        AddOfXHandlers(ofXServiceInjector);
+        return ofXServiceInjector;
     }
 
-    public static void AddOfXHandlers<THandlersAssemblyMarker>(this OfXEfCoreServiceInjector serviceInjector)
+    private static void AddOfXHandlers(OfXServiceInjector serviceInjector)
     {
-        var targetInterface = typeof(IQueryOfHandler<,>);
+        if (serviceInjector.OfXRegister.HandlersRegister is null) return;
 
-        typeof(THandlersAssemblyMarker).Assembly.ExportedTypes
-            .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(i =>
-                i.IsGenericType && i.GetGenericTypeDefinition() == targetInterface))
-            .ForEach(handler => handler.GetInterfaces().Where(i => i.GetGenericTypeDefinition() == targetInterface)
-                .ForEach(i =>
-                {
-                    var args = i.GetGenericArguments();
-                    var parentType = targetInterface.MakeGenericType(args);
-                    if (!OfXStatics.InternalQueryMapHandler.TryAdd(args[1], parentType))
-                        throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
-                    serviceInjector.Collection.TryAddScoped(parentType, handler);
-                }));
+        var baseType = typeof(EfQueryOfXHandler<,>);
+        var interfaceType = typeof(IQueryOfHandler<,>);
+        serviceInjector.OfXRegister.HandlersRegister.ExportedTypes
+            .Where(t =>
+            {
+                var basedType = t.BaseType;
+                if (basedType is null || !basedType.IsGenericType) return false;
+                return t is { IsClass: true, IsAbstract: false } && basedType.GetGenericTypeDefinition() == baseType;
+            })
+            .ForEach(handlerType =>
+            {
+                var args = handlerType.BaseType!.GetGenericArguments();
+                var parentType = interfaceType.MakeGenericType(args);
+                if (!OfXStatics.InternalQueryMapHandler.TryAdd(args[1], parentType))
+                    throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
+                serviceInjector.Collection.TryAddScoped(parentType, handlerType);
+            });
     }
 }

@@ -7,7 +7,7 @@ public class GrpcClientsRegister
 {
     public Dictionary<Assembly, string> AssembliesHostLookup { get; private set; } = [];
 
-    public GrpcClientsRegister RegisterForAssembly<TAssemblyMarker>(string serverHost)
+    public GrpcClientsRegister RegisterContractsFromNamespaceContainning<TAssemblyMarker>(string serverHost)
     {
         var assembly = typeof(TAssemblyMarker).Assembly;
         if (!AssembliesHostLookup.TryAdd(assembly, serverHost))
