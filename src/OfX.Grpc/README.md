@@ -57,7 +57,7 @@ app.MapOfXGrpcService();
 ...
 ```
 
-After installing the package OfX-gRPC, you can use the extension method `RegisterClientsAsGrpc()` for client and `MapOfXGrpcService()` for server. Look up at `RegisterClientsAsGrpc` function, we have to defind the contract assembly with server host, on this example above, all the queries are inclued in `SomeContractAssemblyMarker` assembly.
+After installing the package OfX-gRPC, you can use the extension method `AddGrpcClients()` for client and `MapOfXGrpcService()` for server. Look up at `AddGrpcClients` function, we have to define the contract assembly with server host, on this example above, all the queries are included in `SomeContractAssemblyMarker` assembly.
 
 That All, enjoy your moment!
 
