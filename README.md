@@ -95,12 +95,9 @@ public sealed class SomeDataResponse
 ### 3. Write a Handler in Your Service to Fetch the Data
 Implement a handler to process data requests. For example:
 ```csharp
-public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
-    : IMappableRequestHandler<GetUserOfXQuery, UserOfAttribute>
+public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(
-        RequestContext<GetUserOfXQuery> request,
-        CancellationToken cancellationToken = default)
+    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<UserOfAttribute> request)
     {
         // Implement data fetching logic here (e.g., via REST, RPC, or gRPC)
     }
