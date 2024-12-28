@@ -1,55 +1,26 @@
 using System.Reflection;
 using System.Reflection.Emit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Grpc.Abstractions;
-using OfX.Queries.CrossCuttingQueries;
 
 namespace OfX.Grpc.HandlersInstaller;
 
-internal static class DefaultHandlersInstaller
+internal static class DefaultGrpcClientsInstaller
 {
-    public static void InstallerServices(IServiceCollection services, Assembly handlerAssembly,
-        params Assembly[] contractAssemblies)
+    public static void InstallerServices(IServiceCollection services, params Type[] attributeTypes)
     {
-        var ignoreClasses = handlerAssembly.ExportedTypes
-            .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
-                        x is { IsInterface: false, IsAbstract: false })
-            .Distinct()
-            .ToList();
-
-        var ignoreRequestTypes = ignoreClasses.SelectMany(a => a.GetInterfaces())
-            .Where(a =>
-            {
-                if (!a.IsGenericType) return false;
-                var arguments = a.GetGenericArguments();
-                return arguments.Length == 2;
-            }).Select(a => a.GetGenericArguments()[0]);
-
-        var requestTypes = contractAssemblies.SelectMany(x => x.ExportedTypes)
-            .Where(x => typeof(GetDataMappableQuery).IsAssignableFrom(x) &&
-                        x is { IsInterface: false, IsAbstract: false });
-
-        var requestsCreatedImplicit = requestTypes.Except(ignoreRequestTypes).ToList();
-        if (requestsCreatedImplicit is not { Count: > 0 }) return;
-        var queryWithAttributes = requestsCreatedImplicit
-            .Select(a =>
-            {
-                var basedType = a.BaseType;
-                if (basedType is null || !basedType.IsGenericType) return (null, null);
-                var arguments = basedType.GetGenericArguments();
-                return (QueryType: a, AttributeType: arguments[0]);
-            })
-            .Where(a => a is { QueryType: not null, AttributeType: not null })
-            .Select(a => (InterfaceType: typeof(IOfXGrpcRequestClient<,>).MakeGenericType(a.QueryType, a.AttributeType),
-                ServiceType: typeof(IMappableRequestHandler<,>).MakeGenericType(a.QueryType, a.AttributeType)))
+        var attributesBuilding = attributeTypes
+            .Select(a => (AttributeType: a, InterfaceType: typeof(IOfXGrpcRequestClient<>).MakeGenericType(a),
+                ServiceType: typeof(IMappableRequestHandler<>).MakeGenericType(a)))
             .ToList();
 
         var assemblyName = new AssemblyName { Name = "DynamicInstanceAssemblyHandlers" };
         var newAssembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
         var newModule = newAssembly.DefineDynamicModule("DynamicInstanceModule");
-        var typeBuilder = newModule.DefineType("DefaultOfXHandlers", TypeAttributes.Public, null,
-            queryWithAttributes.Select(a => a.InterfaceType).ToArray());
+        var typeBuilder = newModule.DefineType("DefaultGrpcClientOfXHandlers", TypeAttributes.Public, null,
+            attributesBuilding.Select(a => a.InterfaceType).ToArray());
 
         // Add the constructor
         var ctorBuilder = typeBuilder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard,
@@ -76,6 +47,18 @@ internal static class DefaultHandlersInstaller
         methodGenerator.Emit(OpCodes.Ret); // Return from the getter method
         requestClientRepository.SetGetMethod(requestClientRepositoryGetMethod);
         var handlersType = typeBuilder.CreateType();
-        queryWithAttributes.ForEach(c => services.AddScoped(c.ServiceType, handlersType));
+        attributesBuilding.ForEach(c =>
+        {
+            var existedService = services.FirstOrDefault(a => a.ServiceType == c.ServiceType);
+            if (existedService is not null)
+            {
+                if (existedService.ImplementationType !=
+                    typeof(DefaultMappableRequestHandler<>).MakeGenericType(c.AttributeType)) return;
+                services.Replace(new ServiceDescriptor(c.ServiceType, handlersType, ServiceLifetime.Scoped));
+                return;
+            }
+
+            services.AddScoped(c.ServiceType, handlersType);
+        });
     }
 }

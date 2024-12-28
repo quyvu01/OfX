@@ -1,7 +1,7 @@
-using OfX.Queries.CrossCuttingQueries;
+using OfX.Queries.OfXQueries;
 
 namespace OfX.Abstractions;
 
-public abstract record DataMappableOf<TAttribute>(List<string> SelectorIds, string Expression)
+public sealed record DataMappableOf<TAttribute>(List<string> SelectorIds, string Expression)
     : GetDataMappableQuery(SelectorIds, Expression), IDataMappableOf<TAttribute>
     where TAttribute : Attribute, IDataMappableCore;

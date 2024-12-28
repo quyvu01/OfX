@@ -13,7 +13,7 @@ service OfXTransportService{
 message GetOfXGrpcQuery{
   repeated string selector_ids = 1;
   google.protobuf.StringValue expression = 2;
-  google.protobuf.StringValue query_assembly_type = 3;
+  google.protobuf.StringValue attribute_assembly_type = 3;
 }
 
 message OfXItemsGrpcResponse{

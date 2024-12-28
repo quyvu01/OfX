@@ -41,10 +41,15 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
-    cfg.AddGrpcClients(config => config.RegisterContractsFromNamespaceContainning<SomeContractAssemblyMarker>("http://localhost:5001")); //gRPC server host
+    cfg.AddGrpcClients(config => config
+        .AddGrpcHostWithOfXAttributes("http://localhost:5001", [typeof(UserOfAttribute)])
+        .AddGrpcHostWithOfXAttributes("http://localhost:5002", [typeof(CountryOfAttribute), typeof(ProvinceOfAttribute)...])
+        ... //Other host configurations, you can also filter attributes by creating an interface and then filtering the attributes that implement the interface...
+    ); //gRPC server host
 
 });
 ```
+
 
 For Server:
 

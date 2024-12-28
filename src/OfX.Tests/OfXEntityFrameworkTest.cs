@@ -4,6 +4,7 @@ using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
+using OfX.Tests.Attributes;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
 using Xunit;
@@ -22,11 +23,11 @@ public class OfXEntityFrameworkTest : ServicesBuilding
             {
                 serviceCollection.AddOfX(options =>
                     {
-                        options.AddContractsContainNamespaces(assembly);
+                        options.AddAttributesContainNamespaces(assembly);
                         options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
                         options.AddGrpcClients(c =>
                         {
-                            c.RegisterContractsFromNamespaceContainning<ITestAssemblyMarker>("localhost:5001");
+                            c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
                         });
                     })
                     .AddOfXEFCore<TestDbContext>();

@@ -23,18 +23,22 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
     {
         try
         {
-            var requestType = Type.GetType(request.QueryAssemblyType);
-            if (requestType is null)
-                throw new OfXGrpcExceptions.CannotDeserializeContractType();
-            if (!OfXStatics.QueryMapHandler.TryGetValue(requestType, out var handlerType))
-                throw new OfXGrpcExceptions.CannotFindHandlerForQueryContract(requestType);
+            var attributeType = Type.GetType(request.AttributeAssemblyType);
+
+            if (attributeType is null)
+                throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(request.AttributeAssemblyType);
+
+            if (!OfXStatics.QueryMapHandler.TryGetValue(attributeType, out var handlerType))
+                throw new OfXGrpcExceptions.CannotFindHandlerForOfAttribute(attributeType);
+
             var handler = serviceProvider.GetRequiredService(handlerType);
-            var genericMethod = MethodInfoStorage.Value.GetOrAdd(requestType, q => handler.GetType().GetMethods()
+
+            var genericMethod = MethodInfoStorage.Value.GetOrAdd(attributeType, q => handler.GetType().GetMethods()
                 .FirstOrDefault(m =>
                     m.Name == GetDataAsync && m.GetParameters() is { Length: 1 } parameters &&
                     parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
-            var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(requestType);
-            var query = OfXCached.CreateInstanceWithCache(requestType, request.SelectorIds.ToList(),
+            var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
+            var query = OfXCached.CreateInstanceWithCache(attributeType, request.SelectorIds.ToList(),
                 request.Expression);
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
             var requestContext = Activator
@@ -50,7 +54,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
         }
         catch (Exception e)
         {
-            Debug.WriteLine($"Error while execute get items: {request.QueryAssemblyType}, error: {e.Message}");
+            Debug.WriteLine($"Error while execute get items: {request.AttributeAssemblyType}, error: {e.Message}");
             throw;
         }
     }

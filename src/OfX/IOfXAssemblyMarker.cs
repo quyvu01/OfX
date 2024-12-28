@@ -1,3 +1,3 @@
 namespace OfX;
 
-public interface IOfXAssemblyMarker;
+internal interface IOfXAssemblyMarker;

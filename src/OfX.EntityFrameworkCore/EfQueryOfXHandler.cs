@@ -7,20 +7,19 @@ using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.Helpers;
-using OfX.Queries.CrossCuttingQueries;
 using OfX.Responses;
 
 namespace OfX.EntityFrameworkCore;
 
-public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel, TQuery>
+public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TModel, TAttribute>
     where TModel : class
-    where TQuery : GetDataMappableQuery
+    where TAttribute : OfXAttribute
 {
     private readonly string _idAlias;
 
     private const string DefaultIdAlias = "Id";
 
-    private readonly Func<TQuery, Expression<Func<TModel, bool>>> _filterFunction;
+    private readonly Func<DataMappableOf<TAttribute>, Expression<Func<TModel, bool>>> _filterFunction;
     private readonly Expression<Func<TModel, OfXDataResponse>> _howToGetDefaultData;
     private readonly DbSet<TModel> _collection;
 
@@ -42,13 +41,13 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
         _collection = serviceProvider.GetRequiredService<IOfXModel>().GetCollection<TModel>();
     }
 
-    protected abstract Func<TQuery, Expression<Func<TModel, bool>>> SetFilter();
+    protected abstract Func<DataMappableOf<TAttribute>, Expression<Func<TModel, bool>>> SetFilter();
 
     protected abstract Expression<Func<TModel, OfXDataResponse>> SetHowToGetDefaultData();
 
-    protected virtual Task HandleContextAsync(RequestContext<TQuery> context) => Task.CompletedTask;
+    protected virtual Task HandleContextAsync(RequestContext<TAttribute> context) => Task.CompletedTask;
 
-    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TQuery> context)
+    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
         await HandleContextAsync(context);
         var filter = _filterFunction.Invoke(context.Query);
@@ -60,7 +59,7 @@ public abstract class EfQueryOfXHandler<TModel, TQuery> : IQueryOfHandler<TModel
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
-    private Expression<Func<TModel, OfXDataResponse>> BuildResponse(TQuery request)
+    private Expression<Func<TModel, OfXDataResponse>> BuildResponse(DataMappableOf<TAttribute> request)
     {
         if (string.IsNullOrWhiteSpace(request.Expression)) return _howToGetDefaultData;
 

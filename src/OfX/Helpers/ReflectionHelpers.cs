@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json;
 using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -11,7 +10,7 @@ using OfX.Responses;
 
 namespace OfX.Helpers;
 
-public static class ReflectionHelpers
+internal static class ReflectionHelpers
 {
     private static readonly ConcurrentDictionary<PropertyInfo, CrossCuttingDataPropertyCache>
         CrossCuttingPropertiesCache = new();
@@ -46,7 +45,7 @@ public static class ReflectionHelpers
                 }
 
                 var crossCutting = property.GetCustomAttributes(true)
-                    .OfType<ICrossCuttingConcernCore>()
+                    .OfType<IOfXAttributeCore>()
                     .FirstOrDefault();
                 if (crossCutting is not null && Attribute.IsDefined(property, crossCutting.GetType()))
                 {
@@ -91,7 +90,7 @@ public static class ReflectionHelpers
                 stack.Push(item);
     }
 
-    public static IEnumerable<CrossCuttingTypeData> GetCrossCuttingTypeWithIds(
+    public static IEnumerable<CrossCuttingTypeData> GetOfXTypesData(
         IEnumerable<CrossCuttingDataProperty> datas, IEnumerable<Type> crossCuttingTypes) =>
         datas
             .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Expression, x.Order })

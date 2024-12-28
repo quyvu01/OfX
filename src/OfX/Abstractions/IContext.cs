@@ -6,7 +6,7 @@ public interface IContext
     CancellationToken CancellationToken { get; }
 }
 
-public interface RequestContext<out TQuery> : IContext where TQuery : class
+public interface RequestContext<TAttribute> : IContext where TAttribute : OfXAttribute
 {
-    TQuery Query { get; }
+    DataMappableOf<TAttribute> Query { get; }
 }

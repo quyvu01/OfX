@@ -24,4 +24,5 @@ public static class OfXCached
 
         return factory(args);
     }
+    
 }

@@ -6,20 +6,20 @@ namespace OfX.ApplicationModels;
 public sealed record CrossCuttingDataProperty(
     PropertyInfo PropertyInfo,
     object Model,
-    ICrossCuttingConcernCore Attribute,
+    IOfXAttributeCore Attribute,
     Delegate Func,
     string Expression,
     int Order);
 
 public sealed record CrossCuttingDataPropertyCache(
-    ICrossCuttingConcernCore Attribute,
+    IOfXAttributeCore Attribute,
     Delegate Func,
     string Expression,
     int Order);
 
 
 public sealed record CrossCuttingTypeData(
-    Type CrossCuttingType,
+    Type OfXAttributeType,
     IEnumerable<PropertyCalledLater> PropertyCalledLaters,
     string Expression,
     int Order);

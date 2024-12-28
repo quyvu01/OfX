@@ -1,21 +1,22 @@
-using System.Reflection;
-
 namespace OfX.Grpc.Exceptions;
 
 public static class OfXGrpcExceptions
 {
-    public sealed class GrpcClientAssemblyExisted(Assembly assemblyType)
-        : Exception($"Assembly {assemblyType.FullName} has been register!");
+    public class GrpcHostMustNotBeNull()
+        : Exception("Grpc host must not be null!");
 
-    public class GrpcClientQueryTypeNotRegistered(Type requestType)
-        : Exception($"QueryType: {requestType.Name} is not registered!");
+    public class GrpcHostHasBeenRegistered(string host)
+        : Exception($"Grpc host: {host} has been registered!");
 
-    public sealed class SomeGrpcClientAssemblyAreNotRegistered()
-        : Exception("Some assemblies are not register on root. Please check again!");
+    public sealed class SomeAttributesHasBeenRegisteredWithOtherHost()
+        : Exception("Some attributes has been registered with other host. Please check again!");
 
-    public sealed class CannotDeserializeContractType() : Exception(
-        "Cannot deserialize contract type, may it is not a part of this application as well. Please check again!");
+    public sealed class AttributeTypesCannotBeNull()
+        : Exception("Cannot register nullable attributes with a host!");
+
+    public sealed class CannotDeserializeOfXAttributeType(string type)
+        : Exception($"The OfX Attribute seems not a part of this application: {type}!");
     
-    public sealed class CannotFindHandlerForQueryContract(Type requestType) : Exception(
-        $"Cannot find the handler for query: {requestType.Name}. Please check again!");
+    public sealed class CannotFindHandlerForOfAttribute(Type type)
+        : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");
 }

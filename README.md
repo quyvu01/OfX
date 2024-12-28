@@ -42,33 +42,28 @@ Add the OfX to your service configuration to register OfX:
 ```csharp
 builder.Services.AddOfX(cfg =>
 {
-    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 });
 ```
 
 ### Function Descriptions
-#### RegisterContractsContainsAssemblies
+#### AddAttributesContainNamespaces
 
-Registers assemblies that contain the contracts (queries) used by OfX for data mapping.
+Registers assemblies that contain the attributes, used by OfX for data mapping.
 
-Contracts define the structure and logic for retrieving data.
+The Attribute should be inherited from `OfXAttribute` will be scanned!
 
 Parameters:
-`Assembly`: The assembly containing the contract definitions.
-
-Example:
-```csharp
-cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-```
-
-In this example, `SomeContractAssemblyMarker` is a type within the assembly containing your contract definitions.
+`Assembly`: The assembly containing the (OfX) attributes.
 
 #### RegisterHandlersContainsAssembly
 
 Registers assemblies that contain handlers responsible for processing queries or commands for data retrieval.
 
 Handlers are the execution units that resolve attributes applied to models.
+
+If this function is not called. The default value `ItemsResponse<OfXDataResponse>` is returned!
 
 Parameters:
 `Type`: A marker type within the assembly that includes the handler implementations.
@@ -79,14 +74,7 @@ cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
-### 2. Create a Relevant Attribute Based on Your Use Case
-Define a custom attribute, such as UserOfAttribute, to suit your specific purpose:
-
-```csharp
-public sealed class UserOfAttribute(string propertyName) : OfXAttribute(propertyName);
-```
-
-### 3. Integrate the Attribute into Your Model, Entity, or DTO
+### 2. Integrate the Attribute into Your Model, Entity, or DTO
 Apply the attribute to your properties like this:
 ```csharp
 public sealed class SomeDataResponse
@@ -104,7 +92,7 @@ public sealed class SomeDataResponse
 }
 ```
 
-### 4. Write a Handler in Your Service to Fetch the Data
+### 3. Write a Handler in Your Service to Fetch the Data
 Implement a handler to process data requests. For example:
 ```csharp
 public class UserRequestHandler(IRequestClient<GetUserOfXQuery> client)
