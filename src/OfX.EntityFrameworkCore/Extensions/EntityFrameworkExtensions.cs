@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
+using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
 using OfX.Exceptions;
@@ -14,26 +16,38 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
+    private static readonly Lazy<ConcurrentDictionary<Type, Type>> modelTypeLookUp = new(() => []);
+
     public static OfXServiceInjector AddOfXEFCore<TDbContext>(
         this OfXServiceInjector ofXServiceInjector) where TDbContext : DbContext
     {
-        var serviceCollection = ofXServiceInjector.Collection;
-        serviceCollection.TryAddScoped<IOfXModel>(sp =>
+        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        serviceCollection.AddScoped<IOfXEfDbContext>(sp =>
         {
             var dbContext = sp.GetService<TDbContext>();
             if (dbContext is null)
                 throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
                     "DbContext must be registered first!");
-            return new EntityFrameworkModelWrapped(dbContext);
+            return new EfDbContextWrapped<TDbContext>(dbContext);
         });
-        AddOfXHandlers(ofXServiceInjector);
+        serviceCollection.AddSingleton<GetEfDbContext>(sp => modelType =>
+        {
+            if (modelTypeLookUp.Value.TryGetValue(modelType, out var serviceType))
+                return sp.GetService(serviceType) as IOfXEfDbContext;
+            var contexts = sp.GetServices<IOfXEfDbContext>();
+            var matchingServiceType = contexts.FirstOrDefault(a => a.HasCollection(modelType));
+            if (matchingServiceType is null)
+                throw new OfXEntityFrameworkException.ThereAreNoDbContextHasModel(modelType);
+            modelTypeLookUp.Value.TryAdd(modelType, matchingServiceType.GetType());
+            return matchingServiceType;
+        });
+        AddEfQueryOfXHandlers(ofXServiceInjector);
         return ofXServiceInjector;
     }
 
-    private static void AddOfXHandlers(OfXServiceInjector serviceInjector)
+    private static void AddEfQueryOfXHandlers(OfXServiceInjector serviceInjector)
     {
         if (serviceInjector.OfXRegister.HandlersRegister is null) return;
-
         var baseType = typeof(EfQueryOfXHandler<,>);
         var interfaceType = typeof(IQueryOfHandler<,>);
         serviceInjector.OfXRegister.HandlersRegister.ExportedTypes
@@ -49,7 +63,7 @@ public static class EntityFrameworkExtensions
                 var parentType = interfaceType.MakeGenericType(args);
                 if (!OfXStatics.InternalQueryMapHandler.TryAdd(args[1], parentType))
                     throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
-                serviceInjector.Collection.TryAddScoped(parentType, handlerType);
+                serviceInjector.OfXRegister.ServiceCollection.TryAddScoped(parentType, handlerType);
             });
     }
 }

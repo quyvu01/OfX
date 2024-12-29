@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.Attributes;
 using OfX.Grpc.Delegates;
 using OfX.Implementations;
 using OfX.Queries.OfXQueries;

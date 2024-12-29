@@ -1,4 +1,6 @@
-namespace OfX.Abstractions;
+using OfX.Abstractions;
+
+namespace OfX.Attributes;
 
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
 public abstract class OfXAttribute(string propertyName) : Attribute, IDataMappableCore

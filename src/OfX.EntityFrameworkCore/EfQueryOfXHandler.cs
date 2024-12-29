@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OfX.Abstractions;
-using OfX.EntityFrameworkCore.Abstractions;
+using OfX.Attributes;
 using OfX.EntityFrameworkCore.ApplicationModels;
+using OfX.EntityFrameworkCore.Delegates;
 using OfX.Helpers;
 using OfX.Responses;
 
@@ -38,7 +39,8 @@ public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TM
         ExceptionHelpers.ThrowIfNull(_filterFunction);
         ExceptionHelpers.ThrowIfNull(_howToGetDefaultData);
         _idAlias = SetIdAlias();
-        _collection = serviceProvider.GetRequiredService<IOfXModel>().GetCollection<TModel>();
+        _collection = serviceProvider.GetRequiredService<GetEfDbContext>().Invoke(typeof(TModel))
+            .GetCollection<TModel>();
     }
 
     protected abstract Func<RequestOf<TAttribute>, Expression<Func<TModel, bool>>> SetFilter();

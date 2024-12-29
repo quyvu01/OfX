@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Registries;
@@ -45,8 +46,7 @@ public static class OfXExtensions
         }
 
 
-        serviceCollection.AddScoped<IDataMappableService>(sp =>
-            new DataMappableService(sp, newOfRegister.AttributesRegister));
+        serviceCollection.AddScoped<IDataMappableService>(sp => new DataMappableService(sp, newOfRegister.AttributesRegister));
 
         var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
         newOfRegister.AttributesRegister.SelectMany(a => a.ExportedTypes)
@@ -61,6 +61,6 @@ public static class OfXExtensions
                 // So we have to replace the default service if existed -> Good!
                 serviceCollection.TryAddScoped(parentType, defaultImplementedService);
             });
-        return new OfXServiceInjector(serviceCollection, newOfRegister);
+        return new OfXServiceInjector(newOfRegister);
     }
 }

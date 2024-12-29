@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.Attributes;
 using OfX.Cached;
 using OfX.Helpers;
 using OfX.Responses;
