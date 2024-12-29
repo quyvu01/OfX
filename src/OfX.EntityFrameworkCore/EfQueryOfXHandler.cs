@@ -19,7 +19,7 @@ public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TM
 
     private const string DefaultIdAlias = "Id";
 
-    private readonly Func<DataMappableOf<TAttribute>, Expression<Func<TModel, bool>>> _filterFunction;
+    private readonly Func<RequestOf<TAttribute>, Expression<Func<TModel, bool>>> _filterFunction;
     private readonly Expression<Func<TModel, OfXDataResponse>> _howToGetDefaultData;
     private readonly DbSet<TModel> _collection;
 
@@ -41,7 +41,7 @@ public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TM
         _collection = serviceProvider.GetRequiredService<IOfXModel>().GetCollection<TModel>();
     }
 
-    protected abstract Func<DataMappableOf<TAttribute>, Expression<Func<TModel, bool>>> SetFilter();
+    protected abstract Func<RequestOf<TAttribute>, Expression<Func<TModel, bool>>> SetFilter();
 
     protected abstract Expression<Func<TModel, OfXDataResponse>> SetHowToGetDefaultData();
 
@@ -59,7 +59,7 @@ public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TM
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
-    private Expression<Func<TModel, OfXDataResponse>> BuildResponse(DataMappableOf<TAttribute> request)
+    private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         if (string.IsNullOrWhiteSpace(request.Expression)) return _howToGetDefaultData;
 

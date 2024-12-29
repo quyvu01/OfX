@@ -60,7 +60,7 @@ public sealed class DataMappableService(
                 var selectorsByType = selectorsByTypeFunc.Invoke();
                 if (selectorsByType is null)
                     return (CrossCuttingType: x.OfXAttributeType, x.Expression, Response: emptyCollection);
-                var queryType = typeof(DataMappableOf<>).MakeGenericType(x.OfXAttributeType);
+                var queryType = typeof(RequestOf<>).MakeGenericType(x.OfXAttributeType);
                 var query = OfXCached.CreateInstanceWithCache(queryType, selectorsByType, x.Expression);
                 if (query is null || queryType is null) return emptyResponse;
                 var serviceType = typeof(IMappableRequestHandler<>).MakeGenericType(x.OfXAttributeType);

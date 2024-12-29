@@ -8,5 +8,5 @@ public interface IContext
 
 public interface RequestContext<TAttribute> : IContext where TAttribute : OfXAttribute
 {
-    DataMappableOf<TAttribute> Query { get; }
+    RequestOf<TAttribute> Query { get; }
 }

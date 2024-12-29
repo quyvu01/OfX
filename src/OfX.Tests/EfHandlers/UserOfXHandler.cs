@@ -10,7 +10,7 @@ namespace OfX.Tests.EfHandlers;
 public class UserOfXHandler(IServiceProvider serviceProvider)
     : EfQueryOfXHandler<User, UserOfAttribute>(serviceProvider)
 {
-    protected override Func<DataMappableOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
+    protected override Func<RequestOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
         q => c => q.SelectorIds.Contains(c.Id);
 
     protected override Expression<Func<User, OfXDataResponse>> SetHowToGetDefaultData() =>

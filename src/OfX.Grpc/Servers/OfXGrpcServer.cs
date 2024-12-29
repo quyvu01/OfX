@@ -38,7 +38,10 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
                     m.Name == GetDataAsync && m.GetParameters() is { Length: 1 } parameters &&
                     parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
             var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
-            var query = OfXCached.CreateInstanceWithCache(attributeType, request.SelectorIds.ToList(),
+
+            var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
+            
+            var query = OfXCached.CreateInstanceWithCache(queryType, request.SelectorIds.ToList(),
                 request.Expression);
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
             var requestContext = Activator

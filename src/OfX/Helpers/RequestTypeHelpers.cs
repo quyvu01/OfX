@@ -20,9 +20,9 @@ public static class RequestTypeHelpers
         var assemblyName = new AssemblyName { Name = attributeAssemblyName };
         var newAssembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
         var newModule = newAssembly.DefineDynamicModule("DynamicRequestModule");
-        var requestType = typeof(DataMappableOf<>).MakeGenericType(attributeType);
+        var requestType = typeof(RequestOf<>).MakeGenericType(attributeType);
         var typeBuilder = newModule.DefineType($"DynamicRequestType{attributeType.Name}", TypeAttributes.Public,
-            typeof(DataMappableOf<>).MakeGenericType(attributeType));
+            typeof(RequestOf<>).MakeGenericType(attributeType));
         var ctorTypes = requestType.GetConstructor(
             BindingFlags.NonPublic | BindingFlags.Instance, [..RequestArgumentsType])!;
         // Define the constructor for the dynamic class
