@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>2.0.0</Version>
+        <Version>2.0.1</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX</PackageId>
         <Description>The high performance and easiest way to play with microservices for .NET</Description>
