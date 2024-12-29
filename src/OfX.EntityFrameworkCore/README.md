@@ -55,7 +55,7 @@ Implement a request handler to fetch the required data using Entity Framework Co
 public sealed class UserOfXHandler(IServiceProvider serviceProvider)
     : EfQueryOfXHandler<User, UserOfAttribute>(serviceProvider)
 {
-    protected override Func<DataMappableOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
+    protected override Func<RequestOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
         q => u => q.SelectorIds.Contains(u.Id);
 
     protected override Expression<Func<User, OfXDataResponse>> SetHowToGetDefaultData() =>
@@ -70,7 +70,7 @@ This function is used to define the filter for querying data. It takes the query
 
 Example:
 ```csharp
-protected override Func<DataMappableOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
+protected override Func<RequestOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
     q => u => q.SelectorIds.Contains(u.Id);
 ```
 Here, `SetFilter` ensures that only entities matching the provided `SelectorIds` in the query are retrieved.
