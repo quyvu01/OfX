@@ -11,9 +11,9 @@ using Xunit;
 
 namespace OfX.Tests;
 
-public class OfXEntityFrameworkTest : ServicesBuilding
+public class OfXCoreTests : ServicesBuilding
 {
-    public OfXEntityFrameworkTest()
+    public OfXCoreTests()
     {
         var assembly = typeof(ITestAssemblyMarker).Assembly;
         InstallService((serviceCollection, _) => serviceCollection
@@ -40,7 +40,7 @@ public class OfXEntityFrameworkTest : ServicesBuilding
 
     [Theory]
     [InlineData("1")]
-    public async Task Member_Should_Have_The_Correct_Email(string userId)
+    public async Task Member_Should_Have_The_Correct_User_Data(string userId)
     {
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
         var member = new Member { UserId = userId };

@@ -33,7 +33,7 @@ public static class EntityFrameworkExtensions
         serviceCollection.AddSingleton<GetEfDbContext>(sp => modelType =>
         {
             if (modelTypeLookUp.Value.TryGetValue(modelType, out var serviceType))
-                return sp.GetService(serviceType) as IOfXEfDbContext;
+                return sp.GetServices<IOfXEfDbContext>().First(a => a.GetType() == serviceType);
             var contexts = sp.GetServices<IOfXEfDbContext>();
             var matchingServiceType = contexts.FirstOrDefault(a => a.HasCollection(modelType));
             if (matchingServiceType is null)
