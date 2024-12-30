@@ -12,11 +12,6 @@ public static class OfXCached
 
     private static readonly Lazy<ConcurrentDictionary<Type, Func<object[], object>>> ConstructorCache = new(() => []);
 
-    public static readonly Lazy<MethodInfo> IdsContainsMethodLazy =
-        new(() => typeof(List<string>).GetMethod("Contains", [typeof(string)]));
-
-    public static readonly Lazy<ConcurrentDictionary<Type, ModelIdData>> ModelIdDataCachedLazy = new(() => []);
-
     public static object CreateInstanceWithCache(Type type, params object[] args)
     {
         if (ConstructorCache.Value.TryGetValue(type, out var factory)) return factory(args);

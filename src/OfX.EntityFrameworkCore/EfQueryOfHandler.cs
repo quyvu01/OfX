@@ -4,10 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Cached;
 using OfX.EntityFrameworkCore.Delegates;
+using OfX.Exceptions;
 using OfX.Responses;
 
 namespace OfX.EntityFrameworkCore;
@@ -46,18 +45,25 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     // May I should cache the containsMethod, idAsString first!
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
-        var modelIdData = GetModelData();
-        var selectorsConstant = Expression.Constant(query.SelectorIds);
-        var containsCall = Expression.Call(selectorsConstant, OfXCached.IdsContainsMethodLazy.Value,
-            modelIdData.MethodCallExpression);
-        return Expression.Lambda<Func<TModel, bool>>(containsCall, modelIdData.ParameterExpression);
+        var parameter = Expression.Parameter(typeof(TModel), "x");
+        var idProperty = Expression.Property(parameter, idPropertyName);
+        var idType = idProperty.Type;
+        var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod("Contains");
+        var selectorsConstant = Helpers.GeneralHelpers.ConstantExpression(query.SelectorIds, idType);
+        var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
+        return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         return ExpressionMapModelStorage.Value.GetOrAdd(request.Expression, expression =>
         {
-            var (parameter, idAsString) = GetModelData();
+            var parameter = Expression.Parameter(typeof(TModel), "x");
+            // Access the Id property on the model
+            var idProperty = Expression.Property(parameter, idPropertyName);
+            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+            var idAsString = Expression.Call(idProperty, toStringMethod!);
+
             var expressionParts = expression.Split('.');
             Expression currentExpression = parameter;
             var currentType = typeof(TModel);
@@ -123,14 +129,4 @@ public class EfQueryOfHandler<TModel, TAttribute>(
             return Expression.Lambda<Func<TModel, OfXDataResponse>>(newExpression, parameter);
         });
     }
-
-    private ModelIdData GetModelData() => OfXCached.ModelIdDataCachedLazy
-        .Value.GetOrAdd(typeof(TModel), modelType =>
-        {
-            var parameter = Expression.Parameter(modelType, "x");
-            var idProperty = Expression.Property(parameter, idPropertyName);
-            var toStringMethod = idProperty.Type.GetMethod(nameof(ToString), Type.EmptyTypes);
-            var idAsString = Expression.Call(idProperty, toStringMethod!);
-            return new ModelIdData(parameter, idAsString);
-        });
 }

@@ -7,4 +7,7 @@ public static class OfXException
 
     public sealed class AttributesFromNamespaceShouldBeAdded() :
         Exception("Attributes from namespaces should be added!");
+    
+    public sealed class CurrentIdTypeWasNotSupported() :
+        Exception("Current Id type was not supported. Please create a join us to contribute more!");
 }
