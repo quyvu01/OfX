@@ -5,7 +5,11 @@ namespace OfX.Cached;
 
 public static class OfXCached
 {
+    internal static Dictionary<Type, Type> InternalQueryMapHandler { get; } = [];
+    public static IReadOnlyDictionary<Type, Type> QueryMapHandler => InternalQueryMapHandler;
+
     private static readonly Lazy<ConcurrentDictionary<Type, Func<object[], object>>> ConstructorCache = new(() => []);
+
     public static object CreateInstanceWithCache(Type type, params object[] args)
     {
         if (ConstructorCache.Value.TryGetValue(type, out var factory)) return factory(args);
@@ -24,5 +28,4 @@ public static class OfXCached
 
         return factory(args);
     }
-    
 }

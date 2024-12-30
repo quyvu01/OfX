@@ -8,7 +8,6 @@ using OfX.Cached;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
 using OfX.Responses;
-using OfX.Statics;
 
 namespace OfX.Grpc.Servers;
 
@@ -28,7 +27,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             if (attributeType is null)
                 throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(request.AttributeAssemblyType);
 
-            if (!OfXStatics.QueryMapHandler.TryGetValue(attributeType, out var handlerType))
+            if (!OfXCached.QueryMapHandler.TryGetValue(attributeType, out var handlerType))
                 throw new OfXGrpcExceptions.CannotFindHandlerForOfAttribute(attributeType);
 
             var handler = serviceProvider.GetRequiredService(handlerType);
@@ -40,7 +39,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
 
             var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
-            
+
             var query = OfXCached.CreateInstanceWithCache(queryType, request.SelectorIds.ToList(),
                 request.Expression);
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);

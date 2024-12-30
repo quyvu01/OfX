@@ -9,11 +9,10 @@ using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
+using OfX.EntityFrameworkCore.Implementations;
 using OfX.EntityFrameworkCore.Services;
-using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Registries;
-using OfX.Statics;
 
 namespace OfX.EntityFrameworkCore.Extensions;
 
@@ -23,7 +22,7 @@ public static class EntityFrameworkExtensions
     private static readonly Type baseGenericType = typeof(EfQueryOfHandler<,>);
     private static readonly Type interfaceGenericType = typeof(IQueryOfHandler<,>);
 
-    public static OfXServiceInjector AddOfXEFCore(this OfXServiceInjector ofXServiceInjector,
+    public static OfXRegister AddOfXEFCore(this OfXRegister ofXServiceInjector,
         Action<OfXEfCoreRegistrar> registrarAction)
     {
         var newOfXEfCoreRegistrar = new OfXEfCoreRegistrar();
@@ -31,7 +30,7 @@ public static class EntityFrameworkExtensions
         var dbContextTypes = newOfXEfCoreRegistrar.DbContextTypes;
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
-        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        var serviceCollection = ofXServiceInjector.ServiceCollection;
         dbContextTypes.ForEach(dbContextType =>
         {
             serviceCollection.AddScoped(sp =>
@@ -59,7 +58,7 @@ public static class EntityFrameworkExtensions
         return ofXServiceInjector;
     }
 
-    private static void AddEfQueryOfXHandlers(OfXServiceInjector serviceInjector, OfXEfCoreRegistrar ofXEfCoreRegistrar)
+    private static void AddEfQueryOfXHandlers(OfXRegister ofXRegister, OfXEfCoreRegistrar ofXEfCoreRegistrar)
     {
         var modelsHasOfXConfig = ofXEfCoreRegistrar.ModelConfigurationAssembly
             .ExportedTypes
@@ -109,9 +108,8 @@ public static class EntityFrameworkExtensions
             // Create the dynamic type
             var dynamicType = typeBuilder.CreateType();
             var parentType = interfaceGenericType.MakeGenericType(m.ModelType, m.OfXAttribute);
-            if (!OfXStatics.InternalQueryMapHandler.TryAdd(m.OfXAttribute, parentType))
-                throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
-            serviceInjector.OfXRegister.ServiceCollection.AddScoped(parentType, dynamicType);
+            var extensionHandlerInstaller = new EfCoreExtensionHandlersInstaller(ofXRegister.ServiceCollection);
+            extensionHandlerInstaller.AddExtensionHandler(parentType, dynamicType, m.OfXAttribute);
         });
     }
 }
