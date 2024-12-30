@@ -30,7 +30,11 @@ public class OfXCoreTests : ServicesBuilding
                             c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
                         });
                     })
-                    .AddOfXEFCore<TestDbContext>();
+                    .AddOfXEFCore(options =>
+                    {
+                        options.AddDbContexts(typeof(TestDbContext));
+                        options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
+                    });
             })
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();

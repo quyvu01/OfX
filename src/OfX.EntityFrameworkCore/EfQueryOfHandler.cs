@@ -5,73 +5,57 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Delegates;
-using OfX.Helpers;
 using OfX.Responses;
 
 namespace OfX.EntityFrameworkCore;
 
-public abstract class EfQueryOfXHandler<TModel, TAttribute> : IQueryOfHandler<TModel, TAttribute>
+public class EfQueryOfHandler<TModel, TAttribute>(
+    IServiceProvider serviceProvider,
+    string idPropertyName,
+    string defaultPropertyName)
+    : IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute
 {
-    private readonly string _idAlias;
+    private static readonly Lazy<ConcurrentDictionary<string, Expression<Func<TModel, OfXDataResponse>>>>
+        ExpressionMapModelStorage = new(() => []);
 
-    private const string DefaultIdAlias = "Id";
-
-    private readonly Func<RequestOf<TAttribute>, Expression<Func<TModel, bool>>> _filterFunction;
-    private readonly Expression<Func<TModel, OfXDataResponse>> _howToGetDefaultData;
-    private readonly DbSet<TModel> _collection;
-
-    /// <summary>
-    /// Note that the Id will automatically be selected. To modify this one, please update this method either
-    /// </summary>
-    protected virtual string SetIdAlias() => DefaultIdAlias;
-
-    private static readonly Lazy<ConcurrentDictionary<QueryExpressionData, Expression<Func<TModel, OfXDataResponse>>>>
-        LazyStorage = new(() => []);
-
-    protected EfQueryOfXHandler(IServiceProvider serviceProvider)
-    {
-        _filterFunction = SetFilter();
-        _howToGetDefaultData = SetHowToGetDefaultData();
-        ExceptionHelpers.ThrowIfNull(_filterFunction);
-        ExceptionHelpers.ThrowIfNull(_howToGetDefaultData);
-        _idAlias = SetIdAlias();
-        _collection = serviceProvider.GetRequiredService<GetEfDbContext>().Invoke(typeof(TModel))
-            .GetCollection<TModel>();
-    }
-
-    protected abstract Func<RequestOf<TAttribute>, Expression<Func<TModel, bool>>> SetFilter();
-
-    protected abstract Expression<Func<TModel, OfXDataResponse>> SetHowToGetDefaultData();
-
-    protected virtual Task HandleContextAsync(RequestContext<TAttribute> context) => Task.CompletedTask;
+    private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
+        .Invoke(typeof(TModel)).GetCollection<TModel>();
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        await HandleContextAsync(context);
-        var filter = _filterFunction.Invoke(context.Query);
+        var query = context.Query.Expression is null
+            ? context.Query with { Expression = defaultPropertyName }
+            : context.Query;
         var data = await _collection
             .AsNoTracking()
-            .Where(filter)
-            .Select(BuildResponse(context.Query))
+            .Where(BuildFilter(context.Query))
+            .Select(BuildResponse(query))
             .ToListAsync(context.CancellationToken);
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
+    // Todo: This is very first version, which is support for string. I need to define for specific type. This will be update later one!
+    private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
+    {
+        var parameter = Expression.Parameter(typeof(TModel), "x");
+        var property = Expression.Property(parameter, idPropertyName);
+        var selectorsConstant = Expression.Constant(query.SelectorIds);
+        var containsMethod = typeof(List<string>).GetMethod("Contains", [typeof(string)]);
+        var containsCall = Expression.Call(selectorsConstant, containsMethod!, property);
+        return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
+    }
+
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
-        if (string.IsNullOrWhiteSpace(request.Expression)) return _howToGetDefaultData;
-
-        return LazyStorage.Value.GetOrAdd(new QueryExpressionData(request.Expression, typeof(TModel)), expressionData =>
+        return ExpressionMapModelStorage.Value.GetOrAdd(request.Expression, expression =>
         {
-            var expression = expressionData.Expression;
             var parameter = Expression.Parameter(typeof(TModel), "x");
 
             // Access the Id property on the model
-            var idProperty = Expression.Property(parameter, _idAlias);
+            var idProperty = Expression.Property(parameter, idPropertyName);
             var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
             var idAsString = Expression.Call(idProperty, toStringMethod!);
 
