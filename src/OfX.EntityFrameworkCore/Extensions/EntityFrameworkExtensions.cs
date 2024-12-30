@@ -10,8 +10,10 @@ using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Registries;
+using OfX.Statics;
 
 namespace OfX.EntityFrameworkCore.Extensions;
 
@@ -106,8 +108,10 @@ public static class EntityFrameworkExtensions
 
             // Create the dynamic type
             var dynamicType = typeBuilder.CreateType();
-            serviceInjector.OfXRegister.ServiceCollection.AddScoped(
-                interfaceGenericType.MakeGenericType(m.ModelType, m.OfXAttribute), dynamicType);
+            var parentType = interfaceGenericType.MakeGenericType(m.ModelType, m.OfXAttribute);
+            if (!OfXStatics.InternalQueryMapHandler.TryAdd(m.OfXAttribute, parentType))
+                throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
+            serviceInjector.OfXRegister.ServiceCollection.AddScoped(parentType, dynamicType);
         });
     }
 }
