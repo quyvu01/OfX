@@ -30,7 +30,7 @@ public static class EntityFrameworkExtensions
                     "DbContext must be registered first!");
             return new EfDbContextWrapped<TDbContext>(dbContext);
         });
-        serviceCollection.AddSingleton<GetEfDbContext>(sp => modelType =>
+        serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
             if (modelTypeLookUp.Value.TryGetValue(modelType, out var serviceType))
                 return sp.GetServices<IOfXEfDbContext>().First(a => a.GetType() == serviceType);
