@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Cached;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.Responses;
 
@@ -37,28 +39,25 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
-    // Todo: This is very first version, which is support for string. I need to define for specific type. This will be update later one!
+    // Currently, the Id type is supported for primitive type, in the next version. The strongly-type should be supported!
+    // I cannot find the way to optimize this one on this moment because seem this cannot be cached.
+    // Tried to use FromRawSql, but I need to write all Query like Select * from...
+    // Mark this one as the issue. I'll back later one!
+    // May I should cache the containsMethod, idAsString first!
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
-        var parameter = Expression.Parameter(typeof(TModel), "x");
-        var property = Expression.Property(parameter, idPropertyName);
+        var modelIdData = GetModelData();
         var selectorsConstant = Expression.Constant(query.SelectorIds);
-        var containsMethod = typeof(List<string>).GetMethod("Contains", [typeof(string)]);
-        var containsCall = Expression.Call(selectorsConstant, containsMethod!, property);
-        return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
+        var containsCall = Expression.Call(selectorsConstant, OfXCached.IdsContainsMethodLazy.Value,
+            modelIdData.MethodCallExpression);
+        return Expression.Lambda<Func<TModel, bool>>(containsCall, modelIdData.ParameterExpression);
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         return ExpressionMapModelStorage.Value.GetOrAdd(request.Expression, expression =>
         {
-            var parameter = Expression.Parameter(typeof(TModel), "x");
-
-            // Access the Id property on the model
-            var idProperty = Expression.Property(parameter, idPropertyName);
-            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
-            var idAsString = Expression.Call(idProperty, toStringMethod!);
-
+            var (parameter, idAsString) = GetModelData();
             var expressionParts = expression.Split('.');
             Expression currentExpression = parameter;
             var currentType = typeof(TModel);
@@ -113,10 +112,8 @@ public class EfQueryOfHandler<TModel, TAttribute>(
             // Create member bindings for Id and serialized Value
             var bindings = new List<MemberBinding>
             {
-                Expression.Bind(typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Id))!,
-                    idAsString),
-                Expression.Bind(typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Value))!,
-                    serializeCall)
+                Expression.Bind(typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Id))!, idAsString),
+                Expression.Bind(typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Value))!, serializeCall)
             };
 
             // Create a new OfXDataResponse object
@@ -126,4 +123,14 @@ public class EfQueryOfHandler<TModel, TAttribute>(
             return Expression.Lambda<Func<TModel, OfXDataResponse>>(newExpression, parameter);
         });
     }
+
+    private ModelIdData GetModelData() => OfXCached.ModelIdDataCachedLazy
+        .Value.GetOrAdd(typeof(TModel), modelType =>
+        {
+            var parameter = Expression.Parameter(modelType, "x");
+            var idProperty = Expression.Property(parameter, idPropertyName);
+            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+            var idAsString = Expression.Call(idProperty, toStringMethod!);
+            return new ModelIdData(parameter, idAsString);
+        });
 }

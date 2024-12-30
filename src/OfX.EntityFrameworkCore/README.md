@@ -65,7 +65,7 @@ public class User
 ```
 That all! Let go to the moon!
 
-Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!
+Note: Currently, the Id type is supported for primitive type, in the next version. The strongly-type should be supported!
 
 | Package Name                                             | Description                                                                                     | .NET Version | Document                                                                  |
 |----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------|
