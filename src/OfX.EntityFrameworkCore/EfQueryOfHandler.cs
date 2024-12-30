@@ -129,7 +129,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         {
             var parameter = Expression.Parameter(modelType, "x");
             var idProperty = Expression.Property(parameter, idPropertyName);
-            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+            var toStringMethod = idProperty.Type.GetMethod(nameof(ToString), Type.EmptyTypes);
             var idAsString = Expression.Call(idProperty, toStringMethod!);
             return new ModelIdData(parameter, idAsString);
         });
