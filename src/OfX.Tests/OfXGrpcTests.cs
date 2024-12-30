@@ -33,7 +33,11 @@ public sealed class OfXGrpcTests : ServicesBuilding
                                 c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(ProvinceOfAttribute)]);
                             });
                         })
-                        .AddOfXEFCore<TestDbContext>();
+                        .AddOfXEFCore(options =>
+                        {
+                            options.AddDbContexts(typeof(TestDbContext));
+                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
+                        });
                 })
                 .InstallAllServices();
         }
@@ -65,7 +69,11 @@ public sealed class OfXGrpcTests : ServicesBuilding
                                     [typeof(UserOfAttribute), typeof(ProvinceOfAttribute)]);
                             });
                         })
-                        .AddOfXEFCore<TestDbContext>();
+                        .AddOfXEFCore(options =>
+                        {
+                            options.AddDbContexts(typeof(TestDbContext));
+                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
+                        });
                 })
                 .InstallAllServices();
         }

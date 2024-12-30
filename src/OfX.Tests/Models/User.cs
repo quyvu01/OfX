@@ -1,5 +1,9 @@
+using OfX.Attributes;
+using OfX.Tests.Attributes;
+
 namespace OfX.Tests.Models;
 
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
 public class User
 {
     public string Id { get; set; }

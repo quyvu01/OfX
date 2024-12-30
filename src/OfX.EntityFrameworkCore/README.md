@@ -42,51 +42,30 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
     cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 })
-.AddOfXEFCore<ServiceDbContext>();
+.AddOfXEFCore(options =>
+{
+    options.AddDbContexts(typeof(TestDbContext));
+    options.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
+});
 ```
 
-After installing the package OfX-EFCore, you can use the extension method `RegisterOfXEntityFramework()`, which takes two arguments: the `DbContext` and the handlers assembly.
+After installing the package OfX-EFCore, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to executing.
 
-### 2. Write a Handler Using EF Core
-
-Implement a request handler to fetch the required data using Entity Framework Core. For example:
+### 2. Mark the model you want to use with OfXAttribute
+Example:
 
 ```csharp
-public sealed class UserOfXHandler(IServiceProvider serviceProvider)
-    : EfQueryOfXHandler<User, UserOfAttribute>(serviceProvider)
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
+public class User
 {
-    protected override Func<RequestOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
-        q => u => q.SelectorIds.Contains(u.Id);
-
-    protected override Expression<Func<User, OfXDataResponse>> SetHowToGetDefaultData() =>
-        u => new OfXDataResponse { Id = u.Id, Value = u.Name };
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
 }
 ```
+That all! Let go to the moon!
 
-### Function Details
-
-#### `SetFilter`
-This function is used to define the filter for querying data. It takes the query (`GetUserOfXQuery`) as an argument and returns an `Expression<Func<TModel, bool>>`, where `TModel` is your EF Core entity.
-
-Example:
-```csharp
-protected override Func<RequestOf<UserOfAttribute>, Expression<Func<User, bool>>> SetFilter() =>
-    q => u => q.SelectorIds.Contains(u.Id);
-```
-Here, `SetFilter` ensures that only entities matching the provided `SelectorIds` in the query are retrieved.
-
-#### `SetHowToGetDefaultData`
-This function specifies how to map the retrieved entity to the default data format. It returns an `Expression<Func<TModel, OfXDataResponse>>`, where `TModel` is your EF Core entity and `OfXDataResponse` is the mapped data structure.
-
-Example:
-```csharp
-protected override Expression<Func<User, OfXDataResponse>> SetHowToGetDefaultData() =>
-    u => new OfXDataResponse { Id = u.Id, Value = u.Name };
-```
-Here, `SetHowToGetDefaultData` maps the `Id` and `Name` of the `User` entity to the `OfXDataResponse` format.
-
-By overriding these functions, you can customize the filtering logic and data mapping behavior to suit your application's requirements.
-
+Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!
 
 | Package Name                                             | Description                                                                                     | .NET Version | Document                                                                  |
 |----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------|
