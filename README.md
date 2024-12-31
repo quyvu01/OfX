@@ -110,7 +110,7 @@ public sealed class SomeDataResponse
 }
 ```
 
-### 3. Write a Handler in Your Service to Fetch the Data
+### 3. Write a Handler in Your Service to Fetch the Data when you are using OfX only. If you use OfX-gRPC or other transport data layer(next version extension packages), there are no need to create Handlers anymore!
 Implement a handler to process data requests. For example:
 ```csharp
 public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
