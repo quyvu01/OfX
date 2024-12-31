@@ -79,6 +79,8 @@ cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
+#### AddReceivedPipelines
+
 When you want to create some pipelines to handle the request of some attribute.
 Parameters:
 `Action<ReceivedPipeline>`: add the pipelines.
