@@ -56,7 +56,7 @@ builder.Services.AddOfX(cfg =>
 
 Registers assemblies that contain the attributes, used by OfX for data mapping.
 
-The Attribute should be inherited from `OfXAttribute` will be scanned!
+The Attribute should be inherited from `OfXAttribute` and will be scanned!
 
 Parameters:
 `Assembly`: The assembly containing the (OfX) attributes.
@@ -72,22 +72,22 @@ If this function is not called. The default value `ItemsResponse<OfXDataResponse
 Parameters:
 `Type`: A marker type within the assembly that includes the handler implementations.
 Example:
+
 ```csharp
-cfg.AddReceivedPipelines(c =>
-    {
-        c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
-    });
+cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 ```
 
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
-#### AddReceivedPipelines
 When you want to create some pipelines to handle the request of some attribute.
 Parameters:
 `Action<ReceivedPipeline>`: add the pipelines.
 Example:
 ```csharp
-cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
+cfg.AddReceivedPipelines(c =>
+    {
+        c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
+    });
 ```
 
 ### 2. Integrate the Attribute into Your Model, Entity, or DTO
