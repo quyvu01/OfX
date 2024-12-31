@@ -43,7 +43,11 @@ Add the OfX to your service configuration to register OfX:
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
-    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); <- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC, there is no need to add this one anymore!
+    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); //<- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC, there is no need to add this one anymore!
+    cfg.AddReceivedPipelines(c =>
+    {
+        c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
+    });
 });
 ```
 
@@ -57,9 +61,9 @@ The Attribute should be inherited from `OfXAttribute` will be scanned!
 Parameters:
 `Assembly`: The assembly containing the (OfX) attributes.
 
-#### RegisterHandlersContainsAssembly
+#### AddHandlersFromNamespaceContaining
 
-Registers assemblies that contain handlers responsible for processing queries or commands for data retrieval.
+Add assemblies that contain handlers responsible for processing queries or commands for data retrieval.
 
 Handlers are the execution units that resolve attributes applied to models.
 
@@ -69,10 +73,22 @@ Parameters:
 `Type`: A marker type within the assembly that includes the handler implementations.
 Example:
 ```csharp
-cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
+cfg.AddReceivedPipelines(c =>
+    {
+        c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
+    });
 ```
 
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
+
+#### AddReceivedPipelines
+When you want to create some pipelines to handle the request of some attribute.
+Parameters:
+`Action<ReceivedPipeline>`: add the pipelines.
+Example:
+```csharp
+cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
+```
 
 ### 2. Integrate the Attribute into Your Model, Entity, or DTO
 Apply the attribute to your properties like this:
