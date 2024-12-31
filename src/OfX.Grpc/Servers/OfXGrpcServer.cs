@@ -13,7 +13,7 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private const string GetDataAsync = nameof(GetDataAsync);
+    private const string ExecuteAsync = nameof(ExecuteAsync);
 
     private static readonly Lazy<ConcurrentDictionary<Type, MethodInfo>> MethodInfoStorage =
         new(() => new ConcurrentDictionary<Type, MethodInfo>());
@@ -30,12 +30,16 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             if (!OfXCached.QueryMapHandler.TryGetValue(attributeType, out var handlerType))
                 throw new OfXGrpcExceptions.CannotFindHandlerForOfAttribute(attributeType);
 
-            var handler = serviceProvider.GetRequiredService(handlerType);
+            var modelArg = handlerType.GetGenericArguments()[0];
 
-            var genericMethod = MethodInfoStorage.Value.GetOrAdd(attributeType, q => handler.GetType().GetMethods()
+            var pipeline = serviceProvider
+                .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
+
+            var pipelineMethod = MethodInfoStorage.Value.GetOrAdd(attributeType, q => pipeline.GetType().GetMethods()
                 .FirstOrDefault(m =>
-                    m.Name == GetDataAsync && m.GetParameters() is { Length: 1 } parameters &&
+                    m.Name == ExecuteAsync && m.GetParameters() is { Length: 1 } parameters &&
                     parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
+
             var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
 
             var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
@@ -47,9 +51,8 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
                 .CreateInstance(requestContextType, query, headers, context.CancellationToken);
             object[] arguments = [requestContext];
             // Invoke the method and get the result
-            var requestTask = ((Task<ItemsResponse<OfXDataResponse>>)genericMethod
-                .Invoke(handler, arguments))!;
-            var response = await requestTask;
+            var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
+                .Invoke(pipeline, arguments))!;
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a => res.Items.Add(new ItemGrpc { Id = a.Id, Value = a.Value }));
             return res;

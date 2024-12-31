@@ -46,10 +46,6 @@ public static class OfXExtensions
                 });
         }
 
-
-        serviceCollection.AddScoped<IDataMappableService>(sp =>
-            new DataMappableService(sp, newOfRegister.AttributesRegister));
-
         var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
         newOfRegister.AttributesRegister.SelectMany(a => a.ExportedTypes)
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(OfXAttribute).IsAssignableFrom(t))
@@ -63,12 +59,17 @@ public static class OfXExtensions
                 // So we have to replace the default service if existed -> Good!
                 serviceCollection.TryAddScoped(parentType, defaultImplementedService);
             });
+        
+        serviceCollection.AddScoped<IDataMappableService>(sp =>
+            new DataMappableService(sp, newOfRegister.AttributesRegister));
+        
+        serviceCollection.AddScoped(typeof(ReceivedPipelinesImpl<,>));
+
         return newOfRegister;
     }
 
     public static void AddExtensionHandler(this IExtensionHandlersInstaller extensionHandlersInstaller,
-        Type serviceType,
-        Type implementationType, Type attributeType)
+        Type serviceType, Type implementationType, Type attributeType)
     {
         if (!OfXCached.InternalQueryMapHandler.TryAdd(attributeType, serviceType))
             throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();

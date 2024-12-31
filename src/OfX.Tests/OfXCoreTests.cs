@@ -7,6 +7,7 @@ using OfX.Grpc.Extensions;
 using OfX.Tests.Attributes;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
+using OfX.Tests.Pipelines;
 using Xunit;
 
 namespace OfX.Tests;
@@ -26,9 +27,8 @@ public class OfXCoreTests : ServicesBuilding
                         options.AddAttributesContainNamespaces(assembly);
                         options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
                         options.AddGrpcClients(c =>
-                        {
-                            c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
-                        });
+                            c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]));
+                        options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesImpl<>)));
                     })
                     .AddOfXEFCore(options =>
                     {

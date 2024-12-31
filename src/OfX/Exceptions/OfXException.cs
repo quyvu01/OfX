@@ -10,4 +10,7 @@ public static class OfXException
     
     public sealed class CurrentIdTypeWasNotSupported() :
         Exception("Current Id type was not supported. Please create a join us to contribute more!");
+    
+    public sealed class PipelineIsNotReceivedPipelineBehavior(Type type) :
+        Exception($"The input pipeline: {type.Name} is not matched with ReceivedPipelineBehavior. Please check again!");
 }
