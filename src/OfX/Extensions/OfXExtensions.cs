@@ -63,7 +63,7 @@ public static class OfXExtensions
         serviceCollection.AddScoped<IDataMappableService>(sp =>
             new DataMappableService(sp, newOfRegister.AttributesRegister));
         
-        serviceCollection.AddScoped(typeof(ReceivedPipelinesImpl<,>));
+        serviceCollection.AddTransient(typeof(ReceivedPipelinesImpl<,>));
 
         return newOfRegister;
     }
