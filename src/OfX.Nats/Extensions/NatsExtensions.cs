@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NATS.Client;
+using NATS.Net;
 using OfX.Nats.Abstractions;
 using OfX.Nats.ApplicationModels;
 using OfX.Nats.Implementations;
@@ -15,18 +17,12 @@ public static class NatsExtensions
         var newClientsRegister = new NatsClientRegister();
         options.Invoke(newClientsRegister);
         // Register NATS connection as a singleton
+
+
         ofXRegister.ServiceCollection.AddSingleton(_ =>
         {
-            var connectionFactory = new ConnectionFactory();
-            var natsOptions = ConnectionFactory.GetDefaultOptions();
-            natsOptions.AllowReconnect = true;
-            natsOptions.MaxReconnect = -1;
-            natsOptions.ReconnectWait = 2000;
-            natsOptions.Timeout = 5000;
-            natsOptions.Url = newClientsRegister.NatsClient.NatsHost;
-            natsOptions.User = newClientsRegister.NatsClient.NatsCredential.NatsUserName;
-            natsOptions.Password = newClientsRegister.NatsClient.NatsCredential.NatsPassword;
-            return connectionFactory.CreateConnection(natsOptions);
+            var client = new NatsClient(newClientsRegister.NatsClientConfig.NatsHost);
+            return client;
         });
         ClientsRegister(ofXRegister.ServiceCollection);
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
@@ -39,6 +35,6 @@ public static class NatsExtensions
     public static void StartNatsServerAsync(this IServiceProvider serviceProvider)
     {
         var serverListening = new NatsServersListening(serviceProvider);
-        serverListening.StartAsync();
+        _ = serverListening.StartAsync();
     }
 }

@@ -44,12 +44,12 @@ public sealed class OfXNatsTest : ServicesBuilding
     public async Task Test()
     {
         await Task.Yield();
-        // var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
-        // var member = new Member { UserId = "1" };
-        // var user = await dbContext.Users.FirstOrDefaultAsync(a => a.Id == "1");
-        // var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
-        // await dataMappableService.MapDataAsync(member);
-        // Assert.Equal(user?.Name, member.UserName);
-        // Assert.Equal(user?.Email, member.UserEmail);
+        var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
+        var member = new Member { UserId = "1" };
+        var user = await dbContext.Users.FirstOrDefaultAsync(a => a.Id == "1");
+        var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
+        await dataMappableService.MapDataAsync(member);
+        Assert.Equal(user?.Name, member.UserName);
+        Assert.Equal(user?.Email, member.UserEmail);
     }
 }

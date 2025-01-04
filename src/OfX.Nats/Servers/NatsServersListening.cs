@@ -1,11 +1,8 @@
-using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
-using NATS.Client;
+using NATS.Net;
 using OfX.Abstractions;
 using OfX.Cached;
 using OfX.Exceptions;
-using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Implementations;
 using OfX.Nats.Messages;
@@ -15,24 +12,28 @@ namespace OfX.Nats.Servers;
 
 public class NatsServersListening(IServiceProvider serviceProvider)
 {
-    public void StartAsync()
+    public async Task StartAsync()
     {
-        var connection = serviceProvider.GetRequiredService<IConnection>();
+        var natsClient = serviceProvider.GetRequiredService<NatsClient>();
         var serviceTypes = typeof(IQueryOfHandler<,>);
         var handlers = OfXCached.AttributeMapHandler.Values.ToList();
-        handlers.Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
-            .Select(a => a.GetGenericArguments()[1])
-            .ForEach(attributeType => connection.SubscribeAsync(attributeType.GetAssemblyName(), (_, args) =>
+        var attributeTypes = handlers
+            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
+            .Select(a => a.GetGenericArguments()[1]);
+        foreach (var attributeType in attributeTypes)
+        {
+            await foreach (var message in natsClient.SubscribeAsync<MessageRequestOf>(
+                               attributeType.GetAssemblyName()))
             {
-                var request = Encoding.UTF8.GetString(args.Message.Data);
-                var messageDeserialize = JsonSerializer.Deserialize<NatsMessageReceived>(request);
-
+                if (message.Data is null) continue;
                 if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
                     throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
                 var modelArg = handlerType.GetGenericArguments()[0];
 
-                var pipeline = serviceProvider
+                var serviceScope = serviceProvider.CreateScope();
+
+                var pipeline = serviceScope.ServiceProvider
                     .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
 
                 var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
@@ -41,16 +42,17 @@ public class NatsServersListening(IServiceProvider serviceProvider)
 
                 var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
 
-                var query = OfXCached.CreateInstanceWithCache(queryType, messageDeserialize.Query.SelectorIds.ToList(),
-                    messageDeserialize.Query.Expression);
-                var headers = messageDeserialize.Headers;
+                var query = OfXCached.CreateInstanceWithCache(queryType, message.Data.SelectorIds.ToList(),
+                    message.Data.Expression);
+                var headers = message.Headers?
+                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
                 var requestContext = Activator
                     .CreateInstance(requestContextType, query, headers, CancellationToken.None);
                 // Invoke the method and get the result
-                var response = ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
+                var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
                     .Invoke(pipeline, [requestContext]))!;
-                var result = JsonSerializer.Serialize(response.Result);
-                connection.Publish(args.Message.Reply, Encoding.UTF8.GetBytes(result));
-            }));
+                await natsClient.PublishAsync(message.ReplyTo!, response);
+            }
+        }
     }
 }

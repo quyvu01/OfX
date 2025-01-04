@@ -2,10 +2,10 @@ namespace OfX.Nats.ApplicationModels;
 
 public class NatsClientRegister
 {
-    public NatsClient NatsClient { get; } = new();
+    public NatsClientConfig NatsClientConfig { get; } = new();
 
-    public void UseNats(Action<NatsClient> options)
+    public void UseNats(Action<NatsClientConfig> options)
     {
-        options.Invoke(NatsClient);
+        options.Invoke(NatsClientConfig);
     }
 }
