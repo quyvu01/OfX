@@ -1,6 +1,6 @@
-# OfX-Nats
+# OfX.EntityFrameworkCore
 
-OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX.EntityFrameworkCore is an extension package for OfX that integrates with Entity Framework Core to simplify data fetching by leveraging attribute-based data mapping. This extension streamlines data retrieval using EF Core, reducing boilerplate code and improving maintainability.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -8,61 +8,69 @@ OfX-Nats is an extension package for OfX that leverages Nats for efficient data 
 
 ## Introduction
 
-Nats-based Transport: Implements Nats to handle data communication between services, providing a fast, secure, and scalable solution.
+OfX.EntityFrameworkCore extends the core OfX library by providing seamless integration with Entity Framework Core. This enables developers to automatically map and retrieve data directly from a database, leveraging the power of EF Core along with attribute-based data mapping.
+
+For example, suppose you have a `UserId` property in your model, and you want to fetch the corresponding `UserName` and `Email` fields from the database. By using OfX.EntityFrameworkCore, you can annotate your model with attributes, and the library will handle data fetching for you.
 
 ---
 
 ## Installation
 
-To install the OfX-Nats package, use the following NuGet command:
+To install the OfX.EntityFrameworkCore package, use the following NuGet command:
 
 ```bash
-dotnet add package OfX-Nats
+dotnet add package OfX-EFCore
 ```
 
 Or via the NuGet Package Manager:
 
 ```bash
-Install-Package OfX-Nats
+Install-Package OfX-EFCore
 ```
 
 ---
 
 ## How to Use
 
-### 1. Register OfX-Nats
+### 1. Register OfX.EntityFrameworkCore
 
-Add OfX-Nats to your service configuration during application startup:
-
-For Client:
+Add OfX.EntityFrameworkCore to your service configuration during application startup:
 
 ```csharp
 builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
-    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
-    cfg.AddNats(config => config
-        config.UseNats((context, bus) =>
-        {
-            bus.Host(host, c =>
-            {
-                c.Username(userName);
-                c.Password(password);
-            });
-            bus.ConfigureEndpoints(context);
-        });
-    );
-
+})
+.AddOfXEFCore(options =>
+{
+    options.AddDbContexts(typeof(TestDbContext));
+    options.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 });
 ```
-That All, enjoy your moment!
 
+After installing the package OfX-EFCore, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to executing.
 
-| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                                 |
-|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
-| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
-| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
-| [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)     | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. | 8.0, 9.0     | This Document                                                                            |
+### 2. Mark the model you want to use with OfXAttribute
+Example:
 
+```csharp
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
+public class User
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+}
+```
+That all! Let go to the moon!
+
+Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!
+
+| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                      |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                  |
+| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | This Document                                                                 |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)     |
+| [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)     | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/dev-nats/src/OfX.Nats/README.md) |
 ---

@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Extensions;
+using OfX.Grpc.Abstractions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
-using OfX.Grpc.HandlersInstaller;
 using OfX.Grpc.Servers;
 using OfX.Helpers;
 using OfX.Queries.OfXQueries;
@@ -19,12 +19,12 @@ namespace OfX.Grpc.Extensions;
 public static class GrpcExtensions
 {
     private static readonly TimeSpan defaultRequestTimeout = TimeSpan.FromSeconds(3);
+
     public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
         var hostMapAttributes = newClientsRegister.HostMapAttributes;
-        var attributesRegister = hostMapAttributes.Values.SelectMany(a => a);
 
         ofXRegister.ServiceCollection.TryAddScoped<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
         {
@@ -39,7 +39,8 @@ public static class GrpcExtensions
             ]);
             return itemsResponse;
         });
-        DefaultGrpcClientsInstaller.InstallerServices(ofXRegister.ServiceCollection, [..attributesRegister]);
+        Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
+            typeof(IOfXGrpcRequestClient<>), [..ofXRegister.OfXAttributeTypes]);
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,

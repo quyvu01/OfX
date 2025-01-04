@@ -37,21 +37,12 @@ Add OfX-Nats to your service configuration during application startup:
 For Client:
 
 ```csharp
-builder.Services.AddOfXEntityFrameworkCore(cfg =>
+builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
     cfg.AddNats(config => config
-        config.UseNats((context, bus) =>
-        {
-            bus.Host(host, c =>
-            {
-                c.Username(userName);
-                c.Password(password);
-            });
-            bus.ConfigureEndpoints(context);
-        });
-    );
+        .UseNats(c => c.Host("nats://localhost:4222")));
 
 });
 ```
@@ -62,6 +53,7 @@ That All, enjoy your moment!
 |----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
 | [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
 | [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | This Document                                                                            |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
+| [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)     | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. | 8.0, 9.0     | This Document                                                                            |
 
 ---

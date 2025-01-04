@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
-using OfX.Attributes;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
@@ -47,22 +46,20 @@ public static class OfXExtensions
         }
 
         var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
-        newOfRegister.AttributesRegister.SelectMany(a => a.ExportedTypes)
-            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(OfXAttribute).IsAssignableFrom(t))
-            .ForEach(attributeType =>
-            {
-                // I have to create a default handler, which is typically return an empty collection. Great!
-                // So the interface with the default method is a best choice!
-                var parentType = targetInterface.MakeGenericType(attributeType);
-                var defaultImplementedService = defaultImplementedInterface.MakeGenericType(attributeType);
-                // Using TryAddScoped is pretty cool. We don't need to check if the service is register or not!
-                // So we have to replace the default service if existed -> Good!
-                serviceCollection.TryAddScoped(parentType, defaultImplementedService);
-            });
-        
+        newOfRegister.OfXAttributeTypes.ForEach(attributeType =>
+        {
+            // I have to create a default handler, which is typically return an empty collection. Great!
+            // So the interface with the default method is a best choice!
+            var parentType = targetInterface.MakeGenericType(attributeType);
+            var defaultImplementedService = defaultImplementedInterface.MakeGenericType(attributeType);
+            // Using TryAddScoped is pretty cool. We don't need to check if the service is register or not!
+            // So we have to replace the default service if existed -> Good!
+            serviceCollection.TryAddScoped(parentType, defaultImplementedService);
+        });
+
         serviceCollection.AddScoped<IDataMappableService>(sp =>
             new DataMappableService(sp, newOfRegister.AttributesRegister));
-        
+
         serviceCollection.AddTransient(typeof(ReceivedPipelinesImpl<,>));
 
         return newOfRegister;

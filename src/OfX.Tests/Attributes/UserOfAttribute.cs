@@ -1,4 +1,3 @@
-using OfX.Abstractions;
 using OfX.Attributes;
 
 namespace OfX.Tests.Attributes;

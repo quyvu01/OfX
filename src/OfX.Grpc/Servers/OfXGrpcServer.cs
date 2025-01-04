@@ -1,10 +1,9 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Reflection;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Cached;
+using OfX.Exceptions;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
 using OfX.Responses;
@@ -13,11 +12,6 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private const string ExecuteAsync = nameof(ExecuteAsync);
-
-    private static readonly Lazy<ConcurrentDictionary<Type, MethodInfo>> MethodInfoStorage =
-        new(() => new ConcurrentDictionary<Type, MethodInfo>());
-
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
@@ -27,18 +21,15 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             if (attributeType is null)
                 throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(request.AttributeAssemblyType);
 
-            if (!OfXCached.QueryMapHandler.TryGetValue(attributeType, out var handlerType))
-                throw new OfXGrpcExceptions.CannotFindHandlerForOfAttribute(attributeType);
+            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
+                throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
             var modelArg = handlerType.GetGenericArguments()[0];
 
             var pipeline = serviceProvider
                 .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
 
-            var pipelineMethod = MethodInfoStorage.Value.GetOrAdd(attributeType, q => pipeline.GetType().GetMethods()
-                .FirstOrDefault(m =>
-                    m.Name == ExecuteAsync && m.GetParameters() is { Length: 1 } parameters &&
-                    parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
+            var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
 
             var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
 

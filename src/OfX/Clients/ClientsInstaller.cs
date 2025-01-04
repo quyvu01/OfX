@@ -3,23 +3,28 @@ using System.Reflection.Emit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
-using OfX.Grpc.Abstractions;
 
-namespace OfX.Grpc.HandlersInstaller;
+namespace OfX.Clients;
 
-internal static class DefaultGrpcClientsInstaller
+public static class ClientsInstaller
 {
-    public static void InstallerServices(IServiceCollection services, params Type[] attributeTypes)
+    /// <summary>
+    /// ServiceSubstituteType must be implemented from IMappableRequestHandler and have only IServiceProvider!
+    /// </summary>
+    /// <param name="serviceCollection"></param>
+    /// <param name="serviceSubstituteType"></param>
+    /// <param name="attributeTypes"></param>
+    public static void InstallMappableRequestHandlers(IServiceCollection serviceCollection, Type serviceSubstituteType, params Type[] attributeTypes)
     {
         var attributesBuilding = attributeTypes
-            .Select(a => (AttributeType: a, InterfaceType: typeof(IOfXGrpcRequestClient<>).MakeGenericType(a),
+            .Select(a => (AttributeType: a, InterfaceType: serviceSubstituteType.MakeGenericType(a),
                 ServiceType: typeof(IMappableRequestHandler<>).MakeGenericType(a)))
             .ToList();
 
         var assemblyName = new AssemblyName { Name = "DynamicInstanceAssemblyHandlers" };
         var newAssembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
         var newModule = newAssembly.DefineDynamicModule("DynamicInstanceModule");
-        var typeBuilder = newModule.DefineType("DefaultGrpcClientOfXHandlers", TypeAttributes.Public, null,
+        var typeBuilder = newModule.DefineType("DynamicOfXClientHandlers", TypeAttributes.Public, null,
             attributesBuilding.Select(a => a.InterfaceType).ToArray());
 
         // Add the constructor
@@ -49,16 +54,16 @@ internal static class DefaultGrpcClientsInstaller
         var handlersType = typeBuilder.CreateType();
         attributesBuilding.ForEach(c =>
         {
-            var existedService = services.FirstOrDefault(a => a.ServiceType == c.ServiceType);
+            var existedService = serviceCollection.FirstOrDefault(a => a.ServiceType == c.ServiceType);
             if (existedService is not null)
             {
                 if (existedService.ImplementationType !=
                     typeof(DefaultMappableRequestHandler<>).MakeGenericType(c.AttributeType)) return;
-                services.Replace(new ServiceDescriptor(c.ServiceType, handlersType, ServiceLifetime.Scoped));
+                serviceCollection.Replace(new ServiceDescriptor(c.ServiceType, handlersType, ServiceLifetime.Scoped));
                 return;
             }
 
-            services.AddScoped(c.ServiceType, handlersType);
+            serviceCollection.AddScoped(c.ServiceType, handlersType);
         });
     }
 }

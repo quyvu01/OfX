@@ -2,11 +2,18 @@
 
     <PropertyGroup>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>3.1.1</Version>
+        <Version>3.1.2</Version>
+        <Authors>Quy Vu</Authors>
+        <PackageId>OfX-Nats</PackageId>
+        <Description>Nats.io extension. Use Nats as Data transporting</Description>
+        <PackageTags>OfX;mappable;open-source;Nats.io</PackageTags>
+        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
     </PropertyGroup>
     
     <ItemGroup>
@@ -18,6 +25,10 @@
             <PackagePath/>
             <Link>OfX.png</Link>
         </None>
+    </ItemGroup>
+    
+    <ItemGroup>
+      <PackageReference Include="NATS.Client" Version="1.1.6" />
     </ItemGroup>
 
 </Project>
