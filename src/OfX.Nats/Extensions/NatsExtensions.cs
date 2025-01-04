@@ -1,6 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using NATS.Client;
 using NATS.Net;
 using OfX.Nats.Abstractions;
 using OfX.Nats.ApplicationModels;
@@ -35,6 +33,6 @@ public static class NatsExtensions
     public static void StartNatsServerAsync(this IServiceProvider serviceProvider)
     {
         var serverListening = new NatsServersListening(serviceProvider);
-        _ = serverListening.StartAsync();
+        serverListening.StartAsync();
     }
 }

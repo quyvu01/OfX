@@ -83,7 +83,7 @@ public sealed class DataMappableService(
                     var response = await requestTask;
                     return (CrossCuttingType: x.OfXAttributeType, x.Expression, Response: response);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     return emptyResponse;
                 }
