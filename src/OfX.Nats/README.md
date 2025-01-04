@@ -1,6 +1,6 @@
-# OfX-gRPC
+# OfX-Nats
 
-OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -8,31 +8,31 @@ OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data 
 
 ## Introduction
 
-gRPC-based Transport: Implements gRPC to handle data communication between services, providing a fast, secure, and scalable solution.
+Nats-based Transport: Implements Nats to handle data communication between services, providing a fast, secure, and scalable solution.
 
 ---
 
 ## Installation
 
-To install the OfX-gRPC package, use the following NuGet command:
+To install the OfX-Nats package, use the following NuGet command:
 
 ```bash
-dotnet add package OfX-gRPC
+dotnet add package OfX-Nats
 ```
 
 Or via the NuGet Package Manager:
 
 ```bash
-Install-Package OfX-gRPC
+Install-Package OfX-Nats
 ```
 
 ---
 
 ## How to Use
 
-### 1. Register OfX-gRPC
+### 1. Register OfX-Nats
 
-Add OfX-gRPC to your service configuration during application startup:
+Add OfX-Nats to your service configuration during application startup:
 
 For Client:
 
@@ -41,29 +41,20 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
-    cfg.AddGrpcClients(config => config
-        .AddGrpcHostWithOfXAttributes("http://localhost:5001", [typeof(UserOfAttribute)])
-        .AddGrpcHostWithOfXAttributes("http://localhost:5002", [typeof(CountryOfAttribute), typeof(ProvinceOfAttribute)...])
-        ... //Other host configurations, you can also filter attributes by creating an interface and then filtering the attributes that implement the interface...
-    ); //gRPC server host
+    cfg.AddNats(config => config
+        config.UseNats((context, bus) =>
+        {
+            bus.Host(host, c =>
+            {
+                c.Username(userName);
+                c.Password(password);
+            });
+            bus.ConfigureEndpoints(context);
+        });
+    );
 
 });
 ```
-
-
-For Server:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-...
-var app = builder.Build();
-...
-app.MapOfXGrpcService();
-...
-```
-
-After installing the package OfX-gRPC, you can use the extension method `AddGrpcClients()` for client and `MapOfXGrpcService()` for server. Look up at `AddGrpcClients` function, we have to define the contract assembly with server host, on this example above, all the queries are included in `SomeContractAssemblyMarker` assembly.
-
 That All, enjoy your moment!
 
 

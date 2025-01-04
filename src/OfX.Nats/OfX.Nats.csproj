@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+        <LangVersion>default</LangVersion>
+        <Version>3.1.1</Version>
+        <PackageIcon>OfX.png</PackageIcon>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\OfX\OfX.csproj"/>
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\..\OfX.png">
+            <Pack>True</Pack>
+            <PackagePath/>
+            <Link>OfX.png</Link>
+        </None>
+    </ItemGroup>
+
+</Project>
