@@ -1,4 +1,4 @@
-# OfX.EntityFrameworkCore
+# OfX-EfCore
 
 OfX.EntityFrameworkCore is an extension package for OfX that integrates with Entity Framework Core to simplify data fetching by leveraging attribute-based data mapping. This extension streamlines data retrieval using EF Core, reducing boilerplate code and improving maintainability.
 
@@ -8,7 +8,7 @@ OfX.EntityFrameworkCore is an extension package for OfX that integrates with Ent
 
 ## Introduction
 
-OfX.EntityFrameworkCore extends the core OfX library by providing seamless integration with Entity Framework Core. This enables developers to automatically map and retrieve data directly from a database, leveraging the power of EF Core along with attribute-based data mapping.
+OfX-EfCore extends the core OfX library by providing seamless integration with Entity Framework Core. This enables developers to automatically map and retrieve data directly from a database, leveraging the power of EF Core along with attribute-based data mapping.
 
 For example, suppose you have a `UserId` property in your model, and you want to fetch the corresponding `UserName` and `Email` fields from the database. By using OfX.EntityFrameworkCore, you can annotate your model with attributes, and the library will handle data fetching for you.
 
@@ -16,7 +16,7 @@ For example, suppose you have a `UserId` property in your model, and you want to
 
 ## Installation
 
-To install the OfX.EntityFrameworkCore package, use the following NuGet command:
+To install the OfX-EfCore package, use the following NuGet command:
 
 ```bash
 dotnet add package OfX-EFCore
@@ -32,9 +32,9 @@ Install-Package OfX-EFCore
 
 ## How to Use
 
-### 1. Register OfX.EntityFrameworkCore
+### 1. Register OfX-EfCore
 
-Add OfX.EntityFrameworkCore to your service configuration during application startup:
+Add OfX-EfCore to your service configuration during application startup:
 
 ```csharp
 builder.Services.AddOfXEntityFrameworkCore(cfg =>
