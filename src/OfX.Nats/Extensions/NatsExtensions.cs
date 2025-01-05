@@ -29,6 +29,6 @@ public static class NatsExtensions
     private static void ClientsRegister(IServiceCollection serviceCollection) =>
         serviceCollection.AddScoped(typeof(INatsRequester<>), typeof(NatsRequester<>));
 
-    public static void StartNatsServerAsync(this IHost host) =>
+    public static void StartNatsListeningAsync(this IHost host) =>
         NatsServersListening.StartAsync(host.Services);
 }

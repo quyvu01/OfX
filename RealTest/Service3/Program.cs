@@ -29,5 +29,5 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 }, 128);
 
 var app = builder.Build();
-app.StartNatsServerAsync();
+app.StartNatsListeningAsync();
 app.Run();
