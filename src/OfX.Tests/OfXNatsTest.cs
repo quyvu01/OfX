@@ -24,8 +24,7 @@ public sealed class OfXNatsTest : ServicesBuilding
                     {
                         options.AddAttributesContainNamespaces(assembly);
                         options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                        options.AddNats(config => config
-                            .UseNats(c => c.Host("nats://localhost:4222")));
+                        options.AddNats(config => config.Url("nats://localhost:4222"));
                     })
                     .AddOfXEFCore(options =>
                     {
@@ -37,7 +36,6 @@ public sealed class OfXNatsTest : ServicesBuilding
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
         dbContext.Users.AddRange(StaticData.StaticDataTest.Users);
         dbContext.SaveChanges();
-        ServiceProvider.StartNatsServerAsync();
     }
 
     [Fact]

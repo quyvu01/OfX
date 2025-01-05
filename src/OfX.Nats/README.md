@@ -41,10 +41,15 @@ builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
-    cfg.AddNats(config => config
-        .UseNats(c => c.Host("nats://localhost:4222")));
-
+    cfg.AddNats(config => config.Url("nats://localhost:4222"));
 });
+
+...
+
+var app = builder.Build();
+app.StartNatsServerAsync(); // When you want to create NatsHost
+app.Run();
+
 ```
 That All, enjoy your moment!
 

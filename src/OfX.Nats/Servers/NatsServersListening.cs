@@ -10,9 +10,9 @@ using OfX.Responses;
 
 namespace OfX.Nats.Servers;
 
-public class NatsServersListening(IServiceProvider serviceProvider)
+internal static class NatsServersListening
 {
-    public void StartAsync()
+    internal static void StartAsync(IServiceProvider serviceProvider)
     {
         var natsClient = serviceProvider.GetRequiredService<NatsClient>();
         var serviceTypes = typeof(IQueryOfHandler<,>);
@@ -20,42 +20,39 @@ public class NatsServersListening(IServiceProvider serviceProvider)
         var attributeTypes = handlers
             .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
             .Select(a => a.GetGenericArguments()[1]).ToList();
-        foreach (var attributeType in attributeTypes)
+        attributeTypes.ForEach(attributeType => Task.Factory.StartNew(async () =>
         {
-            _ = Task.Run(async () =>
+            var natsScribeAsync = natsClient.SubscribeAsync<MessageRequestOf>(attributeType.GetAssemblyName());
+            await foreach (var message in natsScribeAsync)
             {
-                await foreach (var message in natsClient.SubscribeAsync<MessageRequestOf>(
-                                   attributeType.GetAssemblyName()))
-                {
-                    if (message.Data is null) continue;
-                    if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
-                        throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
+                if (message.Data is null) continue;
+                if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
+                    throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
-                    var modelArg = handlerType.GetGenericArguments()[0];
+                var modelArg = handlerType.GetGenericArguments()[0];
 
-                    var serviceScope = serviceProvider.CreateScope();
+                var serviceScope = serviceProvider.CreateScope();
 
-                    var pipeline = serviceScope.ServiceProvider
-                        .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
+                var pipeline = serviceScope.ServiceProvider
+                    .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
 
-                    var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
+                var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
 
-                    var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
+                var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
 
-                    var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
+                var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
 
-                    var query = OfXCached.CreateInstanceWithCache(queryType, message.Data.SelectorIds.ToList(),
-                        message.Data.Expression);
-                    var headers = message.Headers?
-                        .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-                    var requestContext = Activator
-                        .CreateInstance(requestContextType, query, headers, CancellationToken.None);
-                    // Invoke the method and get the result
-                    var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
-                        .Invoke(pipeline, [requestContext]))!;
-                    await natsClient.PublishAsync(message.ReplyTo!, response);
-                }
-            });
-        }
+                var query = OfXCached.CreateInstanceWithCache(queryType, message.Data.SelectorIds.ToList(),
+                    message.Data.Expression);
+                var headers = message.Headers?
+                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
+                var requestContext = Activator
+                    .CreateInstance(requestContextType, query, headers, CancellationToken.None);
+                // Invoke the method and get the result
+                var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
+                    .Invoke(pipeline, [requestContext]))!;
+                await natsClient.PublishAsync(message.ReplyTo!, response);
+            }
+        }));
     }
 }

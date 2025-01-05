@@ -11,8 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(options => options
-            .UseNats(c => c.Host("nats://localhost:4222")));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg =>
     {
@@ -30,5 +29,5 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 }, 128);
 
 var app = builder.Build();
-app.Services.StartNatsServerAsync();
+app.StartNatsServerAsync();
 app.Run();

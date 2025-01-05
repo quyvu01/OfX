@@ -10,8 +10,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-    cfg.AddNats(options => options
-        .UseNats(c => c.Host("nats://localhost:4222")));
+    cfg.AddNats(config => config.Url("nats://localhost:4222"));
+
 });
 
 builder.Services.AddControllers();
