@@ -67,10 +67,10 @@ That all! Let go to the moon!
 
 Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!
 
-| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                      |
-|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
-| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                  |
-| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | This Document                                                                 |
-| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)     |
-| [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)     | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/dev-nats/src/OfX.Nats/README.md) |
+| Package Name                                             | Description                                                                                     | .NET Version | Document                                                                  |
+|----------------------------------------------------------|-------------------------------------------------------------------------------------------------|--------------|---------------------------------------------------------------------------|
+| [OfX](https://www.nuget.org/packages/OfX/)               | OfX core                                                                                        | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)              |
+| [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/) | This is the OfX extension package using EntityFramework to fetch data                           | 8.0, 9.0     | This Document                                                             |
+| [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)     | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md) |
+| [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)     | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md) |
 ---
