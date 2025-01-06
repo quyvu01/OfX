@@ -25,6 +25,7 @@ public static class GrpcExtensions
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
         var hostMapAttributes = newClientsRegister.HostMapAttributes;
+        var attributeRegisters = hostMapAttributes.SelectMany(a => a.Value);
 
         ofXRegister.ServiceCollection.TryAddScoped<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
         {
@@ -40,7 +41,7 @@ public static class GrpcExtensions
             return itemsResponse;
         });
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
-            typeof(IOfXGrpcRequestClient<>), [..ofXRegister.OfXAttributeTypes]);
+            typeof(IOfXGrpcRequestClient<>), [..attributeRegisters]);
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,

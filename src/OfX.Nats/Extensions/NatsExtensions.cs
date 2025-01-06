@@ -18,7 +18,7 @@ public static class NatsExtensions
 
         ofXRegister.ServiceCollection.AddSingleton(_ =>
         {
-            var client = new NatsClient(newClientsRegister.NatsHost);
+            var client = new NatsClient(newClientsRegister.NatsUrl);
             return client;
         });
         ClientsRegister(ofXRegister.ServiceCollection);

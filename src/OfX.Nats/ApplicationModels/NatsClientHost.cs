@@ -2,7 +2,7 @@ namespace OfX.Nats.ApplicationModels;
 
 public class NatsClientHost
 {
-    public string NatsHost { get; private set; }
+    public string NatsUrl { get; private set; }
 
-    public void Url(string host) => NatsHost = host;
+    public void Url(string host) => NatsUrl = host;
 }
