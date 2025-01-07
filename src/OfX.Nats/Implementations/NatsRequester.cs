@@ -10,7 +10,7 @@ using OfX.Responses;
 
 namespace OfX.Nats.Implementations;
 
-public sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
+internal sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
     : INatsRequester<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
