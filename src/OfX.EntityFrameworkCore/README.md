@@ -49,20 +49,8 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 });
 ```
 
-After installing the package OfX-EFCore, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to executing.
+Here, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to executing.
 
-### 2. Mark the model you want to use with OfXAttribute
-Example:
-
-```csharp
-[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
-public class User
-{
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Email { get; set; }
-}
-```
 That all! Let go to the moon!
 
 Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!

@@ -110,7 +110,20 @@ public sealed class SomeDataResponse
 }
 ```
 
-### 3. Write a Handler in Your Service to Fetch the Data when you are using OfX only. If you use OfX-gRPC or other transport data layer(next version extension packages), there are no need to create Handlers anymore!
+### 3. Mark the model you want to use with OfXAttribute
+Example:
+
+```csharp
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
+public class User
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+}
+```
+
+### 4. Write a Handler in Your Service to Fetch the Data when you are using OfX only. If you use OfX-gRPC, OfX-Nats... or other transport data layer(next version extension packages), there are no need to create Handlers anymore, they should be dynamic proxy handlers!
 Implement a handler to process data requests. For example:
 ```csharp
 public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
