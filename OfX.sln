@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service2", "RealTest\Servic
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service3", "RealTest\Service3\Service3.csproj", "{DC8D7CB3-1A39-42EA-9D67-99397D64B89D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.RabbitMq", "src\OfX.RabbitMq\OfX.RabbitMq.csproj", "{C2D5D291-CFE2-4EBD-9EB0-B454AAB491EE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -68,6 +70,10 @@ Global
 		{DC8D7CB3-1A39-42EA-9D67-99397D64B89D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC8D7CB3-1A39-42EA-9D67-99397D64B89D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC8D7CB3-1A39-42EA-9D67-99397D64B89D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2D5D291-CFE2-4EBD-9EB0-B454AAB491EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2D5D291-CFE2-4EBD-9EB0-B454AAB491EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2D5D291-CFE2-4EBD-9EB0-B454AAB491EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2D5D291-CFE2-4EBD-9EB0-B454AAB491EE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A6DE45EE-7842-4079-ACEC-E1153C7B7188} = {58463FE9-951F-4EB3-BAA4-298EF4DADDF6}

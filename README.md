@@ -43,7 +43,7 @@ Add the OfX to your service configuration to register OfX:
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
-    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); //<- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC, there is no need to add this one anymore!
+    cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); //<- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC or OfX-Nats...(like OfX transport extension package), there is no need to add this one anymore!
     cfg.AddReceivedPipelines(c =>
     {
         c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();

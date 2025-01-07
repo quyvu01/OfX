@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using NATS.Net;
 using OfX.Abstractions;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Helpers;
 using OfX.Implementations;
 using OfX.Nats.Messages;
+using OfX.Nats.Wrappers;
 using OfX.Responses;
 
 namespace OfX.Nats.Servers;
@@ -14,7 +14,7 @@ internal static class NatsServersListening
 {
     internal static void StartAsync(IServiceProvider serviceProvider)
     {
-        var natsClient = serviceProvider.GetRequiredService<NatsClient>();
+        var natsClient = serviceProvider.GetRequiredService<NatsClientWrapper>();
         var serviceTypes = typeof(IQueryOfHandler<,>);
         var handlers = OfXCached.AttributeMapHandler.Values.ToList();
         var attributeTypes = handlers
@@ -22,7 +22,8 @@ internal static class NatsServersListening
             .Select(a => a.GetGenericArguments()[1]).ToList();
         attributeTypes.ForEach(attributeType => Task.Factory.StartNew(async () =>
         {
-            var natsScribeAsync = natsClient.SubscribeAsync<MessageRequestOf>(attributeType.GetAssemblyName());
+            var natsScribeAsync =
+                natsClient.NatsClient.SubscribeAsync<MessageRequestOf>(attributeType.GetAssemblyName());
             await foreach (var message in natsScribeAsync)
             {
                 if (message.Data is null) continue;
@@ -51,7 +52,7 @@ internal static class NatsServersListening
                 // Invoke the method and get the result
                 var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
                     .Invoke(pipeline, [requestContext]))!;
-                await natsClient.PublishAsync(message.ReplyTo!, response);
+                await natsClient.NatsClient.PublishAsync(message.ReplyTo!, response);
             }
         }));
     }

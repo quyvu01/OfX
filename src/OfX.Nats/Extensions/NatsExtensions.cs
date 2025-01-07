@@ -5,6 +5,7 @@ using OfX.Nats.Abstractions;
 using OfX.Nats.ApplicationModels;
 using OfX.Nats.Implementations;
 using OfX.Nats.Servers;
+using OfX.Nats.Wrappers;
 using OfX.Registries;
 
 namespace OfX.Nats.Extensions;
@@ -19,7 +20,7 @@ public static class NatsExtensions
         ofXRegister.ServiceCollection.AddSingleton(_ =>
         {
             var client = new NatsClient(newClientsRegister.NatsUrl);
-            return client;
+            return new NatsClientWrapper(client);
         });
         ClientsRegister(ofXRegister.ServiceCollection);
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
