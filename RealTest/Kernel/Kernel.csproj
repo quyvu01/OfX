@@ -14,7 +14,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
-      <ProjectReference Include="..\..\src\OfX.Nats\OfX.Nats.csproj" />
+      <ProjectReference Include="..\..\src\OfX.RabbitMq\OfX.RabbitMq.csproj" />
       <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
     </ItemGroup>
 

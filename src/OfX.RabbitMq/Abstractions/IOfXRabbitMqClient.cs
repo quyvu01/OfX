@@ -12,8 +12,8 @@ public interface IOfXRabbitMqClient<TAttribute> : IMappableRequestHandler<TAttri
     async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(
         RequestContext<TAttribute> context)
     {
-        var natRequesterService = ServiceProvider.GetRequiredService<IRabbitMqClient>();
-        var result = await natRequesterService.RequestAsync(context);
+        var client = ServiceProvider.GetRequiredService<IRabbitMqClient>();
+        var result = await client.RequestAsync(context);
         return result;
     }
 }

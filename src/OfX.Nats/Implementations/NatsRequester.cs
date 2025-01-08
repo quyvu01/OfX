@@ -1,5 +1,4 @@
 using NATS.Client.Core;
-using NATS.Net;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Extensions;

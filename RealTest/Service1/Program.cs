@@ -1,6 +1,6 @@
 using Kernel;
 using OfX.Extensions;
-using OfX.Nats.Extensions;
+using OfX.RabbitMq.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,8 +10,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-    cfg.AddNats(config => config.Url("nats://localhost:4222"));
-
+    cfg.AddRabbitMq(config => config.Host("localhost", "/"));
 });
 
 builder.Services.AddControllers();

@@ -3,38 +3,53 @@ using System.Text;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Constants;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.RabbitMq.Abstractions;
+using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.Constants;
-using OfX.RabbitMq.Wrappers;
+using OfX.RabbitMq.Extensions;
 using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace OfX.RabbitMq.Implementations;
 
-public class RabbitMqClient(RabbitMqClientWrapper rabbitMqClientWrapper) : IRabbitMqClient, IAsyncDisposable
+internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
 {
-    private const string QueueName = OfXConstants.QueueName;
-
+    private readonly RabbitMqConfigurator _rabbitMqConfigurator;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _callbackMapper = new();
+    private IConnection _connection;
+    private IChannel _channel;
+    private AsyncEventingBasicConsumer _consumer;
+    private string _replyQueueName;
+    private const string routingKey = OfXRabbitMqConstants.RoutingKey;
 
-    private IConnection? _connection;
-    private IChannel? _channel;
-    private string? _replyQueueName;
-
-    public async Task StartAsync()
+    public RabbitMqClient(RabbitMqConfigurator rabbitMqConfigurator)
     {
-        _connection = await rabbitMqClientWrapper.ConnectionFactory.CreateConnectionAsync();
-        _channel = await _connection.CreateChannelAsync();
+        _rabbitMqConfigurator = rabbitMqConfigurator;
+        StartAsync().Wait(); // We have to wait this one and ensure that everything is initialized
+    }
 
-        // declare a server-named queue
+    private async Task StartAsync()
+    {
+        var credential = _rabbitMqConfigurator.RabbitMqCredential;
+        var userName = credential.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
+        var password = credential.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
+        var _connectionFactory = new ConnectionFactory
+        {
+            HostName = _rabbitMqConfigurator.RabbitMqHost, VirtualHost = _rabbitMqConfigurator.RabbitVirtualHost,
+            Port = _rabbitMqConfigurator.RabbitMqPort,
+            UserName = userName, Password = password
+        };
+
+        _connection = await _connectionFactory.CreateConnectionAsync();
+        _channel = await _connection.CreateChannelAsync();
         var queueDeclareResult = await _channel.QueueDeclareAsync();
         _replyQueueName = queueDeclareResult.QueueName;
-        var consumer = new AsyncEventingBasicConsumer(_channel);
-
-        consumer.ReceivedAsync += (_, ea) =>
+        _consumer = new AsyncEventingBasicConsumer(_channel);
+        _consumer.ReceivedAsync += (_, ea) =>
         {
             var correlationId = ea.BasicProperties.CorrelationId;
             if (string.IsNullOrEmpty(correlationId)) return Task.CompletedTask;
@@ -43,32 +58,32 @@ public class RabbitMqClient(RabbitMqClientWrapper rabbitMqClientWrapper) : IRabb
             tcs.TrySetResult(body);
             return Task.CompletedTask;
         };
-
-        await _channel.BasicConsumeAsync(_replyQueueName, true, consumer);
+        await _channel.BasicConsumeAsync(_replyQueueName, true, _consumer);
     }
 
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
-        if (_channel is null)
-            throw new InvalidOperationException();
-
-        var cancellationToken = requestContext.CancellationToken;
+        if (_channel is null) throw new InvalidOperationException();
+        var exchangeName = typeof(TAttribute).GetExchangeName();
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
+        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        var cancellationToken = cts.Token;
         var correlationId = Guid.NewGuid().ToString();
         var props = new BasicProperties
         {
             CorrelationId = correlationId,
             ReplyTo = _replyQueueName,
-            MessageId = typeof(TAttribute).GetAssemblyName()
+            Type = typeof(TAttribute).GetAssemblyName()
         };
-        props.Headers ??= new Dictionary<string, object?>();
+        props.Headers ??= new Dictionary<string, object>();
         requestContext.Headers?.ForEach(h => props.Headers.Add(h.Key, h.Value));
 
         var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
         _callbackMapper.TryAdd(correlationId, tcs);
         var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
         var messageBytes = Encoding.UTF8.GetBytes(messageSerialize);
-        await _channel.BasicPublishAsync(exchange: string.Empty, routingKey: QueueName,
+        await _channel.BasicPublishAsync(exchangeName, routingKey: routingKey,
             mandatory: true, basicProperties: props, body: messageBytes, cancellationToken: cancellationToken);
 
         await using var ctr = cancellationToken.Register(() =>
@@ -85,7 +100,6 @@ public class RabbitMqClient(RabbitMqClientWrapper rabbitMqClientWrapper) : IRabb
     public async ValueTask DisposeAsync()
     {
         if (_channel is not null) await _channel.CloseAsync();
-
         if (_connection is not null) await _connection.CloseAsync();
     }
 }

@@ -1,6 +1,6 @@
 namespace OfX.RabbitMq.Abstractions;
 
-public interface IRabbitMqServer
+internal interface IRabbitMqServer
 {
     Task ConsumeAsync();
 }

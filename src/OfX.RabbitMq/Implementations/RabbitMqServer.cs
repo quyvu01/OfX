@@ -8,30 +8,53 @@ using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.Constants;
-using OfX.RabbitMq.Wrappers;
+using OfX.RabbitMq.Extensions;
 using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace OfX.RabbitMq.Implementations;
 
-public class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
+internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
 {
     public async Task ConsumeAsync()
     {
-        var connectionFactory = serviceProvider.GetRequiredService<RabbitMqClientWrapper>();
-        const string queueName = OfXConstants.QueueName;
-        await using var connection = await connectionFactory.ConnectionFactory.CreateConnectionAsync();
+        var rabbitMqConfigurator = serviceProvider.GetRequiredService<RabbitMqConfigurator>();
+        var queueName = $"{OfXRabbitMqConstants.QueueNamePrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
+        const string routingKey = OfXRabbitMqConstants.RoutingKey;
+        
+        var credential = rabbitMqConfigurator.RabbitMqCredential;
+        var userName = credential.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
+        var password = credential.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
+        var connectionFactory = new ConnectionFactory
+        {
+            HostName = rabbitMqConfigurator.RabbitMqHost, VirtualHost = rabbitMqConfigurator.RabbitVirtualHost,
+            Port = rabbitMqConfigurator.RabbitMqPort,
+            UserName = userName, Password = password
+        };
+        
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
-
         await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null);
+        
+        var serviceTypes = typeof(IQueryOfHandler<,>);
+        var handlers = OfXCached.AttributeMapHandler.Values.ToList();
+        if (handlers is not { Count: > 0 }) return;
 
-        await channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 1, global: false);
+        var attributeTypes = handlers
+            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
+            .Select(a => a.GetGenericArguments()[1]);
+        
+        foreach (var attributeType in attributeTypes)
+        {
+            var exchangeName = attributeType.GetExchangeName();
+            await channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct);
+            await channel.QueueBindAsync(queue: queueName, exchangeName, routingKey);
+        }
 
         var consumer = new AsyncEventingBasicConsumer(channel);
 
-        //Todo: This is not correct because I must config the eventType!
         consumer.ReceivedAsync += async (sender, ea) =>
         {
             var cons = (AsyncEventingBasicConsumer)sender;
@@ -39,13 +62,12 @@ public class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
             var body = ea.Body.ToArray();
             var props = ea.BasicProperties;
             var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
-            var messageId = props.MessageId;
-            var attributeType = Type.GetType(messageId!);
-            if (attributeType is null || !OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
+
+            var attributeType = Type.GetType(props.Type!);
+            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
                 throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
             var modelArg = handlerType.GetGenericArguments()[0];
-
             var serviceScope = serviceProvider.CreateScope();
 
             var pipeline = serviceScope.ServiceProvider
@@ -82,5 +104,6 @@ public class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
         };
 
         await channel.BasicConsumeAsync(queueName, false, consumer);
+        await new TaskCompletionSource().Task;
     }
 }

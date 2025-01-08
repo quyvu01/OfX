@@ -3,7 +3,7 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Nats.Extensions;
+using OfX.RabbitMq.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 
@@ -11,7 +11,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddRabbitMq(config => config.Host("localhost", "/", 5672, c =>
+        {
+            c.UserName("SomeUserName");
+            c.Password("SomePassword");
+        }));
     })
     .AddOfXEFCore(cfg =>
     {
@@ -29,5 +33,5 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 }, 128);
 
 var app = builder.Build();
-app.StartNatsListeningAsync();
+app.StartRabbitMqListeningAsync();
 app.Run();
