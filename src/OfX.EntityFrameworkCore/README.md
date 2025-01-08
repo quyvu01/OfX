@@ -53,7 +53,7 @@ Here, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to ex
 
 That all! Let go to the moon!
 
-Note: In this release, Id is exclusively supported as a string. But hold tight—I'm gearing up to blow your mind with the next update! Stay tuned!
+Note: In this release, Id is exclusively supported as string, Guid, int, long...(primitive types). But hold tight—I'll be back to support the strongly-type! Stay tuned!
 
 | Package Name                                                 | Description                                                                                             | .NET Version | Document                                                                      |
 |--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
