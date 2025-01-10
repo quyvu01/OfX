@@ -16,4 +16,10 @@ public static class OfXException
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");
+
+    public sealed class StronglyTypeConfigurationImplementationMustNotBeGeneric(Type type)
+        : Exception($"Strongly type configuration implementation must not be generic type: {type.Name}!");
+
+    public sealed class StronglyTypeConfigurationMustNotBeNull()
+        : Exception("Strongly type Id configuration must not be null!");
 }

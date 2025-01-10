@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
@@ -47,8 +48,8 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var parameter = Expression.Parameter(typeof(TModel), "x");
         var idProperty = Expression.Property(parameter, idPropertyName);
         var idType = idProperty.Type;
-        var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod("Contains");
-        var selectorsConstant = Helpers.GeneralHelpers.ConstantExpression(query.SelectorIds, idType);
+        var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
+        var selectorsConstant = Helpers.GeneralHelpers.ConstantExpression(serviceProvider, query.SelectorIds, idType);
         var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
         return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
     }

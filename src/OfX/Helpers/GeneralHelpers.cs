@@ -1,13 +1,21 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
+using OfX.Abstractions;
 using OfX.Exceptions;
 
 namespace OfX.Helpers;
 
 public static class GeneralHelpers
 {
+    private static readonly Lazy<ConcurrentDictionary<Type, (MethodInfo ConvertMethod, MethodInfo CanConvertMethod)>>
+        StronglyTypeMethodInfoStorage = new(() =>
+            new ConcurrentDictionary<Type, (MethodInfo ConvertMethod, MethodInfo CanConvertMethod)>());
+
     public static string GetAssemblyName(this Type type) => $"{type.FullName},{type.Assembly.GetName().Name}";
 
-    public static ConstantExpression ConstantExpression(List<string> selectorIds, Type idType)
+    public static ConstantExpression ConstantExpression(IServiceProvider serviceProvider, List<string> selectorIds,
+        Type idType)
     {
         if (idType == typeof(string)) return ParseStrings(selectorIds);
 
@@ -42,8 +50,7 @@ public static class GeneralHelpers
         if (idType == typeof(sbyte)) return ParseSBytes(selectorIds);
 
         if (idType == typeof(sbyte?)) return ParseNullableSBytes(selectorIds);
-
-        throw new OfXException.CurrentIdTypeWasNotSupported();
+        return ParseStronglyTypes(serviceProvider, selectorIds, idType);
     }
 
     private static ConstantExpression ParseStrings(List<string> selectorIds) => Expression.Constant(selectorIds);
@@ -144,4 +151,30 @@ public static class GeneralHelpers
             .Where(a => sbyte.TryParse(a, out _))
             .Select(a => (sbyte?)sbyte.Parse(a))
             .ToList());
+
+    private static ConstantExpression ParseStronglyTypes(IServiceProvider serviceProvider, List<string> selectorIds,
+        Type idType)
+    {
+        // This is temporary for test, we have to add cache and using Expression to cache the data!
+        var serviceType = typeof(IStronglyTypeConverter<>).MakeGenericType(idType);
+        var stronglyTypeService = serviceProvider.GetService(typeof(IStronglyTypeConverter<>).MakeGenericType(idType));
+        if (stronglyTypeService is null)
+            throw new OfXException.CurrentIdTypeWasNotSupported();
+        var genericMethods = StronglyTypeMethodInfoStorage.Value.GetOrAdd(idType, _ =>
+        {
+            var methods = serviceType.GetMethods();
+            var convertMethod = methods.FirstOrDefault(m =>
+                m.Name == "Convert" && m.GetParameters() is { Length: 1 } parameters &&
+                parameters[0].ParameterType == typeof(string));
+            var canConvertMethod = methods.FirstOrDefault(m =>
+                m.Name == "CanConvert" && m.GetParameters() is { Length: 1 } parameters &&
+                parameters[0].ParameterType == typeof(string));
+            return (convertMethod, canConvertMethod);
+        });
+        var idsConverted = selectorIds.Where(a => (bool)genericMethods.CanConvertMethod
+                .Invoke(stronglyTypeService, [a])!)
+            .Select(a => genericMethods.ConvertMethod.Invoke(stronglyTypeService, [a]))
+            .ToList();
+        return Expression.Constant(idsConverted);
+    }
 }
