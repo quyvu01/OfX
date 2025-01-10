@@ -21,6 +21,6 @@ public static class StronglyTypeIdExtensions
             var interfaceTypes = a.GetInterfaces().Where(t =>
                 t.IsGenericType && t.GetGenericTypeDefinition() == stronglyTypeInterfaceType);
             return (ImplementationType: a, ServiceTypes: interfaceTypes);
-        }).ForEach(a => a.ServiceTypes.ForEach(s => ofXRegister.ServiceCollection.AddSingleton(s, a)));
+        }).ForEach(a => a.ServiceTypes.ForEach(s => ofXRegister.ServiceCollection.AddSingleton(s, a.ImplementationType)));
     }
 }

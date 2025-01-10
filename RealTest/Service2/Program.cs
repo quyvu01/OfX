@@ -7,12 +7,14 @@ using OfX.Extensions;
 using OfX.RabbitMq.Extensions;
 using WorkerService1;
 using WorkerService1.Contexts;
+using WorkerService1.StronglyTypeIdsRegisters;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        cfg.AddStronglyTypeIdConverter(a => a.ForType<StronglyTypeIdRegisters>());
     })
     .AddOfXEFCore(cfg =>
     {

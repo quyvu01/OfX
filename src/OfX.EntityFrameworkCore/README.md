@@ -53,8 +53,6 @@ Here, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to ex
 
 That all! Let go to the moon!
 
-Note: In this release, Id is exclusively supported as string, Guid, int, long...(primitive types). But hold tight—I'll be back to support the strongly-type! Stay tuned!
-
 | Package Name                                                 | Description                                                                                             | .NET Version | Document                                                                      |
 |--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
 | [OfX](https://www.nuget.org/packages/OfX/)                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                  |

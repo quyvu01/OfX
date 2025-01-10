@@ -11,11 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddRabbitMq(config => config.Host("localhost", "/", 5672, c =>
-        {
-            c.UserName("SomeUserName");
-            c.Password("SomePassword");
-        }));
+        cfg.AddRabbitMq(config => config.Host("localhost", "/"));
     })
     .AddOfXEFCore(cfg =>
     {

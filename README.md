@@ -48,7 +48,20 @@ builder.Services.AddOfX(cfg =>
     {
         c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
     });
+    
+    // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
+    cfg.AddStronglyTypeIdConverter(a => a.ForType<StronglyTypeIdRegisters>());
 });
+
+// StronglyTypeIdRegisters example:
+public sealed class StronglyTypeIdRegisters : IStronglyTypeConverter<UserId>
+{
+    public UserId Convert(string input) => new(input);
+    public bool CanConvert(string input) => true;
+}
+
+// You can also implement many IStronglyTypeConverter<T>
+
 ```
 
 ### Function Descriptions

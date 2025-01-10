@@ -49,7 +49,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var idProperty = Expression.Property(parameter, idPropertyName);
         var idType = idProperty.Type;
         var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
-        var selectorsConstant = Helpers.GeneralHelpers.ConstantExpression(serviceProvider, query.SelectorIds, idType);
+        var selectorsConstant = Helpers.IdHelpers.ConstantExpression(serviceProvider, query.SelectorIds, idType);
         var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
         return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
     }
