@@ -56,7 +56,7 @@ builder.Services.AddOfX(cfg =>
 // StronglyTypeIdRegisters example:
 public sealed class StronglyTypeIdRegisters : IStronglyTypeConverter<UserId>
 {
-    public UserId Convert(string input) => new(input);
+    public UserId Convert(string input) => new UserId(input);
     public bool CanConvert(string input) => true;
 }
 
@@ -104,6 +104,16 @@ cfg.AddReceivedPipelines(c =>
         c.OfType(typeof(GenericPipeline<>)).OfType<OtherPipeline>();
     });
 ```
+
+#### AddStronglyTypeIdConverter
+When your models(entities) are using Strongly Type Id, you have to configure how OfX can convert from general Id type(string) to your strongly type.
+
+Parameters:
+`Action<StronglyTypeIdRegister>` the strongly type id register delegate.
+
+#### ForType
+You have to create a class and implement interface `IStronglyTypeConverter<T>`, then you have to override 2 methods(`Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
+Please check the example above!
 
 ### 2. Integrate the Attribute into Your Model, Entity, or DTO
 Apply the attribute to your properties like this:
