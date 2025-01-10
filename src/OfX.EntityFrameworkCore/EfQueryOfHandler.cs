@@ -25,6 +25,8 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
         .Invoke(typeof(TModel)).GetCollection<TModel>();
 
+    private readonly IIdConverter _idConverter = serviceProvider.GetRequiredService<IIdConverter>();
+
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
         var query = context.Query.Expression is null
@@ -49,7 +51,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var idProperty = Expression.Property(parameter, idPropertyName);
         var idType = idProperty.Type;
         var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
-        var selectorsConstant = Helpers.IdHelpers.ConstantExpression(serviceProvider, query.SelectorIds, idType);
+        var selectorsConstant = _idConverter.ConstantExpression(query.SelectorIds, idType);
         var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
         return Expression.Lambda<Func<TModel, bool>>(containsCall, parameter);
     }

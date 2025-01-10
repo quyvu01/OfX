@@ -5,15 +5,14 @@ using OfX.Abstractions;
 using OfX.Exceptions;
 using OfX.Extensions;
 
-namespace OfX.Helpers;
+namespace OfX.Services;
 
-public static class IdHelpers
+internal class IdConverterService(IServiceProvider serviceProvider) : IIdConverter
 {
     private static readonly Lazy<ConcurrentDictionary<Type, StronglyTypeIdCachedData>>
         StronglyTypeMethodInfoStorage = new(() => new ConcurrentDictionary<Type, StronglyTypeIdCachedData>());
-    
-    public static ConstantExpression ConstantExpression(IServiceProvider serviceProvider, List<string> selectorIds,
-        Type idType)
+
+    public ConstantExpression ConstantExpression(List<string> selectorIds, Type idType)
     {
         if (idType == typeof(string)) return ParseStrings(selectorIds);
 

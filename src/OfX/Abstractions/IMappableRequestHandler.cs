@@ -15,8 +15,6 @@ public interface IMappableRequestHandler<TAttribute> : IMappableRequestHandler
 public class DefaultMappableRequestHandler<TAttribute> : IMappableRequestHandler<TAttribute>
     where TAttribute : OfXAttribute
 {
-    public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> context)
-    {
-        return Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
-    }
+    public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> context) =>
+        Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
 }
