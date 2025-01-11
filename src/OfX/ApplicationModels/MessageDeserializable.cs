@@ -1,6 +1,6 @@
-namespace OfX.RabbitMq.ApplicationModels;
+namespace OfX.ApplicationModels;
 
-internal sealed class RabbitMqMessage
+public sealed class MessageDeserializable
 {
     public List<string> SelectorIds { get; set; }
     public string Expression { get; set; }

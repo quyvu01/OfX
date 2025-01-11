@@ -3,7 +3,7 @@ using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Grpc.Delegates;
 using OfX.Implementations;
-using OfX.Queries.OfXQueries;
+using OfX.Queries;
 using OfX.Responses;
 
 namespace OfX.Grpc.Abstractions;

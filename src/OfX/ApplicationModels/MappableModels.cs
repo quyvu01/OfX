@@ -3,7 +3,7 @@ using OfX.Abstractions;
 
 namespace OfX.ApplicationModels;
 
-public sealed record CrossCuttingDataProperty(
+public sealed record MappableDataProperty(
     PropertyInfo PropertyInfo,
     object Model,
     IOfXAttributeCore Attribute,
@@ -11,14 +11,14 @@ public sealed record CrossCuttingDataProperty(
     string Expression,
     int Order);
 
-public sealed record CrossCuttingDataPropertyCache(
+public sealed record MappableDataPropertyCache(
     IOfXAttributeCore Attribute,
     Delegate Func,
     string Expression,
     int Order);
 
 
-public sealed record CrossCuttingTypeData(
+public sealed record MappableTypeData(
     Type OfXAttributeType,
     IEnumerable<PropertyCalledLater> PropertyCalledLaters,
     string Expression,

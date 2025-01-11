@@ -1,47 +1,85 @@
+using System.Text;
+using System.Text.Json;
 using Confluent.Kafka;
+using Microsoft.Extensions.DependencyInjection;
+using OfX.Abstractions;
+using OfX.ApplicationModels;
+using OfX.Attributes;
+using OfX.Cached;
+using OfX.Exceptions;
+using OfX.Implementations;
 using OfX.Kafka.Abstractions;
+using OfX.Kafka.ApplicationModels;
+using OfX.Kafka.Constants;
+using OfX.Kafka.Extensions;
+using OfX.Responses;
 
 namespace OfX.Kafka.Implementations;
 
-public class KafkaServer : IKafkaServer
+internal class KafkaServer<TAttribute>(IServiceProvider serviceProvider) : IKafkaServer<TAttribute>
+    where TAttribute : OfXAttribute
 {
-    private const string RequestTopic = "rpc-requests";
-    private const string ResponseTopic = "rpc-responses";
-    private const string KafkaBootstrapServers = "localhost:9092";
+    private const string RequestTopic = OfXKafkaConstants.RequestTopic;
+    private const string ResponseTopic = OfXKafkaConstants.ResponseTopic;
 
     public async Task StartAsync()
     {
+        var kafkaMqConfigurator = serviceProvider.GetRequiredService<KafkaMqConfigurator>();
+        var kafkaBootstrapServers = kafkaMqConfigurator.KafkaHost;
         var config = new ConsumerConfig
         {
             GroupId = "rpc-server-group",
-            BootstrapServers = KafkaBootstrapServers,
+            BootstrapServers = kafkaBootstrapServers,
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
 
         using var consumer = new ConsumerBuilder<string, string>(config).Build();
-        using var producer = new ProducerBuilder<string, string>(new ProducerConfig { BootstrapServers = KafkaBootstrapServers }).Build();
+        using var producer = new ProducerBuilder<string, string>(new ProducerConfig
+            { BootstrapServers = kafkaBootstrapServers }).Build();
 
         consumer.Subscribe(RequestTopic);
-        Console.WriteLine("Server is listening for RPC requests...");
+        var routingKey = typeof(TAttribute).RoutingKey();
 
         try
         {
             while (true)
             {
                 var consumeResult = consumer.Consume(CancellationToken.None);
-                Console.WriteLine($"Received request: {consumeResult.Message.Value}");
+                if (consumeResult.Message.Key != routingKey) continue;
 
-                // Process the request (simulate some logic)
-                var result = $"Processed: {consumeResult.Message.Value}";
+                var attributeType = typeof(TAttribute);
+                if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
+                    throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
-                // Send response back to the response topic
+                var modelArg = handlerType.GetGenericArguments()[0];
+                var serviceScope = serviceProvider.CreateScope();
+
+                var pipeline = serviceScope.ServiceProvider
+                    .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
+
+                var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
+
+                var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
+
+                var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
+
+                var message = JsonSerializer.Deserialize<MessageDeserializable>(consumeResult.Message.Value);
+
+                var query = OfXCached.CreateInstanceWithCache(queryType, message.SelectorIds,
+                    message.Expression);
+                var headers = consumeResult.Message.Headers
+                    .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes()));
+                var requestContext = Activator
+                    .CreateInstance(requestContextType, query, headers, CancellationToken.None);
+                // Invoke the method and get the result
+                var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
+                    .Invoke(pipeline, [requestContext]))!;
+
                 await producer.ProduceAsync(ResponseTopic, new Message<string, string>
                 {
-                    Key = consumeResult.Message.Key, // Correlate response with request
-                    Value = result
+                    Key = consumeResult.Message.Key,
+                    Value = JsonSerializer.Serialize(response)
                 });
-
-                Console.WriteLine($"Response sent for key {consumeResult.Message.Key}");
             }
         }
         catch (OperationCanceledException)

@@ -12,10 +12,10 @@ namespace OfX.Helpers;
 
 internal static class ReflectionHelpers
 {
-    private static readonly ConcurrentDictionary<PropertyInfo, CrossCuttingDataPropertyCache>
+    private static readonly ConcurrentDictionary<PropertyInfo, MappableDataPropertyCache>
         CrossCuttingPropertiesCache = new();
 
-    public static IEnumerable<CrossCuttingDataProperty> GetCrossCuttingProperties(object rootObject)
+    internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
         if (rootObject is null) yield break;
         var stack = new Stack<object>();
@@ -39,7 +39,7 @@ internal static class ReflectionHelpers
                 if (CrossCuttingPropertiesCache.TryGetValue(property, out var propertyCache))
                 {
                     var func = propertyCache.Func;
-                    yield return new CrossCuttingDataProperty(property, currentObject, propertyCache.Attribute, func,
+                    yield return new MappableDataProperty(property, currentObject, propertyCache.Attribute, func,
                         propertyCache.Expression, propertyCache.Order);
                     continue;
                 }
@@ -53,10 +53,10 @@ internal static class ReflectionHelpers
                     var propExpression = Expression.Property(paramExpression, crossCutting.PropertyName);
                     var expression = Expression.Lambda(propExpression, paramExpression);
                     var func = expression.Compile();
-                    yield return new CrossCuttingDataProperty(property, currentObject, crossCutting, func,
+                    yield return new MappableDataProperty(property, currentObject, crossCutting, func,
                         crossCutting.Expression, crossCutting.Order);
                     CrossCuttingPropertiesCache.TryAdd(property,
-                        new CrossCuttingDataPropertyCache(crossCutting, func, crossCutting.Expression,
+                        new MappableDataPropertyCache(crossCutting, func, crossCutting.Expression,
                             crossCutting.Order));
                     continue;
                 }
@@ -90,26 +90,24 @@ internal static class ReflectionHelpers
                 stack.Push(item);
     }
 
-    public static IEnumerable<CrossCuttingTypeData> GetOfXTypesData(
-        IEnumerable<CrossCuttingDataProperty> datas, IEnumerable<Type> crossCuttingTypes) =>
+    internal static IEnumerable<MappableTypeData> GetOfXTypesData(
+        IEnumerable<MappableDataProperty> datas, IEnumerable<Type> crossCuttingTypes) =>
         datas
             .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Expression, x.Order })
             .Join(crossCuttingTypes, d => d.Key.AttributeType, x => x,
-                (d, x) => new CrossCuttingTypeData(x, d
+                (d, x) => new MappableTypeData(x, d
                         .Select(a => new PropertyCalledLater(a.Model, a.Func)), d.Key.Expression,
                     d.Key.Order));
 
-    public static void MapResponseData(IEnumerable<CrossCuttingDataProperty> allPropertyDatas,
+    internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
         List<(Type CrossCuttingType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
     {
         allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
-            dt => (dt.CrossCuttingType, dt.Expression),
-            (ap, dt) =>
+            dt => (dt.CrossCuttingType, dt.Expression), (ap, dt) =>
             {
                 var value = dt.Response.Items?
                     .FirstOrDefault(a => a.Id == ap.Func.DynamicInvoke(ap.Model)?.ToString())?.Value;
                 if (value is null || ap.PropertyInfo is null) return value;
-
                 try
                 {
                     var valueSet = JsonConvert.DeserializeObject(value, ap.PropertyInfo.PropertyType);
@@ -117,14 +115,7 @@ internal static class ReflectionHelpers
                 }
                 catch (Exception)
                 {
-                    try
-                    {
-                        if (ap.PropertyInfo.PropertyType == typeof(string)) ap.PropertyInfo.SetValue(ap.Model, value);
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
+                    // ignored
                 }
 
                 return value;

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.RabbitMq.Extensions;
+using OfX.Kafka.Extensions;
 using WorkerService1;
 using WorkerService1.Contexts;
 using WorkerService1.StronglyTypeIdsRegisters;
@@ -13,8 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
         cfg.AddStronglyTypeIdConverter(a => a.ForType<StronglyTypeIdRegisters>());
+        cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg =>
     {
@@ -32,5 +33,5 @@ builder.Services.AddDbContextPool<Service2Context>(options =>
 }, 128);
 
 var app = builder.Build();
-app.StartRabbitMqListeningAsync();
+app.StartKafkaMqListeningAsync();
 app.Run();

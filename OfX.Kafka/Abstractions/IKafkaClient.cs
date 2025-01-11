@@ -4,7 +4,7 @@ using OfX.Responses;
 
 namespace OfX.Kafka.Abstractions;
 
-public interface IKafkaClient
+internal interface IKafkaClient
 {
     Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(RequestContext<TAttribute> requestContext)
         where TAttribute : OfXAttribute;

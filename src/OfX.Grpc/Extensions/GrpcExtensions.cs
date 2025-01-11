@@ -10,7 +10,7 @@ using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Servers;
 using OfX.Helpers;
-using OfX.Queries.OfXQueries;
+using OfX.Queries;
 using OfX.Registries;
 using OfX.Responses;
 

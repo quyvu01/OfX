@@ -15,7 +15,8 @@ public sealed class TestController : ControllerBase
     {
         List<MemberResponse> members =
             [.. Enumerable.Range(1, 3).Select(a => new MemberResponse { Id = a.ToString(), UserId = a.ToString() })];
-        await dataMappableService.MapDataAsync(members);
-        return Ok(members);
+        var dicTes = members.ToDictionary(k => k.Id, v => v);
+        await dataMappableService.MapDataAsync(dicTes);
+        return Ok(dicTes);
     }
 }

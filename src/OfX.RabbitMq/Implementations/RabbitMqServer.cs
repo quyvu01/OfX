@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
@@ -79,10 +80,10 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
             var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
 
-            var rabbitMqMessage = JsonSerializer.Deserialize<RabbitMqMessage>(Encoding.UTF8.GetString(body));
+            var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
 
-            var query = OfXCached.CreateInstanceWithCache(queryType, rabbitMqMessage.SelectorIds,
-                rabbitMqMessage.Expression);
+            var query = OfXCached.CreateInstanceWithCache(queryType, message.SelectorIds,
+                message.Expression);
             var headers = props.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var requestContext = Activator

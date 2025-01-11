@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.RabbitMq.Abstractions;
@@ -66,9 +65,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     {
         if (_channel is null) throw new InvalidOperationException();
         var exchangeName = typeof(TAttribute).GetExchangeName();
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-        var cancellationToken = cts.Token;
+        var cancellationToken = requestContext.CancellationToken;
         var correlationId = Guid.NewGuid().ToString();
         var props = new BasicProperties
         {

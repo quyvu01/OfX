@@ -1,5 +1,6 @@
 using Kernel;
 using OfX.Extensions;
+using OfX.Kafka.Extensions;
 using OfX.RabbitMq.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +11,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-    cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+    // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+    cfg.AddKafka(c => c.Host("localhost:9092"));
 });
 
 builder.Services.AddControllers();

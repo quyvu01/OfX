@@ -3,7 +3,7 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.RabbitMq.Extensions;
+using OfX.Kafka.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Converters;
@@ -13,8 +13,9 @@ builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestPipeline<>)); });
-        cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
         cfg.AddStronglyTypeIdConverter(c => c.ForType<IdConverterRegister>());
+        cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg =>
     {
@@ -33,5 +34,5 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 builder.Services.AddGrpc();
 
 var app = builder.Build();
-app.StartRabbitMqListeningAsync();
+app.StartKafkaMqListeningAsync();
 app.Run();

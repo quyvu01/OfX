@@ -1,4 +1,4 @@
-using OfX.Queries.OfXQueries;
+using OfX.Queries;
 
 namespace OfX.Abstractions;
 

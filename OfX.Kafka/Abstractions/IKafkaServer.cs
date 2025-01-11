@@ -1,6 +1,10 @@
+using OfX.Attributes;
+
 namespace OfX.Kafka.Abstractions;
 
-public interface IKafkaServer
+internal interface IKafkaServer
 {
     Task StartAsync();
 }
+
+internal interface IKafkaServer<TAttribute> : IKafkaServer where TAttribute : OfXAttribute;
