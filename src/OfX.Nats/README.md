@@ -50,6 +50,8 @@ app.StartNatsListeningAsync(); // When you want to create Nats Listening
 app.Run();
 
 ```
+`Note:` OfX-Nats uses subjects that start with OfX-[OfXAttribute metadata]. Therefore, you should avoid using other subjects.
+
 That All, enjoy your moment!
 
 

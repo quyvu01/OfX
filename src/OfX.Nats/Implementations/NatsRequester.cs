@@ -2,8 +2,8 @@ using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Extensions;
-using OfX.Helpers;
 using OfX.Nats.Abstractions;
+using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 
@@ -17,7 +17,7 @@ internal sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
         var natsHeaders = new NatsHeaders();
         requestContext?.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
         var reply = await client.NatsClient
-            .RequestAsync<RequestOf<TAttribute>, ItemsResponse<OfXDataResponse>>(typeof(TAttribute).GetAssemblyName(),
+            .RequestAsync<RequestOf<TAttribute>, ItemsResponse<OfXDataResponse>>(typeof(TAttribute).GetNatsSubject(),
                 requestContext!.Query, natsHeaders, cancellationToken: requestContext.CancellationToken);
         return reply.Data;
     }

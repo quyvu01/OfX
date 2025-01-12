@@ -54,6 +54,8 @@ app.StartRabbitMqListeningAsync(); // When you want to create RabbitMq Listening
 app.Run();
 
 ```
+`Note:` OfX-RabbitMq uses exchanges that start with OfX-[OfXAttribute metadata]. Therefore, you should avoid using other exchanges. Additionally, OfX-RabbitMq automatically creates the queue ofx-rpc-queue-[application friendly name], so you should avoid creating a queue with the same name in your application.
+
 That All, enjoy your moment!
 
 
