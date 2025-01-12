@@ -1,6 +1,6 @@
 # OfX-RabbitMq
 
-OfX-RabbitMq is an extension package for OfX that leverages Nats for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX-RabbitMq is an extension package for OfX that leverages gRPC for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 

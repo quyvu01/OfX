@@ -45,7 +45,6 @@ builder.Services.AddOfX(cfg =>
         .AddGrpcHostWithOfXAttributes("http://localhost:5002", [typeof(CountryOfAttribute), typeof(ProvinceOfAttribute)...])
         ... //Other host configurations, you can also filter attributes by creating an interface and then filtering the attributes that implement the interface...
     ); //gRPC server host
-
 });
 ```
 
