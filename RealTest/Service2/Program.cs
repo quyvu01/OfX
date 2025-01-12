@@ -14,7 +14,7 @@ builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
-        cfg.AddStronglyTypeIdConverter(a => a.ForType<StronglyTypeIdRegisters>());
+        cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
         cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg =>

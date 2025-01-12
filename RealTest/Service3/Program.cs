@@ -14,7 +14,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestPipeline<>)); });
         // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
-        cfg.AddStronglyTypeIdConverter(c => c.ForType<IdConverterRegister>());
+        cfg.AddStronglyTypeIdConverter(c => c.OfType<IdConverterRegister>());
         cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg =>
