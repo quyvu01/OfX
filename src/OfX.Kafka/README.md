@@ -1,6 +1,6 @@
-# OfX-RabbitMq
+# OfX-Kafka
 
-OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -8,53 +8,46 @@ OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficie
 
 ## Introduction
 
-RabbitMq-based Transport: Implements RabbitMq to handle data communication between services, providing a fast, secure, and scalable solution.
+Kafka-based Transport: Implements RabbitMq to handle data communication between services, providing a fast, secure, and scalable solution.
 
 ---
 
 ## Installation
 
-To install the OfX-RabbitMq package, use the following NuGet command:
+To install the OfX-Kafka package, use the following NuGet command:
 
 ```bash
-dotnet add package OfX-RabbitMq
+dotnet add package OfX-Kafka
 ```
 
 Or via the NuGet Package Manager:
 
 ```bash
-Install-Package OfX-RabbitMq
+Install-Package OfX-Kafka
 ```
 
 ---
 
 ## How to Use
 
-### 1. Register OfX-RabbitMq
+### 1. Register OfX-Kafka
 
-Add OfX-RabbitMq to your service configuration during application startup:
+Add OfX-Kafka to your service configuration during application startup:
 
 ```csharp
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddRabbitMq(config => config.Host("localhost", "/")); // This is usally used for local test
-    // Or fullly configuration as bellow:
-    cfg.AddRabbitMq(config => config.Host("localhost", "/", 5672, c =>
-    {
-        c.UserName("SomeUserName");
-        c.Password("SomePassword");
-    }));
+    cfg.AddKafka(c => c.Host("localhost:9092"));
 });
 
 ...
 
 var app = builder.Build();
-app.StartRabbitMqListeningAsync(); // When you want to create RabbitMq Listening
+app.StartKafkaListeningAsync(); // When you want to create RabbitMq Listening
 app.Run();
 
 ```
-`Note:` OfX-RabbitMq uses exchanges that start with `OfX-[OfXAttribute metadata]`. Therefore, you should avoid using other exchanges. Additionally, OfX-RabbitMq automatically creates the queue `ofx-rpc-queue-[application friendly name]`, so you should avoid creating a queue with the same name in your application.
 
 That All, enjoy your moment!
 

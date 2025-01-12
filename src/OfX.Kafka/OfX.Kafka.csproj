@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+        <LangVersion>default</LangVersion>
+        <Version>3.1.10</Version>
+        <Authors>Quy Vu</Authors>
+        <PackageId>OfX-RabbitMq</PackageId>
+        <Description>OfX-RabbitMq extension. Use RabbitMq as Data transporting</Description>
+        <PackageTags>OfX;mappable;open-source;RabbitMq</PackageTags>
+        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
+        <PackageIcon>OfX.png</PackageIcon>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0"/>
+        <PackageReference Include="Confluent.Kafka" Version="2.8.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\OfX\OfX.csproj"/>
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\..\OfX.png">
+            <Pack>True</Pack>
+            <PackagePath/>
+            <Link>OfX.png</Link>
+        </None>
+    </ItemGroup>
+
+</Project>
