@@ -6,9 +6,9 @@
         <LangVersion>default</LangVersion>
         <Version>3.1.11</Version>
         <Authors>Quy Vu</Authors>
-        <PackageId>OfX-RabbitMq</PackageId>
-        <Description>OfX-RabbitMq extension. Use RabbitMq as Data transporting</Description>
-        <PackageTags>OfX;mappable;open-source;RabbitMq</PackageTags>
+        <PackageId>OfX-Kafka</PackageId>
+        <Description>OfX-Kafka extension. Use Kafka as Data transporting</Description>
+        <PackageTags>OfX;mappable;open-source;Kafka</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
