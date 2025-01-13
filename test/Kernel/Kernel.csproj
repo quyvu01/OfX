@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Nats\OfX.Nats.csproj" />
+      <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
+    </ItemGroup>
+
+</Project>
