@@ -32,7 +32,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
         var producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
         var consumerConfig = new ConsumerConfig
         {
-            GroupId = "ofx-rpc-client-group",
+            GroupId = OfXKafkaConstants.ClientGroupId,
             BootstrapServers = kafkaBootstrapServers,
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
@@ -47,11 +47,11 @@ internal class KafkaClient : IKafkaClient, IDisposable
             .Build();
         _relyTo = $"{OfXKafkaConstants.ResponseTopicPrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
         CreateTopicsAsync().Wait();
-        Task.Run(ConsumeResponses);
+        Task.Factory.StartNew(StartConsume);
     }
 
 
-    private void ConsumeResponses()
+    private void StartConsume()
     {
         _consumer.Subscribe(_relyTo);
         while (true)
@@ -64,10 +64,9 @@ internal class KafkaClient : IKafkaClient, IDisposable
                     .Deserialize<ItemsResponse<OfXDataResponse>>(consumeResult.Message.Value);
                 tcs.TrySetResult(response);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // Handle errors
-                Console.WriteLine($"Error consuming response: {ex}");
+                // ignore
             }
         }
     }

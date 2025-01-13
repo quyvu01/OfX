@@ -11,6 +11,7 @@ using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.ApplicationModels;
+using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
@@ -34,7 +35,7 @@ internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
         var kafkaBootstrapServers = kafkaMqConfigurator.KafkaHost;
         var consumerConfig = new ConsumerConfig
         {
-            GroupId = "rpc-server-group",
+            GroupId = OfXKafkaConstants.ServerGroupId,
             BootstrapServers = kafkaBootstrapServers,
             AutoOffsetReset = AutoOffsetReset.Earliest
         };

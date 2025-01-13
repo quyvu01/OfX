@@ -44,10 +44,11 @@ builder.Services.AddOfX(cfg =>
 ...
 
 var app = builder.Build();
-app.StartKafkaListeningAsync(); // When you want to create RabbitMq Listening
+app.StartKafkaListeningAsync(); // When you want to create Kafka Listening
 app.Run();
 
 ```
+`Note:` OfX-Kafka uses topics that start with `ofx-response-topic-[application.friendly.name]`. Therefore, you should avoid using other topics. Additionally, OfX-Kafka automatically creates the topic `ofx-request-topic-[ofx.attribute.metadata]`, so you should avoid creating a topic with the same name in your application.
 
 That All, enjoy your moment!
 
@@ -58,5 +59,6 @@ That All, enjoy your moment!
 | [OfX-EFCore](https://www.nuget.org/packages/OfX-EFCore/)     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
 | [OfX-gRPC](https://www.nuget.org/packages/OfX-gRPC/)         | OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Nats](https://www.nuget.org/packages/OfX-Nats/)         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
-| [OfX-RabbitMq](https://www.nuget.org/packages/OfX-RabbitMq/) | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | This Document                                                                            |
+| [OfX-RabbitMq](https://www.nuget.org/packages/OfX-RabbitMq/) | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
+| [OfX-Kafka](https://www.nuget.org/packages/OfX-Kafka/)       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | This Document                                                                            |
 ---

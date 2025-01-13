@@ -2,5 +2,7 @@ namespace OfX.Kafka.Constants;
 
 internal class OfXKafkaConstants
 {
-    public const string ResponseTopicPrefix = "ofx-kafka-response-topic";
+    internal const string ResponseTopicPrefix = "ofx-response-topic";
+    internal const string ClientGroupId = "ofx-rpc-client-group";
+    internal const string ServerGroupId = "ofx-rpc-server-group";
 }
