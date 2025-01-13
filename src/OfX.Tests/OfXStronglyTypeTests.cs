@@ -20,7 +20,7 @@ public sealed class OfXStronglyTypeTests : ServicesBuilding
             {
                 options.AddAttributesContainNamespaces(assembly);
                 options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                options.AddStronglyTypeIdConverter(c => c.ForType<StronglyTypeTestsRegister>());
+                options.AddStronglyTypeIdConverter(c => c.OfType<StronglyTypeTestsRegister>());
             }))
             .InstallAllServices();
     }
