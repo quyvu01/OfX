@@ -10,10 +10,10 @@ public interface IOfXRabbitMqClient<TAttribute> : IMappableRequestHandler<TAttri
     IServiceProvider ServiceProvider { get; }
 
     async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(
-        RequestContext<TAttribute> context)
+        RequestContext<TAttribute> requestContext)
     {
         var client = ServiceProvider.GetRequiredService<IRabbitMqClient>();
-        var result = await client.RequestAsync(context);
+        var result = await client.RequestAsync(requestContext);
         return result;
     }
 }

@@ -12,11 +12,11 @@ public interface IOfXGrpcRequestClient<TAttribute> : IMappableRequestHandler<TAt
     where TAttribute : OfXAttribute
 {
     IServiceProvider ServiceProvider { get; }
-    async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(RequestContext<TAttribute> context)
+    async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(RequestContext<TAttribute> requestContext)
     {
         var ofXResponseFunc = ServiceProvider.GetRequiredService<GetOfXResponseFunc>();
         var func = ofXResponseFunc.Invoke(typeof(TAttribute));
-        return await func.Invoke(new GetDataMappableQuery(context.Query.SelectorIds, context.Query.Expression),
-            new Context(context.Headers, context.CancellationToken));
+        return await func.Invoke(new GetDataMappableQuery(requestContext.Query.SelectorIds, requestContext.Query.Expression),
+            new Context(requestContext.Headers, requestContext.CancellationToken));
     }
 }

@@ -14,7 +14,7 @@ internal sealed class DataMappableService(
     IServiceProvider serviceProvider,
     IEnumerable<Assembly> attributeAssemblies) : IDataMappableService
 {
-    private const string RequestAsync = nameof(RequestAsync);
+    private const string ExecuteAsync = nameof(ExecuteAsync);
 
     private static readonly Lazy<ConcurrentDictionary<Type, MethodInfo>> MethodInfoStorage =
         new(() => new ConcurrentDictionary<Type, MethodInfo>());
@@ -53,10 +53,10 @@ internal sealed class DataMappableService(
                 var queryType = typeof(RequestOf<>).MakeGenericType(x.OfXAttributeType);
                 var query = OfXCached.CreateInstanceWithCache(queryType, selectorsByType, x.Expression);
                 if (query is null || queryType is null) return emptyResponse;
-                var serviceType = typeof(IMappableRequestHandler<>).MakeGenericType(x.OfXAttributeType);
-                var handler = serviceProvider.GetRequiredService(serviceType);
-                var genericMethod = MethodInfoStorage.Value.GetOrAdd(x.OfXAttributeType, q => serviceType.GetMethods()
-                    .First(m => m.Name == RequestAsync && m.GetParameters() is { Length: 1 } parameters &&
+                var sendPipelineType = typeof(SendPipelinesImpl<>).MakeGenericType(x.OfXAttributeType);
+                var handler = serviceProvider.GetRequiredService(sendPipelineType);
+                var genericMethod = MethodInfoStorage.Value.GetOrAdd(x.OfXAttributeType, q => sendPipelineType.GetMethods()
+                    .First(m => m.Name == ExecuteAsync && m.GetParameters() is { Length: 1 } parameters &&
                                 parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
 
                 try

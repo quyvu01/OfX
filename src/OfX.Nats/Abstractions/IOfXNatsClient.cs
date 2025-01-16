@@ -10,9 +10,9 @@ public interface IOfXNatsClient<TAttribute> : IMappableRequestHandler<TAttribute
     IServiceProvider ServiceProvider { get; }
 
     async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(
-        RequestContext<TAttribute> context)
+        RequestContext<TAttribute> requestContext)
     {
         var natsRequester = ServiceProvider.GetRequiredService<INatsRequester<TAttribute>>();
-        return await natsRequester.RequestAsync(context);
+        return await natsRequester.RequestAsync(requestContext);
     }
 }

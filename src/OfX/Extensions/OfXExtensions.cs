@@ -60,10 +60,12 @@ public static class OfXExtensions
 
         serviceCollection.AddScoped<IDataMappableService>(sp =>
             new DataMappableService(sp, newOfRegister.AttributesRegister));
-        
+
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
 
         serviceCollection.AddTransient(typeof(ReceivedPipelinesImpl<,>));
+        
+        serviceCollection.AddTransient(typeof(SendPipelinesImpl<>));
 
         return newOfRegister;
     }

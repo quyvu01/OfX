@@ -13,6 +13,9 @@ public static class OfXException
 
     public sealed class PipelineIsNotReceivedPipelineBehavior(Type type) :
         Exception($"The input pipeline: {type.Name} is not matched with ReceivedPipelineBehavior. Please check again!");
+    
+    public sealed class PipelineIsNotSendPipelineBehavior(Type type) :
+        Exception($"The input pipeline: {type.Name} is not matched with SendPipelineBehavior. Please check again!");
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");

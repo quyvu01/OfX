@@ -29,6 +29,7 @@ public class OfXCoreTests : ServicesBuilding
                         options.AddGrpcClients(c =>
                             c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]));
                         options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesImpl<>)));
+                        options.AddSendPipelines(c => c.OfType(typeof(TestSendPipelinesImpl<>)));
                     })
                     .AddOfXEFCore(options =>
                     {

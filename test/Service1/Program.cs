@@ -1,6 +1,7 @@
 using Kernel;
 using OfX.Extensions;
 using OfX.Nats.Extensions;
+using Service1.Pipelines;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,7 @@ builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
     cfg.AddNats(options => options.Url("nats://localhost:4222"));
+    cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<>)));
 });
 
 builder.Services.AddControllers();

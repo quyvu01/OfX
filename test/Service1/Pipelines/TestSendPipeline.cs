@@ -2,9 +2,9 @@ using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Responses;
 
-namespace Service3Api;
+namespace Service1.Pipelines;
 
-public class TestPipeline<TAttribute> : IReceivedPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
+public sealed class TestSendPipeline<TAttribute> : ISendPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
         Func<Task<ItemsResponse<OfXDataResponse>>> next)

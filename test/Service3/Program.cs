@@ -7,13 +7,14 @@ using OfX.Nats.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Converters;
+using Service3Api.Pipelines;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddNats(options => options.Url("nats://localhost:4222"));
-        cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestPipeline<>)); });
+        cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestReceivedPipeline<>)); });
         cfg.AddStronglyTypeIdConverter(c => c.OfType<IdConverterRegister>());
     })
     .AddOfXEFCore(cfg =>

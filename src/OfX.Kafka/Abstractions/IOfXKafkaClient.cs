@@ -10,10 +10,10 @@ public interface IOfXKafkaClient<TAttribute> : IMappableRequestHandler<TAttribut
     IServiceProvider ServiceProvider { get; }
 
     async Task<ItemsResponse<OfXDataResponse>> IMappableRequestHandler<TAttribute>.RequestAsync(
-        RequestContext<TAttribute> context)
+        RequestContext<TAttribute> requestContext)
     {
         var client = ServiceProvider.GetRequiredService<IKafkaClient>();
-        var result = await client.RequestAsync(context);
+        var result = await client.RequestAsync(requestContext);
         return result;
     }
 }

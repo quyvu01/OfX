@@ -4,30 +4,30 @@ using OfX.Exceptions;
 
 namespace OfX.ApplicationModels;
 
-public sealed class ReceivedPipeline(IServiceCollection serviceCollection)
+public sealed class SendPipeline(IServiceCollection serviceCollection)
 {
-    private static readonly Type receivedPipelineInterface = typeof(IReceivedPipelineBehavior<>);
+    private static readonly Type sendPipelineInterface = typeof(ISendPipelineBehavior<>);
 
-    public ReceivedPipeline OfType<TReceivedPipeline>(ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+    public SendPipeline OfType<TSendPipeline>(ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
-        OfType(typeof(TReceivedPipeline));
+        OfType(typeof(TSendPipeline));
         return this;
     }
 
     // Hmmm, this one is temporary!. I think should test more case!
-    public ReceivedPipeline OfType(Type pipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+    public SendPipeline OfType(Type pipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
         var signatureInterfaceTypes = pipelineType.GetInterfaces()
-            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == receivedPipelineInterface)
+            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == sendPipelineInterface)
             .ToList();
 
         if (signatureInterfaceTypes is not { Count: > 0 })
-            throw new OfXException.PipelineIsNotReceivedPipelineBehavior(pipelineType);
+            throw new OfXException.PipelineIsNotSendPipelineBehavior(pipelineType);
         if (pipelineType.IsGenericType)
         {
             if (pipelineType.ContainsGenericParameters)
             {
-                var serviceDescriptor = new ServiceDescriptor(receivedPipelineInterface, pipelineType, serviceLifetime);
+                var serviceDescriptor = new ServiceDescriptor(sendPipelineInterface, pipelineType, serviceLifetime);
                 serviceCollection.Add(serviceDescriptor);
                 return this;
             }
