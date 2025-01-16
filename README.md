@@ -45,8 +45,8 @@ builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
     cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); //<- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC or OfX-Nats...(like OfX transport extension package), there is no need to add this one anymore!
-    cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericPipeline<>).OfType<OtherPipeline>());
-    
+    cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericReceivedPipeline<>).OfType<OtherReceivedPipeline>());
+    cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
     // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
     cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
 });
@@ -93,10 +93,23 @@ Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where y
 
 #### AddReceivedPipelines
 
-When you want to create pipelines to handle the request for `OfXAttribute`.
+When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server, where you fetching and response to client!
 
 Parameters:
 `Action<ReceivedPipeline>`: add the pipelines.
+
+Example:
+
+```csharp
+    cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
+```
+
+#### AddSendPipelines
+
+When you want to create pipelines to handle the send request for `OfXAttribute`. You should use it on the client, where you send request to get data!
+
+Parameters:
+`Action<SendPipeline>`: add the pipelines.
 
 Example:
 
