@@ -14,7 +14,8 @@ public static class ClientsInstaller
     /// <param name="serviceCollection"></param>
     /// <param name="serviceSubstituteType"></param>
     /// <param name="attributeTypes"></param>
-    public static void InstallMappableRequestHandlers(IServiceCollection serviceCollection, Type serviceSubstituteType, params Type[] attributeTypes)
+    public static void InstallMappableRequestHandlers(IServiceCollection serviceCollection, Type serviceSubstituteType,
+        params Type[] attributeTypes)
     {
         var attributesBuilding = attributeTypes
             .Select(a => (AttributeType: a, InterfaceType: serviceSubstituteType.MakeGenericType(a),

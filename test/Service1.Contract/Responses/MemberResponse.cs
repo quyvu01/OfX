@@ -19,4 +19,7 @@ public class MemberResponse
 
     [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
     public string CountryName { get; set; }
+
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Provinces.Count", Order = 1)]
+    public int ProvinceCounting { get; set; }
 }
