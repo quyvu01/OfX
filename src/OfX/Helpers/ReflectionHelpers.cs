@@ -2,11 +2,11 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
-using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Extensions;
 using OfX.Responses;
+using OfX.Serializable;
 
 namespace OfX.Helpers;
 
@@ -110,7 +110,7 @@ internal static class ReflectionHelpers
                 if (value is null || ap.PropertyInfo is null) return value;
                 try
                 {
-                    var valueSet = JsonConvert.DeserializeObject(value, ap.PropertyInfo.PropertyType);
+                    var valueSet = SerializeObjects.DeserializeObject(value, ap.PropertyInfo.PropertyType);
                     ap.PropertyInfo.SetValue(ap.Model, valueSet);
                 }
                 catch (Exception)

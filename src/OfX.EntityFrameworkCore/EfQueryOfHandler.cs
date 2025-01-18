@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.Responses;
+using OfX.Serializable;
 
 namespace OfX.EntityFrameworkCore;
 
@@ -111,9 +111,11 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                 }
             }
 
-            // Serialize the final value expression using Newtonsoft.Json
-            var serializeObjectMethod =
-                typeof(JsonConvert).GetMethod(nameof(JsonConvert.SerializeObject), [typeof(object)]);
+            // Serialize the final value expression using System.Text.Json
+            
+            var serializeObjectMethod = typeof(SerializeObjects)
+                .GetMethod(nameof(SerializeObjects.SerializeObject), [typeof(object)]);
+
             var serializeCall = Expression.Call(serializeObjectMethod!,
                 Expression.Convert(currentExpression, typeof(object)));
 

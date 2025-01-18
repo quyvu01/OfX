@@ -83,12 +83,12 @@ public static class EntityFrameworkExtensions
                     configAttribute.OfXAttribute);
             });
 
+        var assemblyName = new AssemblyName("EfQueryOfHandlerModule");
+        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+        var moduleBuilder = assemblyBuilder.DefineDynamicModule("EfQueryOfHandlerModule");
+
         modelsHasOfXConfig.ForEach(m =>
         {
-            var assemblyName = new AssemblyName("EfQueryOfHandlerModule");
-            var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
-            var moduleBuilder = assemblyBuilder.DefineDynamicModule("EfQueryOfHandlerModule");
-
             var baseType = baseGenericType.MakeGenericType(m.ModelType, m.OfXAttribute);
             var typeBuilder = moduleBuilder.DefineType($"{m.ModelType.Name}EfQueryOfHandler",
                 TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.Class, baseType);

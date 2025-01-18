@@ -8,7 +8,7 @@ OfX-Kafka is an extension package for OfX that leverages Kafka for efficient dat
 
 ## Introduction
 
-Kafka-based Transport: Implements RabbitMq to handle data communication between services, providing a fast, secure, and scalable solution.
+Kafka-based Transport: Implements Kafka to handle data communication between services, providing a fast, secure, and scalable solution.
 
 ---
 
