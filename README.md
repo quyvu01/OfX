@@ -279,7 +279,7 @@ public class Country
     public List<Province> Provinces { get; set; }
 }
 ```
-If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to the *thousand kilometers :D* like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
+If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to *thousand kilometers :D*. Like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
 
 Generated SQL:
 ```SQL
@@ -326,7 +326,7 @@ public List<ProvinceDTO> Provinces { get; set; }
 
 `Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries` table.
 
-#### 2.Single Item: [`[0|-1]` `asc|desc` `Property`]example above:
+#### 2.Single Item: [`0|-1` `asc|desc` `Property`]example above:
 - Fetches the first (`0`) or last (`-1`) item in the collection.
 - Example:
 ```csharp
