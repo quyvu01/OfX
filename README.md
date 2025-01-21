@@ -373,7 +373,8 @@ public sealed class SomeDataResponse
 }
 ```
 
-#### Conclusion: The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
+#### Conclusion: 
+The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
 
 
 That all, Enjoy your moment!
