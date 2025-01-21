@@ -279,7 +279,7 @@ public class Country
     public List<Province> Provinces { get; set; }
 }
 ```
-If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to the *thousand kilometers :D* like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
+If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to *thousand kilometers :D*. Like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
 
 Generated SQL:
 ```SQL
@@ -373,7 +373,8 @@ public sealed class SomeDataResponse
 }
 ```
 
-#### Conclusion: The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
+#### Conclusion: 
+The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
 
 
 That all, Enjoy your moment!
