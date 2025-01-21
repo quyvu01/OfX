@@ -107,10 +107,10 @@ internal static class ReflectionHelpers
             {
                 var value = dt.Response.Items?
                     .FirstOrDefault(a => a.Id == ap.Func.DynamicInvoke(ap.Model)?.ToString())?.Value;
-                if (value is null || ap.PropertyInfo is null) return value;
+                if (value is null || ap.PropertyInfo is not { } propertyInfo) return value;
                 try
                 {
-                    var valueSet = SerializeObjects.DeserializeObject(value, ap.PropertyInfo.PropertyType);
+                    var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
                     ap.PropertyInfo.SetValue(ap.Model, valueSet);
                 }
                 catch (Exception)

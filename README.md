@@ -70,7 +70,7 @@ Registers assemblies that contain the attributes, used by OfX for data mapping.
 
 The Attribute must be inherited from `OfXAttribute` and they will be scanned by OfX!
 
-Parameters: 
+Parameters:
 `Assembly`: The assembly containing the (OfX) attributes.
 
 #### AddHandlersFromNamespaceContaining
@@ -149,6 +149,13 @@ public sealed class SomeDataResponse
     
     [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
     public string CountryName { get; set; }
+
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    public string CountryId { get; set; }
+
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]
+    public string Province { get; set; }
+    
     // Add other properties as needed
 }
 ```
@@ -184,6 +191,190 @@ public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
     }
 }
 ```
+
+### 5. Unlock the Full Power of Expressions 🚀
+
+Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how **Expressions** work and what makes them so versatile.
+
+#### Default Data vs. External Data
+- **Default Data**: Automatically fetched using `OfX Attribute`. No `Expression` is required.
+- **External Data**: Define an `Expression` to fetch specific or relational data from other tables.
+
+Here’s how you can harness the power of **Expressions** in different scenarios:
+
+#### Fetching Data on the Same Table
+Simple case: fetching additional fields from the same table.
+
+```csharp
+public sealed class SomeDataResponse
+{
+    public string Id { get; set; }
+    public string UserId { get; set; }
+
+    [UserOf(nameof(UserId), Expression = "Email")]
+    public string UserEmail { get; set; }
+
+    [UserOf(nameof(UserId))]
+    public string UserName { get; set; }
+}
+```
+
+`User` structure:
+```csharp
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
+public sealed class User
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+    ...
+}
+```
+Generated SQL:
+```SQL
+ SELECT u."Id", u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
+```
+#### Fetching Data from Navigated Tables
+Expressions also support navigation through navigated tables.
+
+```csharp
+public sealed class SomeDataResponse
+{
+    ...
+    [UserOf(nameof(UserId), Expression = "ProvinceId")]
+    public string ProvinceId { get; set; }
+    
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
+    public string CountryName { get; set; }
+    ...
+}    
+
+```
+In this case, `Expression = "Country.Name"` means:
+
+- Start from the `Provinces` table.
+
+- Navigate to the `Country` property.
+
+- Fetch the `Name` field from the Countries table.
+
+Structures:
+```csharp
+[OfXConfigFor<ProvinceOfAttribute>(nameof(Id), nameof(Name))]
+public sealed class Province
+{
+    public ProvinceId Id { get; set; }
+    public string Name { get; set; }
+    public CountryId CountryId { get; set; }
+    public Country Country { get; set; }
+}
+```
+
+```csharp
+[OfXConfigFor<CountryOfAttribute>(nameof(Id), nameof(Name))]
+public class Country
+{
+    public CountryId Id { get; set; }
+    public string Name { get; set; }
+    public List<Province> Provinces { get; set; }
+}
+```
+If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to the *thousand kilometers :D* like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
+
+Generated SQL:
+```SQL
+SELECT p."Id", c."Name" FROM "Provinces" AS p
+LEFT JOIN "Countries" AS c ON p."CountryId" = c."Id"
+WHERE p."Id" IN (@__SomeProvinceIds___)
+```
+
+#### Mapping Objects Dynamically.
+```csharp
+public sealed class SomeDataResponse
+{
+    ...
+    [UserOf(nameof(UserId), Expression = "ProvinceId")]
+    public string ProvinceId { get; set; }
+    
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country", Order = 1)]
+    public CountryDTO Country { get; set; }
+    ...
+}    
+```
+```csharp
+public sealed class CountryDTO
+{
+    public string Id { get; set; }
+    public string Name {get; set;}
+}
+```
+`Note`: The DTO structure (e.g., `CountryDTO`) must match the source model's structure.
+- Only properties directly on the source model (e.g., `Id`, `Name`) are selected.
+- Navigators (e.g., `Provinces`) are ignored.
+
+`Note`: When you map an object, the correlation DTO should have the same structure with `Model` like the `CountryDTO` above.
+
+#### Array Mapping:
+Unlock powerful features for mapping collections!
+#### 1. All Items: [`asc|desc` `Property`]
+- Retrieves all items ordered by the specified property.
+- Example:
+```csharp
+[CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
+public List<ProvinceDTO> Provinces { get; set; }
+```
+
+`Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries` table.
+
+#### 2.Single Item: [`[0|-1]` `asc` `Property`]example above:
+- Fetches the first (`0`) or last (`-1`) item in the collection.
+- Example:
+```csharp
+public sealed class SomeDataResponse
+{
+    ...
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    public string CountryId { get; set; }
+
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]", Order = 2)]
+    public ProvinceDTO Province { get; set; }
+    ...
+}
+```
+
+When you select one item, you can navigate to the next level of the Table. Like this one:
+```csharp
+public sealed class SomeDataResponse
+{
+    ...
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    public string CountryId { get; set; }
+
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]
+    public string ProvinceName { get; set; }
+    ...
+}
+```
+
+### 3.Offset & Limit: [`Offset` `Limit` `asc|desc` `Property`]
+- Retrieves a slice of the collection.
+- Example:
+
+```csharp
+public sealed class SomeDataResponse
+{
+    ...
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    public string CountryId { get; set; }
+
+    [CountryOf(nameof(CountryId), Expression = "Provinces[2 10 asc Name]", Order = 2)]
+    public List<ProvinceDTO> Provinces { get; set; }
+    ...
+}
+```
+
+#### Conclusion: The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
+
 
 That all, Enjoy your moment!
 
