@@ -192,7 +192,7 @@ public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 }
 ```
 
-### 5. Unlock the Full Power of Expressions 🚀
+### 5. Unlock the Full Power of `Expressions` 🚀
 
 Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how **Expressions** work and what makes them so versatile.
 
@@ -326,7 +326,7 @@ public List<ProvinceDTO> Provinces { get; set; }
 
 `Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries` table.
 
-#### 2.Single Item: [`[0|-1]` `asc` `Property`]example above:
+#### 2.Single Item: [`[0|-1]` `asc|desc` `Property`]example above:
 - Fetches the first (`0`) or last (`-1`) item in the collection.
 - Example:
 ```csharp
