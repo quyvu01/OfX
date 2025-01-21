@@ -7,6 +7,7 @@ using OfX.Nats.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Converters;
+using Service3Api.Models;
 using Service3Api.Pipelines;
 
 var builder = WebApplication.CreateBuilder(args);

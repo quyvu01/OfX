@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.EntityFrameworkCore.Delegates;
+using OfX.EntityFrameworkCore.Queryable;
 using OfX.Responses;
 using OfX.Serializable;
 
@@ -19,6 +20,10 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     where TModel : class
     where TAttribute : OfXAttribute
 {
+    private const int FullCollection = 2;
+    private const int CollectionWithFirstOrLast = 3;
+    private const int CollectionWithOffsetLimit = 4;
+
     private static readonly Lazy<ConcurrentDictionary<string, Expression<Func<TModel, OfXDataResponse>>>>
         ExpressionMapModelStorage = new(() => []);
 
@@ -32,15 +37,17 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var query = context.Query.Expression is null
             ? context.Query with { Expression = defaultPropertyName }
             : context.Query;
+
+        var filter = BuildFilter(context.Query);
         var data = await _collection
             .AsNoTracking()
-            .Where(BuildFilter(context.Query))
+            .Where(filter)
             .Select(BuildResponse(query))
             .ToListAsync(context.CancellationToken);
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
-    // Currently, the Id type is supported for primitive type, in the next version. The strongly-type should be supported!
+    // Currently, the ID type is supported for primitive type, in the next version. The strongly-type should be supported!
     // I cannot find the way to optimize this one on this moment because seem this cannot be cached.
     // Tried to use FromRawSql, but I need to write all Query like Select * from...
     // Mark this one as the issue. I'll back later one!
@@ -61,7 +68,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         return ExpressionMapModelStorage.Value.GetOrAdd(request.Expression, expression =>
         {
             var parameter = Expression.Parameter(typeof(TModel), "x");
-            // Access the Id property on the model
+            // Access the ID property on the model
             var idProperty = Expression.Property(parameter, idPropertyName);
             var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
             var idAsString = Expression.Call(idProperty, toStringMethod!);
@@ -72,54 +79,100 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 
             foreach (var part in expressionParts)
             {
-                // Handle collection access with an index (e.g., "ApplicationUserRoleGroups[0]")
-                var bracketIndex = part.IndexOf('[');
-                if (bracketIndex != -1 && part.EndsWith("]"))
+                // Handle collection access with an index (e.g., "Collections[...]")
+                var startBracketIndex = part.IndexOf('[');
+                var endBracketIndex = part.IndexOf(']');
+                if (startBracketIndex != -1 && endBracketIndex != -1)
                 {
-                    var collectionPropertyName = part[..bracketIndex];
-                    var collectionProperty = currentType.GetProperty(collectionPropertyName);
-                    if (collectionProperty == null)
+                    var collectionPropertyName = part[..startBracketIndex];
+                    // Here, we get the data of items with index and ordered by property name!
+                    var collectionOneItemData = part
+                        .Substring(startBracketIndex + 1, endBracketIndex - startBracketIndex - 1);
+
+                    var collectionItems = collectionOneItemData.Split(' ');
+
+                    if (collectionItems is not
+                        { Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit })
                         throw new ArgumentException(
-                            $"Property '{collectionPropertyName}' does not exist on type '{currentType.FullName}'");
+                            $"Collection data [{collectionOneItemData}] must be defined as [OrderDirection OrderedProperty] or [Offset Limit OrderDirection OrderedProperty] or [0 OrderDirection OrderedProperty](First item) or [-1 OrderDirection OrderedProperty](Last item)");
 
-                    currentExpression = Expression.Property(currentExpression, collectionProperty);
-                    currentExpression = Expression.Call(
-                        typeof(Enumerable),
-                        nameof(Enumerable.FirstOrDefault),
-                        [collectionProperty.PropertyType.GetGenericArguments()[0]],
-                        currentExpression
-                    );
+                    if (collectionItems.Length == FullCollection)
+                    {
+                        var orderedDirection = collectionItems[0];
+                        var orderedPropertyName = collectionItems[1];
+                        var expressionQueryableData = QueryableHelpers.GetManyExpression(currentExpression,
+                            collectionPropertyName,
+                            orderedDirection, orderedPropertyName);
+                        currentExpression = expressionQueryableData.Expression;
+                        currentType = expressionQueryableData.TargetType;
+                        continue;
+                    }
 
-                    currentType = collectionProperty.PropertyType.GetGenericArguments()[0];
+                    if (collectionItems.Length == CollectionWithFirstOrLast)
+                    {
+                        var indexAsString = collectionItems[0];
+                        var orderedDirection = collectionItems[1];
+                        var orderedPropertyName = collectionItems[2];
+                        if (!int.TryParse(indexAsString, out var index) || (index != 0 && index != -1))
+                            throw new ArgumentException(
+                                $"First parameter [{indexAsString}] must be 0(First item) or -1(Last item)");
+                        var expressionQueryableData = QueryableHelpers.GetOneExpression(currentExpression,
+                            collectionPropertyName,
+                            orderedDirection, orderedPropertyName, index);
+                        currentExpression = expressionQueryableData.Expression;
+                        currentType = expressionQueryableData.TargetType;
+                        continue;
+                    }
+
+                    if (collectionItems.Length == CollectionWithOffsetLimit)
+                    {
+                        var offsetAsString = collectionItems[0];
+                        var limitAsString = collectionItems[1];
+                        var orderedDirection = collectionItems[2];
+                        var orderedPropertyName = collectionItems[3];
+                        if (!int.TryParse(offsetAsString, out var offset) || offset < 0)
+                            throw new ArgumentException(
+                                $"Offset parameter [{offset}] must not be a negative or zero number!");
+                        if (!int.TryParse(limitAsString, out var limit) || limit < 0)
+                            throw new ArgumentException(
+                                $"Limit parameter [{limit}] must not be a negative or zero number!");
+                        var expressionQueryableData = QueryableHelpers.GetManyExpression(currentExpression,
+                            collectionPropertyName, orderedDirection, orderedPropertyName, offset, limit);
+
+                        currentExpression = expressionQueryableData.Expression;
+                        currentType = expressionQueryableData.TargetType;
+                    }
+
+                    continue;
                 }
-                else if (part == "Count")
+
+                if (part == "Count")
                 {
                     // Handle "Count" for collections
                     currentExpression = Expression.Property(currentExpression, "Count");
                     currentType = typeof(int);
+                    continue;
                 }
-                else
-                {
-                    // Handle normal property access
-                    var propertyInfo = currentType.GetProperty(part);
-                    if (propertyInfo == null)
-                        throw new ArgumentException(
-                            $"Property '{part}' does not exist on type '{currentType.FullName}'");
 
-                    currentExpression = Expression.Property(currentExpression, propertyInfo);
-                    currentType = propertyInfo.PropertyType;
-                }
+                // Handle normal property access
+                var propertyInfo = currentType.GetProperty(part);
+                if (propertyInfo == null)
+                    throw new ArgumentException(
+                        $"Property '{part}' does not exist on type '{currentType.FullName}'");
+
+                currentExpression = Expression.Property(currentExpression, propertyInfo);
+                currentType = propertyInfo.PropertyType;
             }
 
             // Serialize the final value expression using System.Text.Json
-            
+
             var serializeObjectMethod = typeof(SerializeObjects)
                 .GetMethod(nameof(SerializeObjects.SerializeObject), [typeof(object)]);
 
             var serializeCall = Expression.Call(serializeObjectMethod!,
                 Expression.Convert(currentExpression, typeof(object)));
 
-            // Create member bindings for Id and serialized Value
+            // Create member bindings for ID and serialized Value
             var bindings = new List<MemberBinding>
             {
                 Expression.Bind(typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Id))!, idAsString),

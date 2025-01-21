@@ -1,4 +1,5 @@
 using Kernel.Attributes;
+using Kernel.ModelIds;
 
 namespace Service1.Contract.Responses;
 
@@ -20,6 +21,9 @@ public class MemberResponse
     [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
     public string CountryName { get; set; }
 
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Provinces.Count", Order = 1)]
-    public int ProvinceCounting { get; set; }
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    public StronglyTypedId<string> CountryId { get; set; }
+
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 1 asc Name]", Order = 2)]
+    public List<ProvinceResponse> Provinces { get; set; }
 }
