@@ -326,7 +326,7 @@ public List<ProvinceDTO> Provinces { get; set; }
 
 `Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries` table.
 
-#### 2.Single Item: [`[0|-1]` `asc|desc` `Property`]example above:
+#### 2.Single Item: [`0|-1` `asc|desc` `Property`]example above:
 - Fetches the first (`0`) or last (`-1`) item in the collection.
 - Example:
 ```csharp
