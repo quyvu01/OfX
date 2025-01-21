@@ -279,7 +279,7 @@ public class Country
     public List<Province> Provinces { get; set; }
 }
 ```
-If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to the *thousand kilometers :D* like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
+If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to *thousand kilometers :D*. Like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
 
 Generated SQL:
 ```SQL
