@@ -5,6 +5,7 @@ using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Cached;
 using OfX.Constants;
+using OfX.Exceptions;
 using OfX.Helpers;
 using OfX.Responses;
 
@@ -15,6 +16,8 @@ internal sealed class DataMappableService(
     IEnumerable<Assembly> attributeAssemblies) : IDataMappableService
 {
     private const string ExecuteAsync = nameof(ExecuteAsync);
+    private const int maxObjectSpawnTimes = 32;
+    private int _currentObjectSpawnTimes;
 
     private static readonly Lazy<ConcurrentDictionary<Type, MethodInfo>> MethodInfoStorage =
         new(() => new ConcurrentDictionary<Type, MethodInfo>());
@@ -27,6 +30,8 @@ internal sealed class DataMappableService(
 
     public async Task MapDataAsync(object value, IContext context = null)
     {
+        if (_currentObjectSpawnTimes >= maxObjectSpawnTimes)
+            throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
         var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
         var ofXTypesData = ReflectionHelpers
             .GetOfXTypesData(allPropertyDatas, _attributeLazyStorage.Value);
@@ -55,10 +60,8 @@ internal sealed class DataMappableService(
                 if (query is null || queryType is null) return emptyResponse;
                 var sendPipelineType = typeof(SendPipelinesImpl<>).MakeGenericType(x.OfXAttributeType);
                 var handler = serviceProvider.GetRequiredService(sendPipelineType);
-                var genericMethod = MethodInfoStorage.Value.GetOrAdd(x.OfXAttributeType, q => sendPipelineType.GetMethods()
-                    .First(m => m.Name == ExecuteAsync && m.GetParameters() is { Length: 1 } parameters &&
-                                parameters[0].ParameterType == typeof(RequestContext<>).MakeGenericType(q)));
-
+                var genericMethod = MethodInfoStorage.Value.GetOrAdd(x.OfXAttributeType, q => sendPipelineType
+                    .GetMethod(ExecuteAsync, [typeof(RequestContext<>).MakeGenericType(q)]));
                 try
                 {
                     var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(x.OfXAttributeType);
@@ -81,6 +84,21 @@ internal sealed class DataMappableService(
             });
             var orderedTasks = await Task.WhenAll(tasks);
             ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks.ToList());
+        }
+
+        var nextMappableData = allPropertyDatas
+            .Aggregate(new List<object>(), (acc, next) =>
+            {
+                if (GeneralHelpers.IsPrimitiveType(next.PropertyInfo.PropertyType)) return acc;
+                var propertyValue = next.PropertyInfo.GetValue(next.Model);
+                if (propertyValue is null) return acc;
+                acc.Add(propertyValue);
+                return acc;
+            });
+        if (nextMappableData is { Count: > 0 })
+        {
+            _currentObjectSpawnTimes += 1;
+            await MapDataAsync(nextMappableData, context);
         }
     }
 }

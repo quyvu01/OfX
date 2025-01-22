@@ -63,10 +63,14 @@ internal static class ReflectionHelpers
 
                 try
                 {
+                    if (currentObject is IEnumerable and not string)
+                    {
+                        EnumerableObject(currentObject, stack);
+                        continue;
+                    }
                     var propertyValue = property.GetValue(currentObject);
                     if (propertyValue == null) continue;
-                    if (typeof(IEnumerable).IsAssignableFrom(property.PropertyType) &&
-                        property.PropertyType != typeof(string))
+                    if (propertyValue is IEnumerable and not string)
                     {
                         EnumerableObject(propertyValue, stack);
                         continue;
@@ -101,8 +105,7 @@ internal static class ReflectionHelpers
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
         List<(Type CrossCuttingType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
-    {
-        allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
+        => allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
             dt => (dt.CrossCuttingType, dt.Expression), (ap, dt) =>
             {
                 var value = dt.Response.Items?
@@ -115,10 +118,11 @@ internal static class ReflectionHelpers
                 }
                 catch (Exception)
                 {
-                    // ignored
+                    // In case when we cannot know the response type, and we accept this is a string, just save the serializable data to a string. Self handle!
+                    if (ap.PropertyInfo.PropertyType == typeof(string))
+                        ap.PropertyInfo.SetValue(ap.Model, value);
                 }
 
                 return value;
             }).IteratorVoid();
-    }
 }

@@ -25,4 +25,7 @@ public static class OfXException
 
     public sealed class StronglyTypeConfigurationMustNotBeNull()
         : Exception("Strongly type Id configuration must not be null!");
+    
+    public sealed class OfXMappingObjectsSpawnReachableTimes()
+        : Exception("OfX could cannot be mapped because of objects spawn reach the deep!");
 }
