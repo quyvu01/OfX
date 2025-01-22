@@ -13,7 +13,7 @@ namespace OfX.Implementations;
 
 internal sealed class DataMappableService(
     IServiceProvider serviceProvider,
-    IEnumerable<Assembly> attributeAssemblies) : IDataMappableService
+    IEnumerable<Assembly> ofXAttributeAssemblies) : IDataMappableService
 {
     private const string ExecuteAsync = nameof(ExecuteAsync);
     private const int maxObjectSpawnTimes = 32;
@@ -24,7 +24,7 @@ internal sealed class DataMappableService(
 
     private readonly Lazy<IReadOnlyCollection<Type>> _attributeLazyStorage = new(() =>
     [
-        ..attributeAssemblies.SelectMany(x => x.ExportedTypes)
+        ..ofXAttributeAssemblies.SelectMany(x => x.ExportedTypes)
             .Where(x => typeof(OfXAttribute).IsAssignableFrom(x) && !x.IsAbstract && !x.IsInterface)
     ]);
 
@@ -35,18 +35,18 @@ internal sealed class DataMappableService(
         var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
         var ofXTypesData = ReflectionHelpers
             .GetOfXTypesData(allPropertyDatas, _attributeLazyStorage.Value);
-        var orderedCrossCuttings = ofXTypesData
+        var ofXTypesDataGrouped = ofXTypesData
             .GroupBy(a => a.Order)
             .OrderBy(a => a.Key);
-        foreach (var orderedCrossCutting in orderedCrossCuttings)
+        foreach (var mappableTypes in ofXTypesDataGrouped)
         {
             var orderedPropertyDatas = allPropertyDatas
-                .Where(x => x.Order == orderedCrossCutting.Key);
+                .Where(x => x.Order == mappableTypes.Key);
 
-            var tasks = orderedCrossCutting.Select(async x =>
+            var tasks = mappableTypes.Select(async x =>
             {
                 var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
-                var emptyResponse = (CrossCuttingType: x.OfXAttributeType, x.Expression, Response: emptyCollection);
+                var emptyResponse = (x.OfXAttributeType, x.Expression, Response: emptyCollection);
                 var propertyCalledStorages = x.PropertyCalledLaters.ToList();
                 if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
 
@@ -75,7 +75,7 @@ internal sealed class DataMappableService(
                     var requestTask = ((Task<ItemsResponse<OfXDataResponse>>)genericMethod
                         .Invoke(handler, [requestContext]))!;
                     var response = await requestTask;
-                    return (CrossCuttingType: x.OfXAttributeType, x.Expression, Response: response);
+                    return (x.OfXAttributeType, x.Expression, Response: response);
                 }
                 catch (Exception)
                 {
