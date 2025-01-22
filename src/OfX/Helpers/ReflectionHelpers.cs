@@ -13,7 +13,7 @@ namespace OfX.Helpers;
 internal static class ReflectionHelpers
 {
     private static readonly ConcurrentDictionary<PropertyInfo, MappableDataPropertyCache>
-        CrossCuttingPropertiesCache = new();
+        OfXPropertiesCache = new();
 
     internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
@@ -36,7 +36,7 @@ internal static class ReflectionHelpers
             var properties = currentType.GetProperties();
             foreach (var property in properties)
             {
-                if (CrossCuttingPropertiesCache.TryGetValue(property, out var propertyCache))
+                if (OfXPropertiesCache.TryGetValue(property, out var propertyCache))
                 {
                     var func = propertyCache.Func;
                     yield return new MappableDataProperty(property, currentObject, propertyCache.Attribute, func,
@@ -44,20 +44,20 @@ internal static class ReflectionHelpers
                     continue;
                 }
 
-                var crossCutting = property.GetCustomAttributes(true)
+                var ofXAttribute = property.GetCustomAttributes(true)
                     .OfType<IOfXAttributeCore>()
                     .FirstOrDefault();
-                if (crossCutting is not null && Attribute.IsDefined(property, crossCutting.GetType()))
+                if (ofXAttribute is not null && Attribute.IsDefined(property, ofXAttribute.GetType()))
                 {
                     var paramExpression = Expression.Parameter(currentObject.GetType());
-                    var propExpression = Expression.Property(paramExpression, crossCutting.PropertyName);
+                    var propExpression = Expression.Property(paramExpression, ofXAttribute.PropertyName);
                     var expression = Expression.Lambda(propExpression, paramExpression);
                     var func = expression.Compile();
-                    yield return new MappableDataProperty(property, currentObject, crossCutting, func,
-                        crossCutting.Expression, crossCutting.Order);
-                    CrossCuttingPropertiesCache.TryAdd(property,
-                        new MappableDataPropertyCache(crossCutting, func, crossCutting.Expression,
-                            crossCutting.Order));
+                    yield return new MappableDataProperty(property, currentObject, ofXAttribute, func,
+                        ofXAttribute.Expression, ofXAttribute.Order);
+                    OfXPropertiesCache.TryAdd(property,
+                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression,
+                            ofXAttribute.Order));
                     continue;
                 }
 
@@ -68,6 +68,7 @@ internal static class ReflectionHelpers
                         EnumerableObject(currentObject, stack);
                         continue;
                     }
+
                     var propertyValue = property.GetValue(currentObject);
                     if (propertyValue == null) continue;
                     if (propertyValue is IEnumerable and not string)
@@ -95,18 +96,18 @@ internal static class ReflectionHelpers
     }
 
     internal static IEnumerable<MappableTypeData> GetOfXTypesData(
-        IEnumerable<MappableDataProperty> datas, IEnumerable<Type> crossCuttingTypes) =>
+        IEnumerable<MappableDataProperty> datas, IEnumerable<Type> ofXAttributeTypes) =>
         datas
             .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Expression, x.Order })
-            .Join(crossCuttingTypes, d => d.Key.AttributeType, x => x,
+            .Join(ofXAttributeTypes, d => d.Key.AttributeType, x => x,
                 (d, x) => new MappableTypeData(x, d
                         .Select(a => new PropertyCalledLater(a.Model, a.Func)), d.Key.Expression,
                     d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
-        List<(Type CrossCuttingType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
+        List<(Type OfXAttributeType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
         => allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
-            dt => (dt.CrossCuttingType, dt.Expression), (ap, dt) =>
+            dt => (dt.OfXAttributeType, dt.Expression), (ap, dt) =>
             {
                 var value = dt.Response.Items?
                     .FirstOrDefault(a => a.Id == ap.Func.DynamicInvoke(ap.Model)?.ToString())?.Value;
