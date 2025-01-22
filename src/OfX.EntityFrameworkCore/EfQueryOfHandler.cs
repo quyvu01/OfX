@@ -94,7 +94,13 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                     if (collectionItems is not
                         { Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit })
                         throw new ArgumentException(
-                            $"Collection data [{collectionOneItemData}] must be defined as [OrderDirection OrderedProperty] or [Offset Limit OrderDirection OrderedProperty] or [0 OrderDirection OrderedProperty](First item) or [-1 OrderDirection OrderedProperty](Last item)");
+                            $"""
+                             Collection data [{collectionOneItemData}] must be defined as 
+                             [OrderDirection OrderedProperty] or 
+                             [Offset Limit OrderDirection OrderedProperty] or 
+                             [0 OrderDirection OrderedProperty](First item) or 
+                             [-1 OrderDirection OrderedProperty](Last item)
+                             """);
 
                     if (collectionItems.Length == FullCollection)
                     {
