@@ -67,6 +67,8 @@ public static class OfXExtensions
         
         serviceCollection.AddTransient(typeof(SendPipelinesImpl<>));
 
+        serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
+
         return newOfRegister;
     }
 

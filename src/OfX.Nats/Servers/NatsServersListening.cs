@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Nats.Extensions;
-using OfX.Nats.Messages;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 
@@ -22,8 +22,8 @@ internal static class NatsServersListening
             .Select(a => a.GetGenericArguments()[1]).ToList();
         attributeTypes.ForEach(attributeType => Task.Factory.StartNew(async () =>
         {
-            var natsScribeAsync =
-                natsClient.NatsClient.SubscribeAsync<MessageRequestOf>(attributeType.GetNatsSubject());
+            var natsScribeAsync = natsClient.NatsClient
+                .SubscribeAsync<MessageDeserializable>(attributeType.GetNatsSubject());
             await foreach (var message in natsScribeAsync)
             {
                 if (message.Data is null) continue;
