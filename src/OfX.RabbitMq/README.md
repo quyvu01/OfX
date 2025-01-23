@@ -68,7 +68,7 @@ That All, enjoy your moment!
 |------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
 | **Core**                           |                                                                                                         |
 | [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
-| **Data Querying**                  |                                                                                                         |
+| **Data Providers**                 |                                                                                                         |
 | [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
 | **Transports**                     |                                                                                                         |
 | [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
