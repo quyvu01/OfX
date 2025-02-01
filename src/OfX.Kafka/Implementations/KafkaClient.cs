@@ -7,9 +7,9 @@ using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Helpers;
 using OfX.Kafka.Abstractions;
-using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
+using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
 
@@ -17,7 +17,6 @@ namespace OfX.Kafka.Implementations;
 
 internal class KafkaClient : IKafkaClient, IDisposable
 {
-    private readonly KafkaConfigurator _kafkaConfigurator;
     private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
     private readonly string _relyTo;
@@ -25,10 +24,9 @@ internal class KafkaClient : IKafkaClient, IDisposable
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ItemsResponse<OfXDataResponse>>>
         _pendingRequests = [];
 
-    public KafkaClient(KafkaConfigurator kafkaConfigurator)
+    public KafkaClient()
     {
-        _kafkaConfigurator = kafkaConfigurator;
-        var kafkaBootstrapServers = kafkaConfigurator.KafkaHost;
+        var kafkaBootstrapServers = KafkaStatics.KafkaHost;
         var producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
         var consumerConfig = new ConsumerConfig
         {
@@ -116,7 +114,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
         const int numPartitions = 1;
         const short replicationFactor = 1;
 
-        var config = new AdminClientConfig { BootstrapServers = _kafkaConfigurator.KafkaHost };
+        var config = new AdminClientConfig { BootstrapServers = KafkaStatics.KafkaHost };
 
         using var adminClient = new AdminClientBuilder(config).Build();
 

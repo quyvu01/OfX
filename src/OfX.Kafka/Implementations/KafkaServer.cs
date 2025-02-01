@@ -10,9 +10,9 @@ using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Kafka.Abstractions;
-using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
+using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
 
@@ -21,7 +21,6 @@ namespace OfX.Kafka.Implementations;
 internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
     where TAttribute : OfXAttribute
 {
-    private readonly KafkaConfigurator _kafkaConfigurator;
     private readonly IServiceProvider _serviceProvider;
     private readonly IConsumer<string, string> _consumer;
     private readonly IProducer<string, string> _producer;
@@ -30,9 +29,7 @@ internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
     public KafkaServer(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
-        var kafkaMqConfigurator = _serviceProvider.GetRequiredService<KafkaConfigurator>();
-        _kafkaConfigurator = kafkaMqConfigurator;
-        var kafkaBootstrapServers = kafkaMqConfigurator.KafkaHost;
+        var kafkaBootstrapServers = KafkaStatics.KafkaHost;
         var consumerConfig = new ConsumerConfig
         {
             GroupId = OfXKafkaConstants.ServerGroupId,
@@ -123,7 +120,7 @@ internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
         const int numPartitions = 1;
         const short replicationFactor = 1;
 
-        var config = new AdminClientConfig { BootstrapServers = _kafkaConfigurator.KafkaHost };
+        var config = new AdminClientConfig { BootstrapServers = KafkaStatics.KafkaHost };
 
         using var adminClient = new AdminClientBuilder(config).Build();
 

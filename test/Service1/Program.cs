@@ -11,7 +11,11 @@ builder.Services.AddOpenApi();
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-    cfg.AddNats(options => options.Url("nats://localhost:4222"));
+    cfg.AddNats(options =>
+    {
+        options.Url("nats://localhost:4222");
+        options.TopicPrefix("Staging");
+    });
     cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<>)));
 });
 

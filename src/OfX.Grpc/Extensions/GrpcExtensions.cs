@@ -9,6 +9,7 @@ using OfX.Grpc.Abstractions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Servers;
+using OfX.Grpc.Statics;
 using OfX.Helpers;
 using OfX.Queries;
 using OfX.Registries;
@@ -24,7 +25,7 @@ public static class GrpcExtensions
     {
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
-        var hostMapAttributes = newClientsRegister.HostMapAttributes;
+        var hostMapAttributes = GrpcStatics.HostMapAttributes;
         var attributeRegisters = hostMapAttributes.SelectMany(a => a.Value);
 
         ofXRegister.ServiceCollection.TryAddScoped<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>

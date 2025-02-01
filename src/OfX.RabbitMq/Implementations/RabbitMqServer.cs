@@ -7,9 +7,9 @@ using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;
-using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
+using OfX.RabbitMq.Statics;
 using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -20,25 +20,23 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 {
     public async Task ConsumeAsync()
     {
-        var rabbitMqConfigurator = serviceProvider.GetRequiredService<RabbitMqConfigurator>();
         var queueName = $"{OfXRabbitMqConstants.QueueNamePrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
         const string routingKey = OfXRabbitMqConstants.RoutingKey;
-        
-        var credential = rabbitMqConfigurator.RabbitMqCredential;
-        var userName = credential.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
-        var password = credential.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
+
+        var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
+        var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
         var connectionFactory = new ConnectionFactory
         {
-            HostName = rabbitMqConfigurator.RabbitMqHost, VirtualHost = rabbitMqConfigurator.RabbitVirtualHost,
-            Port = rabbitMqConfigurator.RabbitMqPort,
+            HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
+            Port = RabbitMqStatics.RabbitMqPort,
             UserName = userName, Password = password
         };
-        
+
         await using var connection = await connectionFactory.CreateConnectionAsync();
         await using var channel = await connection.CreateChannelAsync();
         await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null);
-        
+
         var serviceTypes = typeof(IQueryOfHandler<,>);
         var handlers = OfXCached.AttributeMapHandler.Values.ToList();
         if (handlers is not { Count: > 0 }) return;
@@ -46,7 +44,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         var attributeTypes = handlers
             .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
             .Select(a => a.GetGenericArguments()[1]);
-        
+
         foreach (var attributeType in attributeTypes)
         {
             var exchangeName = attributeType.GetExchangeName();

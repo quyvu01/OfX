@@ -6,9 +6,9 @@ using OfX.Attributes;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.RabbitMq.Abstractions;
-using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
+using OfX.RabbitMq.Statics;
 using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -17,7 +17,6 @@ namespace OfX.RabbitMq.Implementations;
 
 internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
 {
-    private readonly RabbitMqConfigurator _rabbitMqConfigurator;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _callbackMapper = new();
     private IConnection _connection;
     private IChannel _channel;
@@ -25,21 +24,17 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     private string _replyQueueName;
     private const string routingKey = OfXRabbitMqConstants.RoutingKey;
 
-    public RabbitMqClient(RabbitMqConfigurator rabbitMqConfigurator)
-    {
-        _rabbitMqConfigurator = rabbitMqConfigurator;
+    public RabbitMqClient() =>
         StartAsync().Wait(); // We have to wait this one and ensure that everything is initialized
-    }
 
     private async Task StartAsync()
     {
-        var credential = _rabbitMqConfigurator.RabbitMqCredential;
-        var userName = credential.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
-        var password = credential.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
+        var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
+        var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
         var _connectionFactory = new ConnectionFactory
         {
-            HostName = _rabbitMqConfigurator.RabbitMqHost, VirtualHost = _rabbitMqConfigurator.RabbitVirtualHost,
-            Port = _rabbitMqConfigurator.RabbitMqPort,
+            HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
+            Port = RabbitMqStatics.RabbitMqPort,
             UserName = userName, Password = password
         };
 

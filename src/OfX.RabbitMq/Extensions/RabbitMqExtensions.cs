@@ -13,7 +13,6 @@ public static class RabbitMqExtensions
     {
         var config = new RabbitMqConfigurator();
         options.Invoke(config);
-        ofXRegister.ServiceCollection.AddSingleton(config);
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqServer, RabbitMqServer>();
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqClient, RabbitMqClient>();
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,

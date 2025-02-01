@@ -6,6 +6,7 @@ using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Registries;
 using OfX.Services;
+using OfX.Statics;
 
 namespace OfX.Extensions;
 
@@ -15,11 +16,11 @@ public static class OfXExtensions
     {
         var newOfRegister = new OfXRegister(serviceCollection);
         options.Invoke(newOfRegister);
-        if (newOfRegister.AttributesRegister is not { Count: > 0 })
+        if (OfXStatics.AttributesRegister is not { Count: > 0 })
             throw new OfXException.AttributesFromNamespaceShouldBeAdded();
 
         var targetInterface = typeof(IMappableRequestHandler<>);
-        if (newOfRegister.HandlersRegister is { } handlersRegister)
+        if (OfXStatics.HandlersRegister is { } handlersRegister)
         {
             // We don't need to care this so much, exactly. Because if there are not any handlers. It should be return an empty collection!
             handlersRegister.ExportedTypes
@@ -59,12 +60,12 @@ public static class OfXExtensions
         });
 
         serviceCollection.AddScoped<IDataMappableService>(sp =>
-            new DataMappableService(sp, newOfRegister.AttributesRegister));
+            new DataMappableService(sp, OfXStatics.AttributesRegister));
 
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
 
         serviceCollection.AddTransient(typeof(ReceivedPipelinesImpl<,>));
-        
+
         serviceCollection.AddTransient(typeof(SendPipelinesImpl<>));
 
         serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
