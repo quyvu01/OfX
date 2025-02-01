@@ -12,7 +12,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(options => options.Url("nats://localhost:4222"));
+        cfg.AddNats(options =>
+        {
+            options.Url("nats://localhost:4222");
+            options.TopicPrefix("Staging");
+        });
     })
     .AddOfXEFCore(cfg =>
     {

@@ -11,6 +11,7 @@ using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Implementations;
 using OfX.EntityFrameworkCore.Services;
+using OfX.EntityFrameworkCore.Statics;
 using OfX.Extensions;
 using OfX.Registries;
 
@@ -27,7 +28,7 @@ public static class EntityFrameworkExtensions
     {
         var newOfXEfCoreRegistrar = new OfXEfCoreRegistrar();
         registrarAction.Invoke(newOfXEfCoreRegistrar);
-        var dbContextTypes = newOfXEfCoreRegistrar.DbContextTypes;
+        var dbContextTypes = EntityFrameworkCoreStatics.DbContextTypes;
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
         var serviceCollection = ofXServiceInjector.ServiceCollection;
@@ -54,13 +55,13 @@ public static class EntityFrameworkExtensions
             modelTypeLookUp.Value.TryAdd(modelType, matchingServiceType.GetType());
             return matchingServiceType;
         });
-        AddEfQueryOfXHandlers(ofXServiceInjector, newOfXEfCoreRegistrar);
+        AddEfQueryOfXHandlers(ofXServiceInjector);
         return ofXServiceInjector;
     }
 
-    private static void AddEfQueryOfXHandlers(OfXRegister ofXRegister, OfXEfCoreRegistrar ofXEfCoreRegistrar)
+    private static void AddEfQueryOfXHandlers(OfXRegister ofXRegister)
     {
-        var modelsHasOfXConfig = ofXEfCoreRegistrar.ModelConfigurationAssembly
+        var modelsHasOfXConfig = EntityFrameworkCoreStatics.ModelConfigurationAssembly
             .ExportedTypes
             .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
             .Where(a => a.GetCustomAttributes().Any(x =>

@@ -1,11 +1,10 @@
 using OfX.Grpc.Exceptions;
+using OfX.Grpc.Statics;
 
 namespace OfX.Grpc.ApplicationModels;
 
 public class GrpcClientsRegister
 {
-    public Dictionary<string, List<Type>> HostMapAttributes { get; } = [];
-
     public GrpcClientsRegister AddGrpcHostWithOfXAttributes(string grpcHost, IEnumerable<Type> attributeTypes)
     {
         if (grpcHost is null)
@@ -13,12 +12,12 @@ public class GrpcClientsRegister
         if (attributeTypes is null)
             throw new OfXGrpcExceptions.AttributeTypesCannotBeNull();
         var typesAdding = attributeTypes.ToList();
-        if (HostMapAttributes.TryGetValue(grpcHost, out _))
+        if (GrpcStatics.HostMapAttributes.TryGetValue(grpcHost, out _))
             throw new OfXGrpcExceptions.GrpcHostHasBeenRegistered(grpcHost);
-        var addTypes = HostMapAttributes.Values.SelectMany(a => a);
+        var addTypes = GrpcStatics.HostMapAttributes.Values.SelectMany(a => a);
         if (typesAdding.Intersect(addTypes).Any())
             throw new OfXGrpcExceptions.SomeAttributesHasBeenRegisteredWithOtherHost();
-        HostMapAttributes.Add(grpcHost, typesAdding);
+        GrpcStatics.HostMapAttributes.Add(grpcHost, typesAdding);
         return this;
     }
 }

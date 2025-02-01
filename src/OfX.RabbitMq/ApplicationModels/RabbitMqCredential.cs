@@ -1,9 +1,9 @@
+using OfX.RabbitMq.Statics;
+
 namespace OfX.RabbitMq.ApplicationModels;
 
 public sealed class RabbitMqCredential
 {
-    public string RabbitMqUserName { get; private set; }
-    public string RabbitMqPassword { get; private set; }
-    public void UserName(string userName) => RabbitMqUserName = userName;
-    public void Password(string password) => RabbitMqPassword = password;
+    public void UserName(string userName) => RabbitMqStatics.RabbitMqUserName = userName;
+    public void Password(string password) => RabbitMqStatics.RabbitMqPassword = password;
 }
