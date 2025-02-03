@@ -14,7 +14,7 @@ public static class KafkaExtensions
         var config = new KafkaConfigurator();
         options.Invoke(config);
         ofXRegister.ServiceCollection.AddSingleton<IKafkaServer, KafkaServerOrchestrator>();
-        ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<>), typeof(KafkaServer<>));
+        ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
         ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaClient), typeof(KafkaClient));
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
             typeof(IOfXKafkaClient<>), [..ofXRegister.OfXAttributeTypes]);

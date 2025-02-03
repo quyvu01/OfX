@@ -22,6 +22,7 @@ public static class NatsExtensions
         ClientsRegister(ofXRegister.ServiceCollection);
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
             typeof(IOfXNatsClient<>), [..ofXRegister.OfXAttributeTypes]);
+        ofXRegister.ServiceCollection.AddSingleton(typeof(INatsServerRpc<,>), typeof(NatsServerRpc<,>));
     }
 
     private static void ClientsRegister(IServiceCollection serviceCollection) =>

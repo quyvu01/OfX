@@ -17,6 +17,7 @@ public static class RabbitMqExtensions
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqClient, RabbitMqClient>();
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
             typeof(IOfXRabbitMqClient<>), [..ofXRegister.OfXAttributeTypes]);
+        ofXRegister.ServiceCollection.AddSingleton(typeof(IRabbitMqServerRpc<,>), typeof(RabbitMqServerRpc<,>));
     }
 
     public static void StartRabbitMqListeningAsync(this IHost host)

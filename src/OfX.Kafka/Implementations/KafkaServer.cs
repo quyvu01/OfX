@@ -6,20 +6,18 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Cached;
-using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
 using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
-using OfX.Responses;
 
 namespace OfX.Kafka.Implementations;
 
-internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
+internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute>, IDisposable
     where TAttribute : OfXAttribute
+    where TModel : class
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IConsumer<string, string> _consumer;
@@ -64,33 +62,19 @@ internal class KafkaServer<TAttribute> : IKafkaServer<TAttribute>, IDisposable
                 var messageUnWrapped = JsonSerializer
                     .Deserialize<KafkaMessageWrapped<MessageDeserializable>>(consumeResult.Message.Value);
 
-                var attributeType = Type.GetType(messageUnWrapped.AttributeAssembly);
-                if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
-                    throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
-
-                var modelArg = handlerType.GetGenericArguments()[0];
                 var serviceScope = _serviceProvider.CreateScope();
 
                 var pipeline = serviceScope.ServiceProvider
-                    .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
-
-                var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
-
-                var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
-
-                var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
+                    .GetRequiredService<ReceivedPipelinesImpl<TModel, TAttribute>>();
 
                 var message = messageUnWrapped.Message;
 
-                var query = OfXCached.CreateInstanceWithCache(queryType, message.SelectorIds,
-                    message.Expression);
+                var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
                 var headers = consumeResult.Message.Headers
                     .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes()));
-                var requestContext = Activator
-                    .CreateInstance(requestContextType, query, headers, CancellationToken.None);
-                // Invoke the method and get the result
-                var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
-                    .Invoke(pipeline, [requestContext]))!;
+                var requestContext = new RequestContextImpl<TAttribute>(query, headers, CancellationToken.None);
+
+                var response = await pipeline.ExecuteAsync(requestContext);
 
                 await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
                 {
