@@ -7,4 +7,5 @@ internal interface IKafkaServer
     Task StartAsync();
 }
 
-internal interface IKafkaServer<TAttribute> : IKafkaServer, IKafkaTopic where TAttribute : OfXAttribute;
+internal interface IKafkaServer<TModel, TAttribute> : IKafkaServer, IKafkaTopic
+    where TAttribute : OfXAttribute where TModel : class;

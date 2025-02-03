@@ -5,7 +5,6 @@ using Confluent.Kafka.Admin;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Helpers;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
@@ -86,7 +85,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
                 {
                     SelectorIds = requestContext.Query.SelectorIds, Expression = requestContext.Query.Expression,
                 },
-                AttributeAssembly = typeof(TAttribute).GetAssemblyName(), RelyTo = _relyTo
+                RelyTo = _relyTo
             };
             await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>
             {

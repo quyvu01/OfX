@@ -1,16 +1,14 @@
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
-using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
-using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -18,6 +16,9 @@ namespace OfX.RabbitMq.Implementations;
 
 internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
 {
+    private static readonly Lazy<ConcurrentDictionary<string, Type>>
+        attributeAssemblyCached = new(() => []);
+
     public async Task ConsumeAsync()
     {
         var queueName = $"{OfXRabbitMqConstants.QueueNamePrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
@@ -37,12 +38,12 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null);
 
-        var serviceTypes = typeof(IQueryOfHandler<,>);
         var handlers = OfXCached.AttributeMapHandler.Values.ToList();
         if (handlers is not { Count: > 0 }) return;
+        var serviceType = typeof(IQueryOfHandler<,>);
 
         var attributeTypes = handlers
-            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
+            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceType)
             .Select(a => a.GetGenericArguments()[1]);
 
         foreach (var attributeType in attributeTypes)
@@ -62,33 +63,27 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var props = ea.BasicProperties;
             var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
 
-            var attributeType = Type.GetType(props.Type!);
-            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
-                throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
+            var rabbitMqServerRpcType = attributeAssemblyCached.Value.GetOrAdd(props.Type,
+                attributeAssembly =>
+                {
+                    var ofXAttributeType = Type.GetType(attributeAssembly)!;
+                    if (!OfXCached.AttributeMapHandler.TryGetValue(ofXAttributeType, out var handlerType))
+                        throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
+                    var modelType = handlerType.GetGenericArguments()[0];
+                    return typeof(IRabbitMqServerRpc<,>).MakeGenericType(modelType, ofXAttributeType);
+                });
+            var server = serviceProvider.GetService(rabbitMqServerRpcType);
 
-            var modelArg = handlerType.GetGenericArguments()[0];
-            var serviceScope = serviceProvider.CreateScope();
-
-            var pipeline = serviceScope.ServiceProvider
-                .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
-
-            var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
-
-            var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
-
-            var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
+            if (server is not IRabbitMqServerRpc serverRpc)
+            {
+                await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false);
+                return;
+            }
 
             var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
-
-            var query = OfXCached.CreateInstanceWithCache(queryType, message.SelectorIds,
-                message.Expression);
             var headers = props.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestContext = Activator
-                .CreateInstance(requestContextType, query, headers, CancellationToken.None);
-            // Invoke the method and get the result
-            var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
-                .Invoke(pipeline, [requestContext]))!;
+            var response = await serverRpc.GetResponse(message, headers, CancellationToken.None);
             try
             {
                 var responseAsString = JsonSerializer.Serialize(response);

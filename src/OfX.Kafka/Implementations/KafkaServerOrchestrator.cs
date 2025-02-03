@@ -1,5 +1,6 @@
 using OfX.Abstractions;
 using OfX.Cached;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Kafka.Abstractions;
 
@@ -19,7 +20,11 @@ internal sealed class KafkaServerOrchestrator(IServiceProvider serviceProvider) 
             .Select(a => a.GetGenericArguments()[1]);
         attributeTypes.ForEach(attributeType =>
         {
-            var kafkaServerGeneric = serviceProvider.GetService(typeof(IKafkaServer<>).MakeGenericType(attributeType));
+            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
+                throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
+            var modelType = handlerType.GetGenericArguments()[0];
+            var kafkaServerGeneric = serviceProvider
+                .GetService(typeof(IKafkaServer<,>).MakeGenericType(modelType, attributeType));
             if (kafkaServerGeneric is not IKafkaServer kafkaServer) return;
             Task.Factory.StartNew(kafkaServer.StartAsync);
         });

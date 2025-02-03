@@ -3,6 +3,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Exceptions;
 using OfX.Registries;
+using OfX.Statics;
 
 namespace OfX.Extensions;
 
@@ -14,13 +15,14 @@ public static class StronglyTypeIdExtensions
         var stronglyTypeInterfaceType = typeof(IStronglyTypeConverter<>);
         var stronglyTypeIdRegister = new StronglyTypeIdRegister();
         options.Invoke(stronglyTypeIdRegister);
-        stronglyTypeIdRegister.StronglyTypeConfigurations.Select(a =>
+        OfXStatics.StronglyTypeConfigurations.Select(a =>
         {
             if (a.IsGenericType)
                 throw new OfXException.StronglyTypeConfigurationImplementationMustNotBeGeneric(a);
             var interfaceTypes = a.GetInterfaces().Where(t =>
                 t.IsGenericType && t.GetGenericTypeDefinition() == stronglyTypeInterfaceType);
             return (ImplementationType: a, ServiceTypes: interfaceTypes);
-        }).ForEach(a => a.ServiceTypes.ForEach(s => ofXRegister.ServiceCollection.AddSingleton(s, a.ImplementationType)));
+        }).ForEach(a => a.ServiceTypes
+            .ForEach(s => ofXRegister.ServiceCollection.AddSingleton(s, a.ImplementationType)));
     }
 }

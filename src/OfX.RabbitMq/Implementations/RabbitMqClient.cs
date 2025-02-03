@@ -24,8 +24,8 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     private string _replyQueueName;
     private const string routingKey = OfXRabbitMqConstants.RoutingKey;
 
-    public RabbitMqClient() =>
-        StartAsync().Wait(); // We have to wait this one and ensure that everything is initialized
+    // We have to wait this one and ensure that everything is initialized
+    public RabbitMqClient() => StartAsync().Wait();
 
     private async Task StartAsync()
     {

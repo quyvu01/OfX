@@ -1,4 +1,3 @@
-using System.Reflection;
 using OfX.EntityFrameworkCore.Statics;
 
 namespace OfX.EntityFrameworkCore.ApplicationModels;

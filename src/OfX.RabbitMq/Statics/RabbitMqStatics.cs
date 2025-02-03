@@ -1,5 +1,3 @@
-using OfX.RabbitMq.ApplicationModels;
-
 namespace OfX.RabbitMq.Statics;
 
 internal static class RabbitMqStatics
