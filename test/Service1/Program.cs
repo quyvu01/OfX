@@ -1,6 +1,9 @@
 using Kernel;
+using Kernel.Attributes;
 using OfX.Extensions;
+using OfX.Grpc.Extensions;
 using OfX.Nats.Extensions;
+using OfX.RabbitMq.Extensions;
 using Service1.Pipelines;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,11 +14,12 @@ builder.Services.AddOpenApi();
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-    cfg.AddNats(options =>
-    {
-        options.Url("nats://localhost:4222");
-        options.TopicPrefix("Staging");
-    });
+    cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+
+    cfg.AddGrpcClients(config => config
+        .AddGrpcHostWithOfXAttributes("http://localhost:5001", [typeof(UserOfAttribute)])
+        .AddGrpcHostWithOfXAttributes("http://localhost:5013", [typeof(ProvinceOfAttribute), typeof(CountryOfAttribute)])
+    );
     cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<>)));
 });
 

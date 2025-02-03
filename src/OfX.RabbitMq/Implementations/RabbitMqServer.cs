@@ -9,6 +9,7 @@ using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
+using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -80,13 +81,21 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
                 return;
             }
 
-            var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
-            var headers = props.Headers?
-                .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var response = await serverRpc.GetResponse(message, headers, CancellationToken.None);
+
             try
             {
+                var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
+                var headers = props.Headers?
+                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
+                var response = await serverRpc.GetResponseAsync(message, headers, CancellationToken.None);
                 var responseAsString = JsonSerializer.Serialize(response);
+                var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
+                await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
+                    mandatory: true, basicProperties: replyProps, body: responseBytes);
+            }
+            catch
+            {
+                var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
                     mandatory: true, basicProperties: replyProps, body: responseBytes);

@@ -12,7 +12,7 @@ internal sealed class RabbitMqServerRpc<TModel, TAttribute>(IServiceProvider ser
     : IRabbitMqServerRpc<TModel, TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
-    public Task<ItemsResponse<OfXDataResponse>> GetResponse(MessageDeserializable message,
+    public Task<ItemsResponse<OfXDataResponse>> GetResponseAsync(MessageDeserializable message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
         using var scope = serviceProvider.CreateScope();
