@@ -44,7 +44,7 @@ builder.Services.AddOfX(cfg =>
 ...
 
 var app = builder.Build();
-app.StartKafkaListeningAsync(); // When you want to create Kafka Listening
+
 app.Run();
 
 ```

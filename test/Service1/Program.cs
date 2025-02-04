@@ -2,7 +2,6 @@ using Kernel;
 using Kernel.Attributes;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
-using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using Service1.Pipelines;
 

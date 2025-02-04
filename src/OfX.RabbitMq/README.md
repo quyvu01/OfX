@@ -53,7 +53,7 @@ builder.Services.AddOfX(cfg =>
 ...
 
 var app = builder.Build();
-app.StartRabbitMqListeningAsync(); // When you want to create RabbitMq Listening
+
 app.Run();
 
 ```

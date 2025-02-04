@@ -3,8 +3,6 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
-using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
@@ -37,5 +35,5 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 builder.Services.AddGrpc();
 
 var app = builder.Build();
-app.StartRabbitMqListeningAsync();
+
 app.Run();

@@ -46,7 +46,7 @@ builder.Services.AddOfX(cfg =>
 ...
 
 var app = builder.Build();
-app.StartNatsListeningAsync(); // When you want to create Nats Listening
+
 app.Run();
 
 ```
