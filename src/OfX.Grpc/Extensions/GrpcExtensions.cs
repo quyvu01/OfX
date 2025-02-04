@@ -2,14 +2,12 @@ using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Extensions;
 using OfX.Grpc.Abstractions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
-using OfX.Grpc.Implementations;
 using OfX.Grpc.Servers;
 using OfX.Grpc.Statics;
 using OfX.Helpers;
@@ -45,8 +43,6 @@ public static class GrpcExtensions
         });
         Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
             typeof(IOfXGrpcRequestClient<>), [..attributeRegisters]);
-        
-        ofXRegister.ServiceCollection.AddScoped(typeof(IGrpcServer<,>), typeof(GrpcServer<,>));
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,

@@ -6,8 +6,9 @@ namespace OfX.RabbitMq.Abstractions;
 
 internal interface IRabbitMqServerRpc
 {
-    Task<ItemsResponse<OfXDataResponse>> GetResponse(MessageDeserializable message, Dictionary<string, string> headers,
-        CancellationToken cancellationToken);
+    Task<ItemsResponse<OfXDataResponse>> GetResponseAsync(MessageDeserializable message,
+        Dictionary<string, string> headers, CancellationToken cancellationToken);
 }
 
-internal interface IRabbitMqServerRpc<TModel, TAttribute> : IRabbitMqServerRpc where TAttribute : OfXAttribute where TModel : class;
+internal interface IRabbitMqServerRpc<TModel, TAttribute> : IRabbitMqServerRpc
+    where TAttribute : OfXAttribute where TModel : class;
