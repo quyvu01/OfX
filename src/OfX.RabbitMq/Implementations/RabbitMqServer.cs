@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using OfX.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
@@ -39,17 +39,11 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null);
 
-        var handlers = OfXCached.AttributeMapHandler.Values.ToList();
-        if (handlers is not { Count: > 0 }) return;
-        var serviceType = typeof(IQueryOfHandler<,>);
+        var attributeTypes = OfXCached.AttributeMapHandler.Keys.ToList();
+        if (attributeTypes is not { Count: > 0 }) return;
 
-        var attributeTypes = handlers
-            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceType)
-            .Select(a => a.GetGenericArguments()[1]);
-
-        foreach (var attributeType in attributeTypes)
+        foreach (var exchangeName in attributeTypes.Select(attributeType => attributeType.GetExchangeName()))
         {
-            var exchangeName = attributeType.GetExchangeName();
             await channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct);
             await channel.QueueBindAsync(queue: queueName, exchangeName, routingKey);
         }
@@ -64,23 +58,23 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var props = ea.BasicProperties;
             var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
 
-            var rabbitMqServerRpcType = attributeAssemblyCached.Value.GetOrAdd(props.Type,
-                attributeAssembly =>
-                {
-                    var ofXAttributeType = Type.GetType(attributeAssembly)!;
-                    if (!OfXCached.AttributeMapHandler.TryGetValue(ofXAttributeType, out var handlerType))
-                        throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
-                    var modelType = handlerType.GetGenericArguments()[0];
-                    return typeof(IRabbitMqServerRpc<,>).MakeGenericType(modelType, ofXAttributeType);
-                });
-            var server = serviceProvider.GetService(rabbitMqServerRpcType);
+            var rabbitMqServerRpcType = attributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
+            {
+                var ofXAttributeType = Type.GetType(attributeAssembly)!;
+                if (!OfXCached.AttributeMapHandler.TryGetValue(ofXAttributeType, out var handlerType))
+                    throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
+                var modelType = handlerType.GetGenericArguments()[0];
+                return typeof(IRabbitMqServerRpc<,>).MakeGenericType(modelType, ofXAttributeType);
+            });
+
+            using var scope = serviceProvider.CreateScope();
+            var server = scope.ServiceProvider.GetService(rabbitMqServerRpcType);
 
             if (server is not IRabbitMqServerRpc serverRpc)
             {
                 await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false);
                 return;
             }
-
 
             try
             {
