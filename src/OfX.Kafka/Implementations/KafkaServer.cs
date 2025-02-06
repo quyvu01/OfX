@@ -65,7 +65,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
                 var serviceScope = _serviceProvider.CreateScope();
 
                 var pipeline = serviceScope.ServiceProvider
-                    .GetRequiredService<ReceivedPipelinesImpl<TModel, TAttribute>>();
+                    .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
 
                 var message = messageUnWrapped.Message;
 

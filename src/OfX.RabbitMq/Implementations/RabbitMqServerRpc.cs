@@ -15,7 +15,7 @@ internal sealed class RabbitMqServerRpc<TModel, TAttribute>(IServiceProvider ser
     public Task<ItemsResponse<OfXDataResponse>> GetResponseAsync(MessageDeserializable message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
-        var receivedPipeline = serviceProvider.GetRequiredService<ReceivedPipelinesImpl<TModel, TAttribute>>();
+        var receivedPipeline = serviceProvider.GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
         var requestContext = new RequestContextImpl<TAttribute>(
             new RequestOf<TAttribute>(message.SelectorIds, message.Expression), headers, cancellationToken);
         return receivedPipeline.ExecuteAsync(requestContext);

@@ -49,7 +49,7 @@ internal sealed class DataMappableService(
                 var selectorsByType = selectors.Where(c => c is not null).Distinct().ToList();
                 if (selectorsByType is not { Count: > 0 }) return emptyResponse;
                 var sendPipelineWrapped = serviceProvider
-                    .GetService(typeof(SendPipelinesWrapped<>).MakeGenericType(x.OfXAttributeType));
+                    .GetService(typeof(SendPipelinesOrchestrator<>).MakeGenericType(x.OfXAttributeType));
                 if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped) return emptyResponse;
                 var result = await pipelinesWrapped.ExecuteAsync(
                     new MessageDeserializable { SelectorIds = selectorsByType, Expression = x.Expression }, context);

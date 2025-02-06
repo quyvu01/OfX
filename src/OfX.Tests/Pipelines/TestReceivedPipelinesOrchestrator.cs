@@ -4,7 +4,7 @@ using OfX.Responses;
 
 namespace OfX.Tests.Pipelines;
 
-public sealed class TestReceivedPipelinesImpl<TAttribute> : IReceivedPipelineBehavior<TAttribute>
+public sealed class TestReceivedPipelinesOrchestrator<TAttribute> : IReceivedPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,

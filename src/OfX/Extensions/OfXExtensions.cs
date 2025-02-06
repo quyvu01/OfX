@@ -64,11 +64,9 @@ public static class OfXExtensions
 
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
 
-        serviceCollection.AddTransient(typeof(ReceivedPipelinesImpl<,>));
+        serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
 
-        serviceCollection.AddTransient(typeof(SendPipelinesImpl<>));
-
-        serviceCollection.AddTransient(typeof(SendPipelinesWrapped<>));
+        serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
 
         serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
 
