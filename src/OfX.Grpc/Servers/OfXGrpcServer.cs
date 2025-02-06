@@ -27,7 +27,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             var modelArg = handlerType.GetGenericArguments()[0];
 
             var pipeline = serviceProvider
-                .GetRequiredService(typeof(ReceivedPipelinesImpl<,>).MakeGenericType(modelArg, attributeType));
+                .GetRequiredService(typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType));
 
             var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
 

@@ -4,14 +4,15 @@ using OfX.Responses;
 
 namespace OfX.Implementations;
 
-internal class SendPipelinesImpl<TAttribute>(
-    IEnumerable<ISendPipelineBehavior<TAttribute>> behaviors,
-    IMappableRequestHandler<TAttribute> handler)
-    where TAttribute : OfXAttribute
+public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
+    IEnumerable<IReceivedPipelineBehavior<TAttribute>> behaviors,
+    IQueryOfHandler<TModel, TAttribute> handler) :
+    IReceivedPipelinesBase<TAttribute>
+    where TAttribute : OfXAttribute where TModel : class
 {
     public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
     {
-        var next = new Func<Task<ItemsResponse<OfXDataResponse>>>(() => handler.RequestAsync(requestContext));
+        var next = new Func<Task<ItemsResponse<OfXDataResponse>>>(() => handler.GetDataAsync(requestContext));
 
         foreach (var behavior in behaviors.Reverse())
         {

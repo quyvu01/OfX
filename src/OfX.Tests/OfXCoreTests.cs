@@ -28,7 +28,7 @@ public class OfXCoreTests : ServicesBuilding
                         options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
                         options.AddGrpcClients(c =>
                             c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]));
-                        options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesImpl<>)));
+                        options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesOrchestrator<>)));
                         options.AddSendPipelines(c => c.OfType(typeof(TestSendPipelinesImpl<>)));
                     })
                     .AddOfXEFCore(options =>

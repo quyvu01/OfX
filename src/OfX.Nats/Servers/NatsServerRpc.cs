@@ -25,7 +25,7 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
                 if (message.Data is null) continue;
                 using var serviceScope = serviceProvider.CreateScope();
                 var pipeline = serviceScope.ServiceProvider
-                    .GetRequiredService<ReceivedPipelinesImpl<TModel, TAttribute>>();
+                    .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
                 var headers = message.Headers?
                     .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
                 var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
