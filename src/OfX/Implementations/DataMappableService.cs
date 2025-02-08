@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -39,7 +40,7 @@ internal sealed class DataMappableService(
             var tasks = mappableTypes.Select(async x =>
             {
                 var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
-                var emptyResponse = (x.OfXAttributeType, x.Expression, Response: emptyCollection);
+                var emptyResponse = (x.OfXAttributeType, Response: emptyCollection);
                 var propertyCalledStorages = x.PropertyCalledLaters.ToList();
                 if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
 
@@ -51,9 +52,14 @@ internal sealed class DataMappableService(
                 var sendPipelineWrapped = serviceProvider
                     .GetService(typeof(SendPipelinesOrchestrator<>).MakeGenericType(x.OfXAttributeType));
                 if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped) return emptyResponse;
+                // To use merge expression without creating `Expressions` we have to merge the `Expression` into MessageDeserializable.Expression by serialize List<string> of Expression
                 var result = await pipelinesWrapped.ExecuteAsync(
-                    new MessageDeserializable { SelectorIds = selectorsByType, Expression = x.Expression }, context);
-                return (x.OfXAttributeType, x.Expression, Response: result);
+                    new MessageDeserializable
+                    {
+                        SelectorIds = selectorsByType,
+                        Expression = JsonSerializer.Serialize(x.Expressions.Distinct().OrderBy(a => a))
+                    }, context);
+                return (x.OfXAttributeType, Response: result);
             });
             var orderedTasks = await Task.WhenAll(tasks);
             ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks.ToList());

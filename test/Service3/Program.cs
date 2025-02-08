@@ -32,7 +32,6 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
         b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
     });
 }, 128);
-builder.Services.AddGrpc();
 
 var app = builder.Build();
 

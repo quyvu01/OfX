@@ -45,7 +45,13 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
                 .Invoke(pipeline, arguments))!;
             var res = new OfXItemsGrpcResponse();
-            response.Items.ForEach(a => res.Items.Add(new ItemGrpc { Id = a.Id, Value = a.Value }));
+            response.Items.ForEach(a =>
+            {
+                var itemGrpc = new ItemGrpc { Id = a.Id };
+                a.OfXValues.ForEach(x =>
+                    itemGrpc.OfxValues.Add(new OfXValueItemGrpc { Expression = x.Expression, Value = x.Value }));
+                res.Items.Add(itemGrpc);
+            });
             return res;
         }
         catch (Exception e)

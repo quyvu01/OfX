@@ -95,22 +95,31 @@ internal static class ReflectionHelpers
                 stack.Push(item);
     }
 
+    // To use merge-expression, we have to group by attribute only, exclude expression as the older version!
     internal static IEnumerable<MappableTypeData> GetOfXTypesData(
         IEnumerable<MappableDataProperty> datas, IEnumerable<Type> ofXAttributeTypes) =>
         datas
-            .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Expression, x.Order })
+            .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Order })
             .Join(ofXAttributeTypes, d => d.Key.AttributeType, x => x,
                 (d, x) => new MappableTypeData(x, d
-                        .Select(a => new PropertyCalledLater(a.Model, a.Func)), d.Key.Expression,
-                    d.Key.Order));
+                        .Select(a => new PropertyCalledLater(a.Model, a.Func)),
+                    d.Select(a => a.Expression), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
-        List<(Type OfXAttributeType, string Expression, ItemsResponse<OfXDataResponse> Response)> dataTasks)
-        => allPropertyDatas.Join(dataTasks, ap => (ap.Attribute.GetType(), ap.Expression),
-            dt => (dt.OfXAttributeType, dt.Expression), (ap, dt) =>
+        List<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> Items)> dataFetched)
+    {
+        var dataWithExpression = dataFetched
+            .Select(a => a.Items.Items
+                .Select(x => (x.Id, x.OfXValues))
+                .Select(k => (a.OfXAttributeType, Data: k))
+            ).SelectMany(x => x);
+        allPropertyDatas.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
+                .DynamicInvoke(ap.Model)?.ToString()),
+            dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>
             {
-                var value = dt.Response.Items?
-                    .FirstOrDefault(a => a.Id == ap.Func.DynamicInvoke(ap.Model)?.ToString())?.Value;
+                var value = dt.Data
+                    .OfXValues
+                    .FirstOrDefault(a => a.Expression == ap.Expression)?.Value;
                 if (value is null || ap.PropertyInfo is not { } propertyInfo) return value;
                 try
                 {
@@ -126,4 +135,5 @@ internal static class ReflectionHelpers
 
                 return value;
             }).IteratorVoid();
+    }
 }

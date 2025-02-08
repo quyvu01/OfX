@@ -21,7 +21,7 @@ public sealed record MappableDataPropertyCache(
 public sealed record MappableTypeData(
     Type OfXAttributeType,
     IEnumerable<PropertyCalledLater> PropertyCalledLaters,
-    string Expression,
+    IEnumerable<string> Expressions,
     int Order);
 
 

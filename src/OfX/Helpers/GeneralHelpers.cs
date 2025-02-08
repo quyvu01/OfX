@@ -4,14 +4,14 @@ public static class GeneralHelpers
 {
     public static string GetAssemblyName(this Type type) => $"{type.FullName},{type.Assembly.GetName().Name}";
 
-    public static bool IsPrimitiveType(object obj)
+    internal static bool IsPrimitiveType(object obj)
     {
         if (obj == null) return false;
         var type = obj.GetType();
         return IsPrimitiveType(type);
     }
 
-    public static bool IsPrimitiveType(Type objectType) =>
+    internal static bool IsPrimitiveType(Type objectType) =>
         objectType.IsPrimitive ||
         objectType == typeof(string) ||
         objectType == typeof(DateTime) ||

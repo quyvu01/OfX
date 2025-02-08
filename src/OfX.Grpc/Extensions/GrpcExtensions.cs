@@ -37,7 +37,14 @@ public static class GrpcExtensions
                 .Key;
             var result = await GetOfXItemsAsync(host, context, query, attributeType);
             var itemsResponse = new ItemsResponse<OfXDataResponse>([
-                ..result.Items.Select(x => new OfXDataResponse { Id = x.Id, Value = x.Value })
+                ..result.Items.Select(x => new OfXDataResponse
+                {
+                    Id = x.Id,
+                    OfXValues =
+                    [
+                        ..x.OfxValues.Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value })
+                    ]
+                })
             ]);
             return itemsResponse;
         });
