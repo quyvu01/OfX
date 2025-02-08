@@ -14,11 +14,7 @@ builder.Services.AddOfX(cfg =>
 {
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
     cfg.AddRabbitMq(config => config.Host("localhost", "/"));
-
-    cfg.AddGrpcClients(config => config
-        .AddGrpcHostWithOfXAttributes("http://localhost:5001", [typeof(UserOfAttribute)])
-        .AddGrpcHostWithOfXAttributes("http://localhost:5013", [typeof(ProvinceOfAttribute), typeof(CountryOfAttribute)])
-    );
+    
     cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<>)));
 });
 

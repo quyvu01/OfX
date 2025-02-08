@@ -22,5 +22,9 @@ message OfXItemsGrpcResponse{
 
 message ItemGrpc{
   string id = 1;
+  repeated OfXValueItemGrpc ofx_values = 2;
+}
+message OfXValueItemGrpc{
+  google.protobuf.StringValue expression = 1;
   google.protobuf.StringValue value = 2;
 }
