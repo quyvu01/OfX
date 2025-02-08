@@ -38,9 +38,8 @@ internal static class ReflectionHelpers
             {
                 if (OfXPropertiesCache.TryGetValue(property, out var propertyCache))
                 {
-                    var func = propertyCache.Func;
-                    yield return new MappableDataProperty(property, currentObject, propertyCache.Attribute, func,
-                        propertyCache.Expression, propertyCache.Order);
+                    yield return new MappableDataProperty(property, currentObject, propertyCache.Attribute,
+                        propertyCache.Func, propertyCache.Expression, propertyCache.Order);
                     continue;
                 }
 
@@ -106,13 +105,13 @@ internal static class ReflectionHelpers
                     d.Select(a => a.Expression), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
-        List<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> Items)> dataFetched)
+        List<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
     {
         var dataWithExpression = dataFetched
-            .Select(a => a.Items.Items
+            .Select(a => a.ItemsResponse.Items
                 .Select(x => (x.Id, x.OfXValues))
-                .Select(k => (a.OfXAttributeType, Data: k))
-            ).SelectMany(x => x);
+                .Select(k => (a.OfXAttributeType, Data: k)))
+            .SelectMany(x => x);
         allPropertyDatas.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
                 .DynamicInvoke(ap.Model)?.ToString()),
             dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>

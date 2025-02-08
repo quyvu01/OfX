@@ -40,10 +40,9 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
             var requestContext = Activator
                 .CreateInstance(requestContextType, query, headers, context.CancellationToken);
-            object[] arguments = [requestContext];
             // Invoke the method and get the result
             var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
-                .Invoke(pipeline, arguments))!;
+                .Invoke(pipeline, [requestContext]))!;
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a =>
             {
