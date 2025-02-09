@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Extensions;
 using OfX.Grpc.Abstractions;
 using OfX.Grpc.ApplicationModels;
@@ -11,7 +12,6 @@ using OfX.Grpc.Delegates;
 using OfX.Grpc.Servers;
 using OfX.Grpc.Statics;
 using OfX.Helpers;
-using OfX.Queries;
 using OfX.Registries;
 using OfX.Responses;
 
@@ -53,7 +53,7 @@ public static class GrpcExtensions
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,
-        GetDataMappableQuery query, Type attributeType)
+        MessageDeserializable query, Type attributeType)
     {
         using var channel = GrpcChannel.ForAddress(serverHost);
         var client = new OfXTransportService.OfXTransportServiceClient(channel);

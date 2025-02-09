@@ -2,11 +2,11 @@ using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
-using OfX.Responses;
 
 namespace OfX.Grpc.Servers;
 
@@ -29,21 +29,17 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             var pipeline = serviceProvider
                 .GetRequiredService(typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType));
 
-            var pipelineMethod = OfXCached.GetPipelineMethodByAttribute(pipeline, attributeType);
+            if (pipeline is not IReceivedPipelinesBase receivedPipelinesBase)
+                throw new UnreachableException();
 
-            var requestContextType = typeof(RequestContextImpl<>).MakeGenericType(attributeType);
-
-            var queryType = typeof(RequestOf<>).MakeGenericType(attributeType);
-
-            var query = OfXCached.CreateInstanceWithCache(queryType, request.SelectorIds.ToList(),
-                request.Expression);
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
-            var requestContext = Activator
-                .CreateInstance(requestContextType, query, headers, context.CancellationToken);
-            object[] arguments = [requestContext];
-            // Invoke the method and get the result
-            var response = await ((Task<ItemsResponse<OfXDataResponse>>)pipelineMethod!
-                .Invoke(pipeline, arguments))!;
+
+            var message = new MessageDeserializable()
+            {
+                SelectorIds = request.SelectorIds.ToList(), Expression = request.Expression
+            };
+            var response = await receivedPipelinesBase.ExecuteAsync(message, headers, context.CancellationToken);
+
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a =>
             {

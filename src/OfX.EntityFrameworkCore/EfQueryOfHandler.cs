@@ -148,10 +148,10 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                         continue;
                     }
 
-                    if (part == "Count")
+                    if (part == nameof(IList.Count))
                     {
                         // Handle "Count" for collections
-                        currentExpression = Expression.Property(currentExpression, "Count");
+                        currentExpression = Expression.Property(currentExpression, nameof(IList.Count));
                         currentType = typeof(int);
                         continue;
                     }

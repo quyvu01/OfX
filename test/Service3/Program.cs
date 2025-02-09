@@ -3,6 +3,7 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Grpc.Extensions;
 using OfX.RabbitMq.Extensions;
 using Service3Api;
 using Service3Api.Contexts;

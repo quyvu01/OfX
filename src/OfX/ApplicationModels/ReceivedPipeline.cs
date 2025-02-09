@@ -10,7 +10,7 @@ public sealed class ReceivedPipeline(IServiceCollection serviceCollection)
 
     public ReceivedPipeline OfType<TReceivedPipeline>(ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
-        OfType(typeof(TReceivedPipeline));
+        OfType(typeof(TReceivedPipeline), serviceLifetime);
         return this;
     }
 
