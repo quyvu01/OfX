@@ -4,7 +4,7 @@ namespace OfX.Nats.Abstractions;
 
 internal interface INatsServerRpc
 {
-    void StartAsync();
+    Task StartAsync();
 }
 
 internal interface INatsServerRpc<TModel, TAttribute> : INatsServerRpc

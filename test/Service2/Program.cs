@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using WorkerService1;
 using WorkerService1.Contexts;
@@ -12,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg =>
     {

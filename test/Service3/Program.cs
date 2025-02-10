@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
+using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
@@ -14,7 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
 
         cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestReceivedPipeline<>)); });
         cfg.AddStronglyTypeIdConverter(c => c.OfType<IdConverterRegister>());
