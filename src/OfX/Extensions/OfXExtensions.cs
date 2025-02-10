@@ -7,12 +7,13 @@ using OfX.Implementations;
 using OfX.Registries;
 using OfX.Services;
 using OfX.Statics;
+using OfX.Wrappers;
 
 namespace OfX.Extensions;
 
 public static class OfXExtensions
 {
-    public static OfXRegister AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> options)
+    public static OfXRegisterWrapped AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> options)
     {
         var newOfRegister = new OfXRegister(serviceCollection);
         options.Invoke(newOfRegister);
@@ -70,7 +71,7 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
 
-        return newOfRegister;
+        return new OfXRegisterWrapped(newOfRegister);
     }
 
     public static void AddExtensionHandler(this IExtensionHandlersInstaller extensionHandlersInstaller,
