@@ -14,6 +14,7 @@ using OfX.EntityFrameworkCore.Services;
 using OfX.EntityFrameworkCore.Statics;
 using OfX.Extensions;
 using OfX.Registries;
+using OfX.Wrappers;
 
 namespace OfX.EntityFrameworkCore.Extensions;
 
@@ -23,7 +24,7 @@ public static class EntityFrameworkExtensions
     private static readonly Type baseGenericType = typeof(EfQueryOfHandler<,>);
     private static readonly Type interfaceGenericType = typeof(IQueryOfHandler<,>);
 
-    public static OfXRegister AddOfXEFCore(this OfXRegister ofXServiceInjector,
+    public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXEfCoreRegistrar> registrarAction)
     {
         var newOfXEfCoreRegistrar = new OfXEfCoreRegistrar();
@@ -31,7 +32,7 @@ public static class EntityFrameworkExtensions
         var dbContextTypes = EntityFrameworkCoreStatics.DbContextTypes;
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
-        var serviceCollection = ofXServiceInjector.ServiceCollection;
+        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
         dbContextTypes.ForEach(dbContextType =>
         {
             serviceCollection.AddScoped(sp =>
@@ -55,7 +56,7 @@ public static class EntityFrameworkExtensions
             modelTypeLookUp.Value.TryAdd(modelType, matchingServiceType.GetType());
             return matchingServiceType;
         });
-        AddEfQueryOfXHandlers(ofXServiceInjector);
+        AddEfQueryOfXHandlers(ofXServiceInjector.OfXRegister);
         return ofXServiceInjector;
     }
 
