@@ -232,7 +232,7 @@ public sealed class User
 ```
 Generated SQL:
 ```SQL
- SELECT u."Id", u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
+ SELECT u."Id", u.Name, u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
 ```
 #### Fetching Data from Navigated Tables
 Expressions also support navigation through navigated tables.
