@@ -10,16 +10,8 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     IReceivedPipelinesBase<TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
-    public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
-    {
-        var next = new Func<Task<ItemsResponse<OfXDataResponse>>>(() => handler.GetDataAsync(requestContext));
-
-        foreach (var behavior in behaviors.Reverse())
-        {
-            var current = next;
-            next = () => behavior.HandleAsync(requestContext, current);
-        }
-
-        return await next();
-    }
+    public Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
+        => behaviors.Reverse()
+            .Aggregate(() => handler.GetDataAsync(requestContext),
+                (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
 }

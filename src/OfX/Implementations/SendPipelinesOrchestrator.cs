@@ -11,7 +11,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
     IMappableRequestHandler<TAttribute> handler)
     : ISendPipelinesWrapped where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message, IContext context)
+    public Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message, IContext context)
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -19,14 +19,8 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
         var requestContext = new RequestContextImpl<TAttribute>(requestOf, context?.Headers ?? [], cts.Token);
 
-        var next = new Func<Task<ItemsResponse<OfXDataResponse>>>(() => handler.RequestAsync(requestContext));
-
-        foreach (var behavior in behaviors.Reverse())
-        {
-            var current = next;
-            next = () => behavior.HandleAsync(requestContext, current);
-        }
-
-        return await next();
+        return behaviors.Reverse()
+            .Aggregate(() => handler.RequestAsync(requestContext),
+                (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
     }
 }
