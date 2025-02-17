@@ -51,7 +51,6 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 .AddOfXEFCore(options =>
 {
     options.AddDbContexts(typeof(TestDbContext));
-    options.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 });
 ```
 

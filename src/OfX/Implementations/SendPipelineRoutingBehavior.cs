@@ -13,7 +13,7 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
         // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesImpl<,> instead of sending via message!
-        var existedHandler = OfXCached.AttributeMapHandler;
+        var existedHandler = OfXCached.AttributeMapHandlers;
         if (!existedHandler.TryGetValue(typeof(TAttribute), out var handlerType)) return await next.Invoke();
         if (!handlerType.IsGenericType) return await next.Invoke();
         var args = handlerType.GetGenericArguments();

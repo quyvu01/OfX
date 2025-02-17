@@ -39,7 +39,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null);
 
-        var attributeTypes = OfXCached.AttributeMapHandler.Keys.ToList();
+        var attributeTypes = OfXCached.AttributeMapHandlers.Keys.ToList();
         if (attributeTypes is not { Count: > 0 }) return;
 
         foreach (var exchangeName in attributeTypes.Select(attributeType => attributeType.GetExchangeName()))
@@ -61,7 +61,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var rabbitMqServerRpcType = attributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
-                if (!OfXCached.AttributeMapHandler.TryGetValue(ofXAttributeType, out var handlerType))
+                if (!OfXCached.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))
                     throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
                 var modelType = handlerType.GetGenericArguments()[0];
                 return typeof(IRabbitMqServerRpc<,>).MakeGenericType(modelType, ofXAttributeType);

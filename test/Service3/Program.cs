@@ -3,9 +3,7 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
 using OfX.Nats.Extensions;
-using OfX.RabbitMq.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Converters;
@@ -17,15 +15,12 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
 
         cfg.AddReceivedPipelines(options => { options.OfType(typeof(TestReceivedPipeline<>)); });
         cfg.AddStronglyTypeIdConverter(c => c.OfType<IdConverterRegister>());
     })
-    .AddOfXEFCore(cfg =>
-    {
-        cfg.AddDbContexts(typeof(Service3Context));
-        cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-    });
+    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 
 builder.Services.AddDbContextPool<Service3Context>(options =>
 {

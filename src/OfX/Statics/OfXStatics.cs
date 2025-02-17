@@ -1,4 +1,6 @@
 using System.Reflection;
+using OfX.Abstractions;
+using OfX.Attributes;
 using OfX.Responses;
 
 namespace OfX.Statics;
@@ -11,15 +13,43 @@ public static class OfXStatics
 
     public static readonly Type OfXValueType = typeof(OfXValueResponse);
 
+    public static Assembly ModelConfigurationAssembly { get; internal set; }
+
     public static readonly PropertyInfo ValueExpressionTypeProp =
         OfXValueType.GetProperty(nameof(OfXValueResponse.Expression))!;
 
     public static readonly PropertyInfo ValueValueTypeProp =
         OfXValueType.GetProperty(nameof(OfXValueResponse.Value))!;
-    
+
     public static readonly PropertyInfo OfXIdProp =
         typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Id))!;
 
     public static readonly PropertyInfo OfXValuesProp =
         typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.OfXValues))!;
+
+    public static readonly Lazy<IReadOnlyCollection<(Type ModelType, Type OfXAttributeType, IOfXConfigAttribute OfXConfigAttribute)>> OfXConfigureStorage = new(() =>
+        [
+            ..ModelConfigurationAssembly
+                .ExportedTypes
+                .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
+                .Where(a => a.GetCustomAttributes().Any(x =>
+                {
+                    var attributeType = x.GetType();
+                    return attributeType.IsGenericType &&
+                           attributeType.GetGenericTypeDefinition() == typeof(OfXConfigForAttribute<>);
+                })).Select(a =>
+                {
+                    var attributes = a.GetCustomAttributes();
+                    var configAttribute = attributes.Select(x =>
+                    {
+                        var attributeType = x.GetType();
+                        if (!attributeType.IsGenericType) return (null, null);
+                        if (attributeType.GetGenericTypeDefinition() != typeof(OfXConfigForAttribute<>))
+                            return (null, null);
+                        return (OfXConfigAttribute: x, OfXAttribute: attributeType.GetGenericArguments()[0]);
+                    }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });
+                    return (ModelType: a, configAttribute.OfXAttribute,
+                        OfXAttributeData: configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
+                })
+        ]);
 }

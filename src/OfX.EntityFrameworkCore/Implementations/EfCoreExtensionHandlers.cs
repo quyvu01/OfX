@@ -3,7 +3,7 @@ using OfX.Abstractions;
 
 namespace OfX.EntityFrameworkCore.Implementations;
 
-public sealed class EfCoreExtensionHandlersInstaller(IServiceCollection serviceCollection) : IExtensionHandlersInstaller
+public sealed class EfCoreExtensionHandlers(IServiceCollection serviceCollection) : IExtensionHandlers
 {
     public IServiceCollection ServiceCollection { get; } = serviceCollection;
 }

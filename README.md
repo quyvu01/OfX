@@ -49,6 +49,7 @@ builder.Services.AddOfX(cfg =>
     cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
     // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
     cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
+    cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 });
 ```
 StronglyTypeIdRegister Example:
@@ -232,7 +233,7 @@ public sealed class User
 ```
 Generated SQL:
 ```SQL
- SELECT u."Id", u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
+ SELECT u."Id", u.Name, u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
 ```
 #### Fetching Data from Navigated Tables
 Expressions also support navigation through navigated tables.

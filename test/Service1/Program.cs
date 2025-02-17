@@ -16,8 +16,6 @@ builder.Services.AddOfX(cfg =>
     cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
     // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
     cfg.AddNats(config => config.Url("nats://localhost:4222"));
-    
-    cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<>)));
 });
 
 builder.Services.AddControllers();
