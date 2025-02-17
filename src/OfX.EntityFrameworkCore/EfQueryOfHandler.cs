@@ -26,10 +26,12 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private const int CollectionWithFirstOrLast = 3;
     private const int CollectionWithOffsetLimit = 4;
     private static readonly ParameterExpression ModelParameterExpression = Expression.Parameter(typeof(TModel), "x");
+
     private static readonly Lazy<ConcurrentDictionary<string, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
+
     private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
-    
+
     private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
         .Invoke(typeof(TModel)).GetCollection<TModel>();
 
@@ -46,11 +48,6 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         return new ItemsResponse<OfXDataResponse>(data);
     }
 
-    // Currently, the ID type is supported for primitive type, in the next version. The strongly-type should be supported!
-    // I cannot find the way to optimize this one on this moment because seem this cannot be cached.
-    // Tried to use FromRawSql, but I need to write all Query like Select * from...
-    // Mark this one as the issue. I'll back later one!
-    // May I should cache the containsMethod, idAsString first!
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
@@ -66,7 +63,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         // Access the ID property on the model
 
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
-        
+
         var ofXValueExpression = expressions
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(expr ?? defaultPropertyName, expression =>
             {
@@ -177,7 +174,8 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                 // Create member bindings for ID and serialized Value
 
                 var bindings = new List<MemberBinding>();
-                if (expr is { }) bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
+                if (expr is { })
+                    bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
                 bindings.Add(Expression.Bind(OfXStatics.ValueValueTypeProp!, serializeCall));
 
                 // Create a new OfXDataResponse object

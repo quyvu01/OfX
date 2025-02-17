@@ -32,11 +32,11 @@ public sealed class OfXGrpcTests : ServicesBuilding
                                 c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
                                 c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(ProvinceOfAttribute)]);
                             });
+                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         })
                         .AddOfXEFCore(options =>
                         {
                             options.AddDbContexts(typeof(TestDbContext));
-                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         });
                 })
                 .InstallAllServices();
@@ -68,11 +68,11 @@ public sealed class OfXGrpcTests : ServicesBuilding
                                 c.AddGrpcHostWithOfXAttributes("localhost:5002",
                                     [typeof(UserOfAttribute), typeof(ProvinceOfAttribute)]);
                             });
+                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         })
                         .AddOfXEFCore(options =>
                         {
                             options.AddDbContexts(typeof(TestDbContext));
-                            options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         });
                 })
                 .InstallAllServices();

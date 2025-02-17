@@ -74,11 +74,10 @@ public static class OfXExtensions
         return new OfXRegisterWrapped(newOfRegister);
     }
 
-    public static void AddExtensionHandler(this IExtensionHandlersInstaller extensionHandlersInstaller,
-        Type serviceType, Type implementationType, Type attributeType)
+    public static void AddAttributeMapHandlers(this IExtensionHandlers extensionHandlers,
+        Type serviceType, Type attributeType)
     {
-        if (!OfXCached.InternalQueryMapHandler.TryAdd(attributeType, serviceType))
+        if (!OfXCached.InternalQueryMapHandlers.TryAdd(attributeType, serviceType))
             throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
-        extensionHandlersInstaller.ServiceCollection.AddScoped(serviceType, implementationType);
     }
 }

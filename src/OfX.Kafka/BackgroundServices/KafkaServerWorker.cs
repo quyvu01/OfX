@@ -1,7 +1,5 @@
 using Microsoft.Extensions.Hosting;
-using OfX.Abstractions;
 using OfX.Cached;
-using OfX.Exceptions;
 using OfX.Kafka.Abstractions;
 
 namespace OfX.Kafka.BackgroundServices;
@@ -10,17 +8,10 @@ internal sealed class KafkaServerWorker(IServiceProvider serviceProvider) : Back
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var serviceTypes = typeof(IQueryOfHandler<,>);
-        var handlers = OfXCached.AttributeMapHandler.Values.ToList();
-        if (handlers is not { Count: > 0 }) return;
-
-        var attributeTypes = handlers
-            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == serviceTypes)
-            .Select(a => a.GetGenericArguments()[1]);
-        var tasks = attributeTypes.Select(async attributeType =>
+        var tasks = OfXCached.AttributeMapHandlers.Select(async x =>
         {
-            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType!, out var handlerType))
-                throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
+            var attributeType = x.Key;
+            var handlerType = x.Value;
             var modelType = handlerType.GetGenericArguments()[0];
             var kafkaServerGeneric = serviceProvider
                 .GetService(typeof(IKafkaServer<,>).MakeGenericType(modelType, attributeType));

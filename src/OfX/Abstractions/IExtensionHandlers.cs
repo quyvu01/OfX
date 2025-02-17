@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace OfX.Abstractions;
 
-public interface IExtensionHandlersInstaller
+public interface IExtensionHandlers
 {
     IServiceCollection ServiceCollection { get; }
 }

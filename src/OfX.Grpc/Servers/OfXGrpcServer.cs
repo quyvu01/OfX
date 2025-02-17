@@ -21,7 +21,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             if (attributeType is null)
                 throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(request.AttributeAssemblyType);
 
-            if (!OfXCached.AttributeMapHandler.TryGetValue(attributeType, out var handlerType))
+            if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
                 throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
             var modelArg = handlerType.GetGenericArguments()[0];

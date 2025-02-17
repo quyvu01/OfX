@@ -30,11 +30,11 @@ public class OfXCoreTests : ServicesBuilding
                             c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]));
                         options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesOrchestrator<>)));
                         options.AddSendPipelines(c => c.OfType(typeof(TestSendPipelinesImpl<>)));
+                        options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                     })
                     .AddOfXEFCore(options =>
                     {
                         options.AddDbContexts(typeof(TestDbContext));
-                        options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                     });
             })
             .InstallAllServices();

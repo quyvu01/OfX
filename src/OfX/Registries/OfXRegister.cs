@@ -16,6 +16,9 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void AddAttributesContainNamespaces(params Assembly[] attributeAssemblies) =>
         OfXStatics.AttributesRegister = [..attributeAssemblies];
 
+    public void AddModelConfigurationsFromNamespaceContaining<TAssembly>() =>
+        OfXStatics.ModelConfigurationAssembly = typeof(TAssembly).Assembly;
+
     public List<Type> OfXAttributeTypes => OfXAttributeTypesCached ??=
     [
         ..OfXStatics.AttributesRegister.SelectMany(a => a.ExportedTypes)

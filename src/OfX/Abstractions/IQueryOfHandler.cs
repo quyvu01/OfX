@@ -2,6 +2,7 @@ using OfX.Attributes;
 using OfX.Responses;
 
 namespace OfX.Abstractions;
+
 /// <summary>
 /// IQueryOfHandler: used for server. This abstraction is used to get data from Server, like OfX.EntityFramework 
 /// </summary>

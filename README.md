@@ -49,6 +49,7 @@ builder.Services.AddOfX(cfg =>
     cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
     // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
     cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
+    cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 });
 ```
 StronglyTypeIdRegister Example:
