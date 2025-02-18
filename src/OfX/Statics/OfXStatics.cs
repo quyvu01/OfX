@@ -1,6 +1,7 @@
 using System.Reflection;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Exceptions;
 using OfX.Responses;
 
 namespace OfX.Statics;
@@ -12,7 +13,6 @@ public static class OfXStatics
     internal static List<Type> StronglyTypeConfigurations { get; } = [];
 
     public static readonly Type OfXValueType = typeof(OfXValueResponse);
-
     public static Assembly ModelConfigurationAssembly { get; internal set; }
 
     public static readonly PropertyInfo ValueExpressionTypeProp =
@@ -27,29 +27,33 @@ public static class OfXStatics
     public static readonly PropertyInfo OfXValuesProp =
         typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.OfXValues))!;
 
-    public static readonly Lazy<IReadOnlyCollection<(Type ModelType, Type OfXAttributeType, IOfXConfigAttribute OfXConfigAttribute)>> OfXConfigureStorage = new(() =>
-        [
-            ..ModelConfigurationAssembly
-                .ExportedTypes
-                .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
-                .Where(a => a.GetCustomAttributes().Any(x =>
-                {
-                    var attributeType = x.GetType();
-                    return attributeType.IsGenericType &&
-                           attributeType.GetGenericTypeDefinition() == typeof(OfXConfigForAttribute<>);
-                })).Select(a =>
-                {
-                    var attributes = a.GetCustomAttributes();
-                    var configAttribute = attributes.Select(x =>
+    public static readonly
+        Lazy<IReadOnlyCollection<(Type ModelType, Type OfXAttributeType, IOfXConfigAttribute OfXConfigAttribute)>>
+        OfXConfigureStorage = new(() => ModelConfigurationAssembly is not null
+            ?
+            [
+                ..ModelConfigurationAssembly
+                    .ExportedTypes
+                    .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
+                    .Where(a => a.GetCustomAttributes().Any(x =>
                     {
                         var attributeType = x.GetType();
-                        if (!attributeType.IsGenericType) return (null, null);
-                        if (attributeType.GetGenericTypeDefinition() != typeof(OfXConfigForAttribute<>))
-                            return (null, null);
-                        return (OfXConfigAttribute: x, OfXAttribute: attributeType.GetGenericArguments()[0]);
-                    }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });
-                    return (ModelType: a, configAttribute.OfXAttribute,
-                        OfXAttributeData: configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
-                })
-        ]);
+                        return attributeType.IsGenericType &&
+                               attributeType.GetGenericTypeDefinition() == typeof(OfXConfigForAttribute<>);
+                    })).Select(a =>
+                    {
+                        var attributes = a.GetCustomAttributes();
+                        var configAttribute = attributes.Select(x =>
+                        {
+                            var attributeType = x.GetType();
+                            if (!attributeType.IsGenericType) return (null, null);
+                            if (attributeType.GetGenericTypeDefinition() != typeof(OfXConfigForAttribute<>))
+                                return (null, null);
+                            return (OfXConfigAttribute: x, OfXAttribute: attributeType.GetGenericArguments()[0]);
+                        }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });
+                        return (ModelType: a, configAttribute.OfXAttribute,
+                            OfXAttributeData: configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
+                    })
+            ]
+            : throw new OfXException.ModelConfigurationMustBeSet());
 }

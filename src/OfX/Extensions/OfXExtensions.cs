@@ -60,7 +60,10 @@ public static class OfXExtensions
             serviceCollection.TryAddScoped(parentType, defaultImplementedService);
         });
 
-        serviceCollection.AddScoped<IDataMappableService>(sp =>
+        if (OfXStatics.AttributesRegister is null)
+            throw new OfXException.OfXAttributesMustBeSet();
+
+        serviceCollection.AddTransient<IDataMappableService>(sp =>
             new DataMappableService(sp, OfXStatics.AttributesRegister));
 
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
