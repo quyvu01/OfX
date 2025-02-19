@@ -22,7 +22,7 @@ public static class EntityFrameworkExtensions
     private static readonly Type baseGenericType = typeof(EfQueryOfHandler<,>);
 
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> factoryCache = new();
+        Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
 
 
     public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
@@ -69,27 +69,24 @@ public static class EntityFrameworkExtensions
             {
                 var (defaultPropertyId, defaultPropertyName) =
                     (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
-                var factory = factoryCache.GetOrAdd((modelType, attributeType), types =>
-                {
-                    var efQueryHandlerType = baseGenericType.MakeGenericType(types.ModelType, types.AttributeType);
-                    var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
-                    var idParam = Expression.Parameter(typeof(string));
-                    var nameParam = Expression.Parameter(typeof(string));
-
-                    var constructor = efQueryHandlerType.GetConstructors().First();
-                    var arguments = new Expression[]
+                var efQueryOfHandlerFactory = efQueryOfHandlerCache
+                    .GetOrAdd((modelType, attributeType), types =>
                     {
-                        Expression.Convert(serviceProviderParam, typeof(IServiceProvider)),
-                        Expression.Constant(defaultPropertyId, typeof(string)),
-                        Expression.Constant(defaultPropertyName, typeof(string))
-                    };
+                        var efQueryHandlerType = baseGenericType.MakeGenericType(types.ModelType, types.AttributeType);
+                        var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
+                        var idParam = Expression.Parameter(typeof(string));
+                        var defaultPropertyNameParam = Expression.Parameter(typeof(string));
 
-                    var newExpression = Expression.New(constructor, arguments);
-                    return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
-                        serviceProviderParam, idParam, nameParam).Compile();
-                });
+                        var constructor = efQueryHandlerType
+                            .GetConstructor([typeof(IServiceProvider), typeof(string), typeof(string)])!;
 
-                return factory.Invoke(sp, defaultPropertyId, defaultPropertyName);
+                        var newExpression = Expression.New(constructor,
+                            [serviceProviderParam, idParam, defaultPropertyNameParam]);
+                        return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
+                            serviceProviderParam, idParam, defaultPropertyNameParam).Compile();
+                    });
+
+                return efQueryOfHandlerFactory.Invoke(sp, defaultPropertyId, defaultPropertyName);
             });
         });
 
