@@ -19,7 +19,7 @@ namespace OfX.EntityFrameworkCore.Extensions;
 public static class EntityFrameworkExtensions
 {
     private static readonly Lazy<ConcurrentDictionary<Type, Type>> modelTypeLookUp = new(() => []);
-    private static readonly Type baseGenericType = typeof(EfQueryOfHandler<,>);
+    private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
 
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
         Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
@@ -34,17 +34,13 @@ public static class EntityFrameworkExtensions
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
-        dbContextTypes.ForEach(dbContextType =>
+        dbContextTypes.ForEach(dbContextType => serviceCollection.AddScoped<IOfXEfDbContext>(sp =>
         {
-            serviceCollection.AddScoped(sp =>
-            {
-                if (sp.GetService(dbContextType) is not DbContext dbContext)
-                    throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
-                        "DbContext must be registered first!");
-                return (IOfXEfDbContext)Activator.CreateInstance(
-                    typeof(EfDbContextWrapped<>).MakeGenericType(dbContextType), dbContext);
-            });
-        });
+            if (sp.GetService(dbContextType) is not DbContext dbContext)
+                throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
+                    "DbContext must be registered first!");
+            return new EfDbContextWrapped(dbContext);
+        }));
 
         serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
@@ -72,7 +68,8 @@ public static class EntityFrameworkExtensions
                 var efQueryOfHandlerFactory = efQueryOfHandlerCache
                     .GetOrAdd((modelType, attributeType), types =>
                     {
-                        var efQueryHandlerType = baseGenericType.MakeGenericType(types.ModelType, types.AttributeType);
+                        var efQueryHandlerType =
+                            efQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType);
                         var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
                         var idParam = Expression.Parameter(typeof(string));
                         var defaultPropertyNameParam = Expression.Parameter(typeof(string));

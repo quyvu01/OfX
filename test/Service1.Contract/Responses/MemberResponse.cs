@@ -6,6 +6,12 @@ namespace Service1.Contract.Responses;
 public class MemberResponse
 {
     public string Id { get; set; }
+
+    public string MemberAdditionalId { get; set; }
+
+    [MemberAdditionalOf(nameof(MemberAdditionalId))]
+    public string MemberAdditionalName { get; set; }
+
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 

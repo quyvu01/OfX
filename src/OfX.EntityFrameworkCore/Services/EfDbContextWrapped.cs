@@ -3,7 +3,7 @@ using OfX.EntityFrameworkCore.Abstractions;
 
 namespace OfX.EntityFrameworkCore.Services;
 
-public sealed class EfDbContextWrapped<TDbContext>(TDbContext dbContext) : IOfXEfDbContext where TDbContext : DbContext
+public sealed class EfDbContextWrapped(DbContext dbContext) : IOfXEfDbContext
 {
     public DbSet<TModel> GetCollection<TModel>() where TModel : class => dbContext.Set<TModel>();
     public bool HasCollection(Type modelType) => HasDbSet(dbContext, modelType);

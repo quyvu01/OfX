@@ -16,10 +16,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
     })
-    .AddOfXEFCore(cfg =>
-    {
-        cfg.AddDbContexts(typeof(Service2Context));
-    });
+    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
 builder.Services.AddDbContextPool<Service2Context>(options =>
 {
