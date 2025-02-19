@@ -3,12 +3,9 @@ namespace OfX.Exceptions;
 public static class OfXException
 {
     public sealed class OfXAttributesMustBeSet()
-        : Exception("You have to call the method: `AddAttributesContainNamespaces` to scanning your `OfXAttributes`!");
+        : Exception("You have to call the method: `AddAttributesContainNamespaces` with assemblies to scanning your `OfXAttributes`!");
     public sealed class RequestMustNotBeAddMoreThanOneTimes()
         : Exception("Request must not be add more than one times!");
-
-    public sealed class AttributesFromNamespaceShouldBeAdded() :
-        Exception("Attributes from namespaces should be added!");
 
     public sealed class CurrentIdTypeWasNotSupported() :
         Exception("Current Id type was not supported. Please create a join us to contribute more!");

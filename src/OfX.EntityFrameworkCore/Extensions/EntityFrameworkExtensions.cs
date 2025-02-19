@@ -19,10 +19,10 @@ namespace OfX.EntityFrameworkCore.Extensions;
 public static class EntityFrameworkExtensions
 {
     private static readonly Lazy<ConcurrentDictionary<Type, Type>> modelTypeLookUp = new(() => []);
-    private static readonly Type baseGenericType = typeof(EfQueryOfHandler<,>);
+    private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
 
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> factoryCache = new();
+        Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
 
 
     public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
@@ -34,17 +34,13 @@ public static class EntityFrameworkExtensions
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
-        dbContextTypes.ForEach(dbContextType =>
+        dbContextTypes.ForEach(dbContextType => serviceCollection.AddScoped<IOfXEfDbContext>(sp =>
         {
-            serviceCollection.AddScoped(sp =>
-            {
-                if (sp.GetService(dbContextType) is not DbContext dbContext)
-                    throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
-                        "DbContext must be registered first!");
-                return (IOfXEfDbContext)Activator.CreateInstance(
-                    typeof(EfDbContextWrapped<>).MakeGenericType(dbContextType), dbContext);
-            });
-        });
+            if (sp.GetService(dbContextType) is not DbContext dbContext)
+                throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
+                    "DbContext must be registered first!");
+            return new EfDbContextWrapped(dbContext);
+        }));
 
         serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
@@ -69,27 +65,25 @@ public static class EntityFrameworkExtensions
             {
                 var (defaultPropertyId, defaultPropertyName) =
                     (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
-                var factory = factoryCache.GetOrAdd((modelType, attributeType), types =>
-                {
-                    var efQueryHandlerType = baseGenericType.MakeGenericType(types.ModelType, types.AttributeType);
-                    var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
-                    var idParam = Expression.Parameter(typeof(string));
-                    var nameParam = Expression.Parameter(typeof(string));
-
-                    var constructor = efQueryHandlerType.GetConstructors().First();
-                    var arguments = new Expression[]
+                var efQueryOfHandlerFactory = efQueryOfHandlerCache
+                    .GetOrAdd((modelType, attributeType), types =>
                     {
-                        Expression.Convert(serviceProviderParam, typeof(IServiceProvider)),
-                        Expression.Constant(defaultPropertyId, typeof(string)),
-                        Expression.Constant(defaultPropertyName, typeof(string))
-                    };
+                        var efQueryHandlerType =
+                            efQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType);
+                        var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
+                        var idParam = Expression.Parameter(typeof(string));
+                        var defaultPropertyNameParam = Expression.Parameter(typeof(string));
 
-                    var newExpression = Expression.New(constructor, arguments);
-                    return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
-                        serviceProviderParam, idParam, nameParam).Compile();
-                });
+                        var constructor = efQueryHandlerType
+                            .GetConstructor([typeof(IServiceProvider), typeof(string), typeof(string)])!;
 
-                return factory.Invoke(sp, defaultPropertyId, defaultPropertyName);
+                        var newExpression = Expression.New(constructor,
+                            [serviceProviderParam, idParam, defaultPropertyNameParam]);
+                        return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
+                            serviceProviderParam, idParam, defaultPropertyNameParam).Compile();
+                    });
+
+                return efQueryOfHandlerFactory.Invoke(sp, defaultPropertyId, defaultPropertyName);
             });
         });
 

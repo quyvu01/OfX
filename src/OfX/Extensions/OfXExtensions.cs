@@ -18,7 +18,7 @@ public static class OfXExtensions
         var newOfRegister = new OfXRegister(serviceCollection);
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 })
-            throw new OfXException.AttributesFromNamespaceShouldBeAdded();
+            throw new OfXException.OfXAttributesMustBeSet();
 
         var targetInterface = typeof(IMappableRequestHandler<>);
         if (OfXStatics.HandlersRegister is { } handlersRegister)
@@ -59,9 +59,6 @@ public static class OfXExtensions
             // So we have to replace the default service if existed -> Good!
             serviceCollection.TryAddScoped(parentType, defaultImplementedService);
         });
-
-        if (OfXStatics.AttributesRegister is null)
-            throw new OfXException.OfXAttributesMustBeSet();
 
         serviceCollection.AddTransient<IDataMappableService>(sp =>
             new DataMappableService(sp, OfXStatics.AttributesRegister));

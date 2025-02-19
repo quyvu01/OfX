@@ -14,7 +14,10 @@ public sealed class TestController : ControllerBase
     public async Task<IActionResult> GetMembers([FromServices] IDataMappableService dataMappableService)
     {
         List<MemberResponse> members =
-            [.. Enumerable.Range(1, 3).Select(a => new MemberResponse { Id = a.ToString(), UserId = a.ToString() })];
+        [
+            .. Enumerable.Range(1, 3).Select(a => new MemberResponse
+                { Id = a.ToString(), UserId = a.ToString(), MemberAdditionalId = a.ToString() })
+        ];
         await dataMappableService.MapDataAsync(members);
         return Ok(members);
     }

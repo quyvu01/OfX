@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -20,16 +21,24 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
             .SubscribeAsync<MessageDeserializable>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
         {
-            if (message.Data is null) continue;
-            using var serviceScope = serviceProvider.CreateScope();
-            var pipeline = serviceScope.ServiceProvider
-                .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
-            var headers = message.Headers?
-                .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
-            var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, CancellationToken.None);
-            var response = await pipeline.ExecuteAsync(requestContext);
-            await natsClient.NatsClient.PublishAsync(message.ReplyTo!, response);
+            try
+            {
+                if (message.Data is null) continue;
+                using var serviceScope = serviceProvider.CreateScope();
+                var pipeline = serviceScope.ServiceProvider
+                    .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
+                var headers = message.Headers?
+                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
+                var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
+                var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, CancellationToken.None);
+                var response = await pipeline.ExecuteAsync(requestContext);
+                await natsClient.NatsClient.PublishAsync(message.ReplyTo!, response);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine($"Error while publish message: {e.Message}");
+                // ignored
+            }
         }
     }
 }
