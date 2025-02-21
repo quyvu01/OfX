@@ -3,6 +3,7 @@ using Kernel;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Nats.Extensions;
 using Service1;
 using Service1.Contexts;
 
@@ -16,7 +17,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context)));
 

@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -17,6 +17,7 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
     public async Task StartAsync()
     {
         var natsClient = serviceProvider.GetRequiredService<NatsClientWrapper>();
+        var logger = serviceProvider.GetService<ILogger<NatsServerRpc<TModel, TAttribute>>>();
         var natsScribeAsync = natsClient.NatsClient
             .SubscribeAsync<MessageDeserializable>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
@@ -32,12 +33,11 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
                 var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
                 var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, CancellationToken.None);
                 var response = await pipeline.ExecuteAsync(requestContext);
-                await natsClient.NatsClient.PublishAsync(message.ReplyTo!, response);
+                await message.ReplyAsync(response);
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Error while publish message: {e.Message}");
-                // ignored
+                logger.LogError("Error while publish message: {@Error}", e.Message);
             }
         }
     }
