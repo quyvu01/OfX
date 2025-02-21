@@ -3,6 +3,7 @@ using System.Text.Json;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -23,6 +24,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     private readonly IConsumer<string, string> _consumer;
     private readonly IProducer<string, string> _producer;
     private readonly string _requestTopic;
+    private readonly ILogger<KafkaServer<TModel, TAttribute>> _logger;
 
     public KafkaServer(IServiceProvider serviceProvider)
     {
@@ -47,6 +49,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
             .SetValueSerializer(Serializers.Utf8)
             .Build();
         _requestTopic = typeof(TAttribute).RequestTopic();
+        _logger = serviceProvider.GetService<ILogger<KafkaServer<TModel, TAttribute>>>();
         CreateTopicsAsync().Wait();
     }
 
@@ -88,7 +91,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing request: {ex}");
+                _logger.LogError("Error processing request Kafka message: {@Error}", ex.Message);
             }
         }
     }

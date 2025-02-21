@@ -1,12 +1,26 @@
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OfX.RabbitMq.Abstractions;
 
 namespace OfX.RabbitMq.BackgroundServices;
 
-internal sealed class RabbitMqServerWorker(IRabbitMqServer rabbitMqServer) : BackgroundService
+internal sealed class RabbitMqServerWorker(IRabbitMqServer rabbitMqServer, ILogger<RabbitMqServerWorker> logger)
+    : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await rabbitMqServer.ConsumeAsync();
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await rabbitMqServer.ConsumeAsync();
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Error while starting RabbitMq: {@Message}", e.Message);
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+        }
     }
 }
