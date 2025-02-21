@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>5.0.2</Version>
+        <Version>5.0.3</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX-gRPC</PackageId>
         <Description>OfX extension. Use gRPC as Data transporting</Description>
