@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,29 +13,35 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
+    private readonly Lazy<ConcurrentDictionary<string, Type>> attributeAssemblyTypeMapReceivedPipelines = new(() => []);
+
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
         {
-            var attributeType = Type.GetType(request.AttributeAssemblyType);
+            var receivedPipelineType = attributeAssemblyTypeMapReceivedPipelines.Value
+                .GetOrAdd(request.AttributeAssemblyType, attributeAssemblyType =>
+                {
+                    var attributeType = Type.GetType(attributeAssemblyType);
 
-            if (attributeType is null)
-                throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(request.AttributeAssemblyType);
+                    if (attributeType is null)
+                        throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(attributeAssemblyType);
 
-            if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
-                throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
+                    if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
+                        throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
-            var modelArg = handlerType.GetGenericArguments()[0];
+                    var modelArg = handlerType.GetGenericArguments()[0];
+                    return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType);
+                });
 
             var pipeline = serviceProvider
-                .GetRequiredService(typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType));
+                .GetRequiredService(receivedPipelineType);
 
-            if (pipeline is not IReceivedPipelinesBase receivedPipelinesBase)
-                throw new UnreachableException();
+            if (pipeline is not IReceivedPipelinesBase receivedPipelinesBase) throw new UnreachableException();
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
-            var message = new MessageDeserializable()
+            var message = new MessageDeserializable
             {
                 SelectorIds = request.SelectorIds.ToList(), Expression = request.Expression
             };

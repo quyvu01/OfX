@@ -170,9 +170,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 
                 var serializeCall = Expression.Call(serializeObjectMethod!,
                     Expression.Convert(currentExpression, typeof(object)));
-
-                // Create member bindings for ID and serialized Value
-
+                
                 var bindings = new List<MemberBinding>();
                 if (expr is { })
                     bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
