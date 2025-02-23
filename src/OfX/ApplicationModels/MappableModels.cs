@@ -3,7 +3,7 @@ using OfX.Abstractions;
 
 namespace OfX.ApplicationModels;
 
-public sealed record MappableDataProperty(
+internal sealed record MappableDataProperty(
     PropertyInfo PropertyInfo,
     object Model,
     IOfXAttributeCore Attribute,
@@ -11,18 +11,18 @@ public sealed record MappableDataProperty(
     string Expression,
     int Order);
 
-public sealed record MappableDataPropertyCache(
+internal sealed record MappableDataPropertyCache(
     IOfXAttributeCore Attribute,
     Delegate Func,
     string Expression,
     int Order);
 
 
-public sealed record MappableTypeData(
+internal sealed record MappableTypeData(
     Type OfXAttributeType,
     IEnumerable<PropertyCalledLater> PropertyCalledLaters,
     IEnumerable<string> Expressions,
     int Order);
 
 
-public sealed record PropertyCalledLater(object Model, Delegate Func);
+internal sealed record PropertyCalledLater(object Model, Delegate Func);
