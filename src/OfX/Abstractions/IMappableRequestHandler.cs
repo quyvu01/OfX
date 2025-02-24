@@ -5,7 +5,7 @@ namespace OfX.Abstractions;
 
 public interface IMappableRequestHandler;
 
-public interface IMappableRequestHandler<TAttribute> : IMappableRequestHandler
+public interface IMappableRequestHandler<TAttribute> : IOfXBase<TAttribute>, IMappableRequestHandler
     where TAttribute : OfXAttribute
 
 {

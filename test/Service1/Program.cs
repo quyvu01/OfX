@@ -19,11 +19,20 @@ builder.Services.AddOfX(cfg =>
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
-    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context)));
+    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)));
 
 builder.Services.AddDbContextPool<Service1Context>(options =>
 {
     options.UseNpgsql("Host=localhost;Username=postgres;Password=Abcd@2021;Database=OfXTestService1", b =>
+    {
+        b.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
+        b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+    });
+}, 128);
+
+builder.Services.AddDbContextPool<OtherService1Context>(options =>
+{
+    options.UseNpgsql("Host=localhost;Username=postgres;Password=Abcd@2021;Database=OfXTestOtherService1", b =>
     {
         b.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
         b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);

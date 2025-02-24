@@ -16,7 +16,11 @@ public sealed class TestController : ControllerBase
         List<MemberResponse> members =
         [
             .. Enumerable.Range(1, 3).Select(a => new MemberResponse
-                { Id = a.ToString(), UserId = a.ToString(), MemberAdditionalId = a.ToString() })
+            {
+                Id = a.ToString(), 
+                UserId = a.ToString(), MemberAdditionalId = a.ToString(),
+                MemberAddressId = a.ToString()
+            })
         ];
         await dataMappableService.MapDataAsync(members);
         return Ok(members);

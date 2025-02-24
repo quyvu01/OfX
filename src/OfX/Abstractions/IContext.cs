@@ -1,6 +1,7 @@
 using OfX.Attributes;
 
 namespace OfX.Abstractions;
+
 /// <summary>
 /// IContext is a RequestContext, which is used for each request
 /// When you invoke the MapDataAsync function from IMappableService, you can pass the Context to this function, this is optional!
@@ -12,11 +13,12 @@ public interface IContext
     Dictionary<string, string> Headers { get; }
     CancellationToken CancellationToken { get; }
 }
+
 /// <summary>
 /// When you received the request, it is wrapped on a request context. Here you can find the header and CancellationToken on the requestContext
 /// </summary>
 /// <typeparam name="TAttribute"></typeparam>
-public interface RequestContext<TAttribute> : IContext where TAttribute : OfXAttribute
+public interface RequestContext<TAttribute> : IOfXBase<TAttribute>, IContext where TAttribute : OfXAttribute
 {
     RequestOf<TAttribute> Query { get; }
 }

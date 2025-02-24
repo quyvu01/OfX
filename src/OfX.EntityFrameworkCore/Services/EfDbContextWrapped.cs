@@ -6,9 +6,6 @@ namespace OfX.EntityFrameworkCore.Services;
 public sealed class EfDbContextWrapped(DbContext dbContext) : IOfXEfDbContext
 {
     public DbSet<TModel> GetCollection<TModel>() where TModel : class => dbContext.Set<TModel>();
-    public bool HasCollection(Type modelType) => HasDbSet(dbContext, modelType);
-
-    private static bool HasDbSet(DbContext context, Type modelType) => context.GetType()
-        .GetProperties()
-        .Any(p => p.PropertyType == typeof(DbSet<>).MakeGenericType(modelType));
+    public bool HasCollection(Type modelType) => dbContext.Model.FindEntityType(modelType) is not null;
+    public Type DbContextType => dbContext.GetType();
 }

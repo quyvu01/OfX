@@ -4,6 +4,7 @@ using OfX.Abstractions;
 using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
+using OfX.InternalPipelines;
 using OfX.Registries;
 using OfX.Services;
 using OfX.Statics;
@@ -74,7 +75,7 @@ public static class OfXExtensions
         return new OfXRegisterWrapped(newOfRegister);
     }
 
-    public static void AddAttributeMapHandlers(this IExtensionHandlers extensionHandlers,
+    public static void AddAttributeMapHandlers(this IExtensionHandlers _,
         Type serviceType, Type attributeType)
     {
         if (!OfXCached.InternalQueryMapHandlers.TryAdd(attributeType, serviceType))
