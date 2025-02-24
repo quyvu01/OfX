@@ -50,7 +50,7 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 })
 .AddOfXEFCore(options =>
 {
-    options.AddDbContexts(typeof(TestDbContext));
+    options.AddDbContexts(typeof(TestDbContext), typeof(OtherDbContext)...);
 });
 ```
 
