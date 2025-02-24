@@ -11,7 +11,8 @@ public interface IReceivedPipelinesBase
         CancellationToken cancellationToken);
 }
 
-public interface IReceivedPipelinesBase<TAttribute> : IReceivedPipelinesBase where TAttribute : OfXAttribute
+public interface IReceivedPipelinesBase<TAttribute> : IOfXBase<TAttribute>, IReceivedPipelinesBase
+    where TAttribute : OfXAttribute
 {
     Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext);
 

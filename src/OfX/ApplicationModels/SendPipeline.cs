@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Exceptions;
 
@@ -22,13 +23,13 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
             .ToList();
 
         if (signatureInterfaceTypes is not { Count: > 0 })
-            throw new OfXException.PipelineIsNotSendPipelineBehavior(pipelineType);
+            throw new OfXException.TypeIsNotSendPipelineBehavior(pipelineType);
         if (pipelineType.IsGenericType)
         {
             if (pipelineType.ContainsGenericParameters)
             {
                 var serviceDescriptor = new ServiceDescriptor(sendPipelineInterface, pipelineType, serviceLifetime);
-                serviceCollection.Add(serviceDescriptor);
+                serviceCollection.TryAdd(serviceDescriptor);
                 return this;
             }
         }
@@ -36,7 +37,7 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
         signatureInterfaceTypes.ForEach(serviceType =>
         {
             var serviceDescriptor = new ServiceDescriptor(serviceType, pipelineType, serviceLifetime);
-            serviceCollection.Add(serviceDescriptor);
+            serviceCollection.TryAdd(serviceDescriptor);
         });
         return this;
     }

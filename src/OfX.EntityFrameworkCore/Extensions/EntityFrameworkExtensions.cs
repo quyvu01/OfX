@@ -18,7 +18,7 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    private static readonly Lazy<ConcurrentDictionary<Type, Type>> modelTypeLookUp = new(() => []);
+    private static readonly Lazy<ConcurrentDictionary<Type, int>> modelTypeLookUp = new(() => []);
     private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
 
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
@@ -37,20 +37,20 @@ public static class EntityFrameworkExtensions
         dbContextTypes.ForEach(dbContextType => serviceCollection.AddScoped<IOfXEfDbContext>(sp =>
         {
             if (sp.GetService(dbContextType) is not DbContext dbContext)
-                throw new OfXEntityFrameworkException.EntityFrameworkDbContextNotRegister(
-                    "DbContext must be registered first!");
+                throw new OfXEntityFrameworkException
+                    .EntityFrameworkDbContextNotRegister("DbContext must be registered first!");
             return new EfDbContextWrapped(dbContext);
         }));
 
         serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
-            if (modelTypeLookUp.Value.TryGetValue(modelType, out var serviceType))
-                return sp.GetServices<IOfXEfDbContext>().First(a => a.GetType() == serviceType);
-            var contexts = sp.GetServices<IOfXEfDbContext>();
+            if (modelTypeLookUp.Value.TryGetValue(modelType, out var contextIndex))
+                return sp.GetServices<IOfXEfDbContext>().ElementAt(contextIndex);
+            var contexts = sp.GetServices<IOfXEfDbContext>().ToList();
             var matchingServiceType = contexts.FirstOrDefault(a => a.HasCollection(modelType));
             if (matchingServiceType is null)
                 throw new OfXEntityFrameworkException.ThereAreNoDbContextHasModel(modelType);
-            modelTypeLookUp.Value.TryAdd(modelType, matchingServiceType.GetType());
+            modelTypeLookUp.Value.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
             return matchingServiceType;
         });
 
@@ -77,8 +77,8 @@ public static class EntityFrameworkExtensions
                         var constructor = efQueryHandlerType
                             .GetConstructor([typeof(IServiceProvider), typeof(string), typeof(string)])!;
 
-                        var newExpression = Expression.New(constructor,
-                            [serviceProviderParam, idParam, defaultPropertyNameParam]);
+                        var newExpression = Expression.New(constructor, serviceProviderParam, idParam,
+                            defaultPropertyNameParam);
                         return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
                             serviceProviderParam, idParam, defaultPropertyNameParam).Compile();
                     });

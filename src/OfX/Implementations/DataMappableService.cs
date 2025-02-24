@@ -13,7 +13,7 @@ internal sealed class DataMappableService(
     IServiceProvider serviceProvider,
     IEnumerable<Assembly> ofXAttributeAssemblies) : IDataMappableService
 {
-    private const int maxObjectSpawnTimes = 32;
+    private const int MaxObjectSpawnTimes = 32;
     private int _currentObjectSpawnTimes;
 
     private readonly Lazy<IReadOnlyCollection<Type>> _attributeLazyStorage = new(() =>
@@ -24,7 +24,7 @@ internal sealed class DataMappableService(
 
     public async Task MapDataAsync(object value, IContext context = null)
     {
-        if (_currentObjectSpawnTimes >= maxObjectSpawnTimes)
+        if (_currentObjectSpawnTimes >= MaxObjectSpawnTimes)
             throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
         var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
         var ofXTypesData = ReflectionHelpers

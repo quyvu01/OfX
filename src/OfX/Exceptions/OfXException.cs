@@ -10,11 +10,11 @@ public static class OfXException
     public sealed class CurrentIdTypeWasNotSupported() :
         Exception("Current Id type was not supported. Please create a join us to contribute more!");
 
-    public sealed class PipelineIsNotReceivedPipelineBehavior(Type type) :
-        Exception($"The input pipeline: {type.Name} is not matched with ReceivedPipelineBehavior. Please check again!");
+    public sealed class TypeIsNotReceivedPipelineBehavior(Type type) :
+        Exception($"The input type: {type.Name} is not matched with ReceivedPipelineBehavior. Please check again!");
 
-    public sealed class PipelineIsNotSendPipelineBehavior(Type type) :
-        Exception($"The input pipeline: {type.Name} is not matched with SendPipelineBehavior. Please check again!");
+    public sealed class TypeIsNotSendPipelineBehavior(Type type) :
+        Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior. Please check again!");
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");

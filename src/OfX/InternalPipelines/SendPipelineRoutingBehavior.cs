@@ -1,9 +1,10 @@
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Cached;
+using OfX.Implementations;
 using OfX.Responses;
 
-namespace OfX.Implementations;
+namespace OfX.InternalPipelines;
 
 internal sealed class SendPipelineRoutingBehavior<TAttribute>(
     IServiceProvider serviceProvider) :
