@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+        <LangVersion>default</LangVersion>
+        <Version>5.0.5</Version>
+        <Authors>Quy Vu</Authors>
+        <PackageId>OfX-MongoDb</PackageId>
+        <Description>OfX extension. Use MongoDb as Data Querying</Description>
+        <PackageTags>OfX;mappable;open-source;mongoDb;ORM</PackageTags>
+        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
+        <PackageIcon>OfX.png</PackageIcon>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Include="..\..\OfX.png">
+            <Pack>True</Pack>
+            <PackagePath/>
+            <Link>OfX.png</Link>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\OfX\OfX.csproj"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MongoDB.Driver" Version="3.2.1"/>
+    </ItemGroup>
+</Project>

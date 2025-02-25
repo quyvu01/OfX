@@ -2,12 +2,10 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
-using OfX.EntityFrameworkCore.Implementations;
 using OfX.EntityFrameworkCore.Services;
 using OfX.EntityFrameworkCore.Statics;
 using OfX.Extensions;
@@ -20,6 +18,7 @@ public static class EntityFrameworkExtensions
 {
     private static readonly Lazy<ConcurrentDictionary<Type, int>> modelTypeLookUp = new(() => []);
     private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
+    private static readonly ConcurrentDictionary<Type, bool> modelTypeCache = new();
 
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
         Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
@@ -58,18 +57,25 @@ public static class EntityFrameworkExtensions
         {
             var modelType = m.ModelType;
             var attributeType = m.OfXAttributeType;
-            var serviceInterfaceType = typeof(IQueryOfHandler<,>).MakeGenericType(modelType, attributeType);
-            var ext = new EfCoreExtensionHandlers(serviceCollection);
-            ext.AddAttributeMapHandlers(serviceInterfaceType, attributeType);
+            var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
+
             serviceCollection.AddScoped(serviceInterfaceType, sp =>
             {
+                var ofXDbContexts = sp.GetServices<IOfXEfDbContext>();
+                var modelCached = modelTypeCache
+                    .GetOrAdd(modelType, mt => ofXDbContexts.Any(x => x.HasCollection(mt)));
+
                 var (defaultPropertyId, defaultPropertyName) =
                     (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
+
                 var efQueryOfHandlerFactory = efQueryOfHandlerCache
                     .GetOrAdd((modelType, attributeType), types =>
                     {
-                        var efQueryHandlerType =
-                            efQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType);
+                        var efQueryHandlerType = modelCached
+                            ? efQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType)
+                            : OfXStatics.DefaultQueryOfHandlerType.MakeGenericType(types.ModelType,
+                                types.AttributeType);
+
                         var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
                         var idParam = Expression.Parameter(typeof(string));
                         var defaultPropertyNameParam = Expression.Parameter(typeof(string));

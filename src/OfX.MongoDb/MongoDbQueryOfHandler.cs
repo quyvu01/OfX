@@ -2,20 +2,19 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.EntityFrameworkCore.Delegates;
-using OfX.EntityFrameworkCore.Queryable;
+using OfX.MongoDb.Queryable;
 using OfX.Responses;
 using OfX.Serializable;
 using OfX.Statics;
 
-namespace OfX.EntityFrameworkCore;
+namespace OfX.MongoDb;
 
-public class EfQueryOfHandler<TModel, TAttribute>(
+public class MongoDbQueryOfHandler<TModel, TAttribute>(
     IServiceProvider serviceProvider,
     string idPropertyName,
     string defaultPropertyName)
@@ -28,21 +27,19 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 
     private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
 
-    private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
-        .Invoke(typeof(TModel)).GetCollection<TModel>();
+    private readonly IMongoCollection<TModel> _collection = serviceProvider.GetService<IMongoCollection<TModel>>();
 
-    private readonly ILogger<EfQueryOfHandler<TModel, TAttribute>> _logger = serviceProvider
-        .GetService<ILogger<EfQueryOfHandler<TModel, TAttribute>>>();
+    private readonly ILogger<MongoDbQueryOfHandler<TModel, TAttribute>> _logger = serviceProvider
+        .GetService<ILogger<MongoDbQueryOfHandler<TModel, TAttribute>>>();
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
         var filter = BuildFilter(context.Query);
-        var data = await _collection
-            .AsNoTracking()
-            .Where(filter)
-            .Select(BuildResponse(context.Query))
+
+        var result = await _collection.Find(filter)
+            .Project(BuildResponse(context.Query))
             .ToListAsync(context.CancellationToken);
-        return new ItemsResponse<OfXDataResponse>(data);
+        return new ItemsResponse<OfXDataResponse>([]);
     }
 
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
@@ -188,11 +185,11 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                 }
             }));
 
-        var ofXValuesExpression = Expression.ListInit(
+        var ofXValuesListInit = Expression.ListInit(
             Expression.New(typeof(List<OfXValueResponse>)), // Create new List<OfXValueResponse>
             ofXValueExpression.Where(x => x is not null)
                 .Select(expr => expr.Body)); // Extract body expressions
-        
+
         var idAsStringExpression = IdMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
         {
             var idProperty = Expression.Property(ModelParameterExpression, id);
@@ -203,7 +200,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var bindings = new List<MemberBinding>
         {
             Expression.Bind(OfXStatics.OfXIdProp, idAsStringExpression),
-            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesExpression)
+            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesListInit)
         };
         var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)), bindings);
 

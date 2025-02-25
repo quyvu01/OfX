@@ -1,17 +1,24 @@
 using System.Reflection;
 using Kernel;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using Service1;
 using Service1.Contexts;
+using Service1.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+var client = new MongoClient("mongodb://localhost:27017");
+var database = client.GetDatabase("Service1MongoDb");
+var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
@@ -19,7 +26,8 @@ builder.Services.AddOfX(cfg =>
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
-    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)));
+    .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
+    .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection));
 
 builder.Services.AddDbContextPool<Service1Context>(options =>
 {
