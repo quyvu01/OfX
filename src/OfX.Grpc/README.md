@@ -1,6 +1,8 @@
 # OfX-gRPC
 
-OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data transportation. This package provides a
+high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data
+retrieval across distributed systems.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -8,7 +10,8 @@ OfX-gRPC is an extension package for OfX that leverages gRPC for efficient data 
 
 ## Introduction
 
-gRPC-based Transport: Implements gRPC to handle data communication between services, providing a fast, secure, and scalable solution.
+gRPC-based Transport: Implements gRPC to handle data communication between services, providing a fast, secure, and
+scalable solution.
 
 ---
 
@@ -48,7 +51,6 @@ builder.Services.AddOfX(cfg =>
 });
 ```
 
-
 For Server:
 
 ```csharp
@@ -60,7 +62,9 @@ app.MapOfXGrpcService();
 ...
 ```
 
-After installing the package OfX-gRPC, you can use the extension method `AddGrpcClients()` for client and `MapOfXGrpcService()` for server. Look up at `AddGrpcClients` function, we have to define the contract assembly with server host, on this example above, all the queries are included in `SomeContractAssemblyMarker` assembly.
+After installing the package OfX-gRPC, you can use the extension method `AddGrpcClients()` for client and
+`MapOfXGrpcService()` for server. Look up at `AddGrpcClients` function, we have to define the contract assembly with
+server host, on this example above, all the queries are included in `SomeContractAssemblyMarker` assembly.
 
 That All, enjoy your moment!
 
@@ -70,6 +74,7 @@ That All, enjoy your moment!
 | [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
 | **Data Providers**                 |                                                                                                         |
 | [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
 | **Transports**                     |                                                                                                         |
 | [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | This Document                                                                            |
 | [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
@@ -79,8 +84,15 @@ That All, enjoy your moment!
 ---
 
 [OfX.nuget]: https://www.nuget.org/packages/OfX/
+
 [OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
+
+[OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
+
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
+
 [OfX-Nats.nuget]: https://www.nuget.org/packages/OfX-Nats/
+
 [OfX-RabbitMq.nuget]: https://www.nuget.org/packages/OfX-RabbitMq/
+
 [OfX-Kafka.nuget]: https://www.nuget.org/packages/OfX-Kafka/

@@ -13,6 +13,10 @@ public static class OfXStatics
     internal static List<Type> StronglyTypeConfigurations { get; } = [];
 
     public static readonly Type OfXValueType = typeof(OfXValueResponse);
+
+    public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
+
+    public static readonly Type DefaultQueryOfHandlerType = typeof(DefaultQueryOfHandler<,>);
     public static Assembly ModelConfigurationAssembly { get; internal set; }
 
     public static readonly PropertyInfo ValueExpressionTypeProp =

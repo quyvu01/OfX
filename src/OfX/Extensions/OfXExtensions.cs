@@ -72,13 +72,12 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
 
-        return new OfXRegisterWrapped(newOfRegister);
-    }
+        OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
+        {
+            var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
+            OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
+        });
 
-    public static void AddAttributeMapHandlers(this IExtensionHandlers _,
-        Type serviceType, Type attributeType)
-    {
-        if (!OfXCached.InternalQueryMapHandlers.TryAdd(attributeType, serviceType))
-            throw new OfXException.RequestMustNotBeAddMoreThanOneTimes();
+        return new OfXRegisterWrapped(newOfRegister);
     }
 }

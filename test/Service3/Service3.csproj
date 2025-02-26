@@ -17,6 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\Service1.Contract\Service1.Contract.csproj" />
     </ItemGroup>
 

@@ -12,10 +12,13 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="MongoDB.Bson" Version="3.2.1" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.2" />
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
+      <ProjectReference Include="..\..\src\OfX.MongoDb\OfX.MongoDb.csproj" />
       <ProjectReference Include="..\Service1.Contract\Service1.Contract.csproj" />
     </ItemGroup>
 

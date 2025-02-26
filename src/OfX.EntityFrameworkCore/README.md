@@ -60,30 +60,33 @@ builder.Services.AddOfXEntityFrameworkCore(cfg =>
 
 Here, you can use the method `AddDbContexts()`, which takes `DbContext(s)` to executing.
 
-#### AddModelConfigurationsFromNamespaceContaining
-
-You have to tell OfX-EFCore where your models are located by assembly. OfX-EFCore will find all `OfXConfigForAttribute`
-to create handler automatically!
-
 That all, Enjoy your moment!
 
-| Package Name                        | Description                                                                                             | .NET Version | Document                                                                      |
-|-------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
-| **Core**                            |                                                                                                         |
-| [OfX][OfX.nuget]                    | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                  |
-| **Data Providers**                  |                                                                                                         |
-| [OfX-EFCore][OfX-EFCore.nuget]      | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | This Document                                                                 |
-| **Transports**                      |                                                                                                         |
-| [OfX-gRPC][OfX-gRPC.nuget]          | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)     |
-| [OfX-Kafka][OfX-Kafka.nuget]        | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)    |
-| [OfX-Nats][OfX-Nats.nuget]          | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)     |
-| [OfX-RabbitMq][OfX-RabbitMq.nuget]  | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md) |
+| Package Name                       | Description                                                                                             | .NET Version | Document                                                                      |
+|------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|-------------------------------------------------------------------------------|
+| **Core**                           |                                                                                                         |
+| [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                  |
+| **Data Providers**                 |                                                                                                         |
+| [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | This Document                                                                 |
+| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)  |
+| **Transports**                     |                                                                                                         |
+| [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)     |
+| [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)    |
+| [OfX-Nats][OfX-Nats.nuget]         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)     |
+| [OfX-RabbitMq][OfX-RabbitMq.nuget] | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md) |
 
 ---
 
 [OfX.nuget]: https://www.nuget.org/packages/OfX/
+
 [OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
+
+[OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
+
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
+
 [OfX-Nats.nuget]: https://www.nuget.org/packages/OfX-Nats/
+
 [OfX-RabbitMq.nuget]: https://www.nuget.org/packages/OfX-RabbitMq/
+
 [OfX-Kafka.nuget]: https://www.nuget.org/packages/OfX-Kafka/

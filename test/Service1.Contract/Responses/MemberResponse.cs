@@ -11,9 +11,14 @@ public class MemberResponse
 
     [MemberAddressOf(nameof(MemberAddressId))]
     public string MemberProvinceId { get; set; }
-
+    
     [ProvinceOf(nameof(MemberProvinceId), Order = 1)]
     public string MemberProvinceName { get; set; }
+
+    public string MemberSocialId { get; set; }
+
+    [MemberSocialOf(nameof(MemberSocialId))]
+    public string MemberSocialName { get; set; }
     
     public string MemberAdditionalId { get; set; }
     

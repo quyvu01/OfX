@@ -1,63 +1,63 @@
-# OfX-Nats
+# OfX-MongoDb
 
-OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation. This package provides a
-high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data
-retrieval across distributed systems.
+OfX-MongoDb is an extension package for OfX that integrates with MongoDb to simplify data fetching by
+leveraging attribute-based data mapping. This extension streamlines data retrieval using MongoDb, reducing boilerplate
+code and improving maintainability.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
 ---
 
-## Introduction
+## MongoDb
 
-Nats-based Transport: Implements Nats to handle data communication between services, providing a fast, secure, and
-scalable solution.
+OfX-MongoDb extends the core OfX library by providing seamless integration with MongoDb. This enables
+developers to automatically map and retrieve data directly from a database, leveraging the power of MongoDb along with
+attribute-based data mapping.
+
+For example, suppose you have a `UserId` property in your model, and you want to fetch the corresponding `Name`
+and `Email` fields from the database. By using OfX-EFCore, you can annotate your model with attributes, and the library
+will handle data fetching for you.
 
 ---
 
 ## Installation
 
-To install the OfX-Nats package, use the following NuGet command:
+To install the OfX-MongoDb package, use the following NuGet command:
 
 ```bash
-dotnet add package OfX-Nats
+dotnet add package OfX-MongoDb
 ```
 
 Or via the NuGet Package Manager:
 
 ```bash
-Install-Package OfX-Nats
+Install-Package OfX-MongoDb
 ```
 
 ---
 
 ## How to Use
 
-### 1. Register OfX-Nats
+### 1. Register OfX-MongoDb
 
-Add OfX-Nats to your service configuration during application startup:
-
-For Client:
+Add OfX-EfCore to your service configuration during application startup:
 
 ```csharp
 builder.Services.AddOfX(cfg =>
-{
-    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddNats(config => config.Url("nats://localhost:4222"));
-});
-
-...
-
-var app = builder.Build();
-
-app.Run();
-
+    {
+        cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
+        cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+    })
+    .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection));
 ```
 
-`Note:` OfX-Nats uses subjects that start with `OfX-[OfXAttribute metadata]`. Therefore, you should avoid using other
-subjects.
+### Function Descriptions
 
-That All, enjoy your moment!
+#### AddMongoDb
+
+Here, you can use the method `AddMongoDb()`, which takes `AddCollection(s)` to executing.
+
+That all, Enjoy your moment!
 
 | Package Name                       | Description                                                                                             | .NET Version | Document                                                                                 |
 |------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
@@ -65,11 +65,11 @@ That All, enjoy your moment!
 | [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
 | **Data Providers**                 |                                                                                                         |
 | [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
+| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | This Document                                                                            |
 | **Transports**                     |                                                                                                         |
 | [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
-| [OfX-Nats][OfX-Nats.nuget]         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | This Document                                                                            |
+| [OfX-Nats][OfX-Nats.nuget]         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
 | [OfX-RabbitMq][OfX-RabbitMq.nuget] | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
 
 ---
