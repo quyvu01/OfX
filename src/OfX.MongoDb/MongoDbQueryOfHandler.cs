@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Queryable;
 using OfX.Responses;
 using OfX.Serializable;
@@ -27,7 +28,8 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
 
-    private readonly IMongoCollection<TModel> _collection = serviceProvider.GetService<IMongoCollection<TModel>>();
+    private readonly IMongoCollectionInternal<TModel> _collectionInternal =
+        serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
 
     private readonly ILogger<MongoDbQueryOfHandler<TModel, TAttribute>> _logger = serviceProvider
         .GetService<ILogger<MongoDbQueryOfHandler<TModel, TAttribute>>>();
@@ -36,7 +38,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
     {
         var filter = BuildFilter(context.Query);
 
-        var result = await _collection.Find(filter)
+        var result = await _collectionInternal.Collection.Find(filter)
             .ToListAsync(context.CancellationToken);
         var items = result.Select(BuildResponse(context.Query).Compile());
         return new ItemsResponse<OfXDataResponse>([..items]);

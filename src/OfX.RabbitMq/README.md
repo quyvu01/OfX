@@ -70,6 +70,7 @@ That All, enjoy your moment!
 | [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
 | **Data Providers**                 |                                                                                                         |
 | [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
 | **Transports**                     |                                                                                                         |
 | [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
@@ -81,6 +82,8 @@ That All, enjoy your moment!
 [OfX.nuget]: https://www.nuget.org/packages/OfX/
 
 [OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
+
+[OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
 
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
 

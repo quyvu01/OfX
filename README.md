@@ -1,12 +1,18 @@
 # OfX
 
-OfX is an open-source, which focus on Attribute-based data mapping, streamlines data handling across services, reduces boilerplate code, and improves maintainability
+OfX is an open-source, which focus on Attribute-based data mapping, streamlines data handling across services, reduces
+boilerplate code, and improves maintainability
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
 ## Project Highlights
-Attribute-based Data Mapping in OfX is a feature that lets developers annotate properties in their data models with custom attributes. These attributes define how and from where data should be fetched, eliminating repetitive code and automating data retrieval.
-For example, imagine a scenario where Service A needs a user’s name stored in Service B. With Attribute-based Data Mapping, Service A can define a UserName property annotated with `[UserOf(nameof(UserId))]`. This tells the system to automatically retrieve the UserName based on UserId, without writing custom code each time.
+
+Attribute-based Data Mapping in OfX is a feature that lets developers annotate properties in their data models with
+custom attributes. These attributes define how and from where data should be fetched, eliminating repetitive code and
+automating data retrieval.
+For example, imagine a scenario where Service A needs a user’s name stored in Service B. With Attribute-based Data
+Mapping, Service A can define a UserName property annotated with `[UserOf(nameof(UserId))]`. This tells the system to
+automatically retrieve the UserName based on UserId, without writing custom code each time.
 
 Example:
 
@@ -21,14 +27,20 @@ public sealed class SomeDataResponse
     ...
 }
 ```
-The `[UserOf]` annotation acts as a directive to automatically retrieve `UserName` based on `UserId`,you can also fetch custom fields as `Email` on the User Table using Expression like `[UserOf(nameof(UserId), Expression="Email")]`. This eliminates the need for manual mapping logic, freeing developers to focus on core functionality rather than data plumbing.
+
+The `[UserOf]` annotation acts as a directive to automatically retrieve `UserName` based on `UserId`,you can also fetch
+custom fields as `Email` on the User Table using Expression like `[UserOf(nameof(UserId), Expression="Email")]`. This
+eliminates the need for manual mapping logic, freeing developers to focus on core functionality rather than data
+plumbing.
 
 ## Start with OfX
+
 To install the OfX package, use the following NuGet command:
 
 ```bash
 dotnet add package OfX
 ```
+
 Or via the NuGet Package Manager:
 
 ```bash
@@ -38,6 +50,7 @@ Install-Package OfX
 ## How to Use
 
 ### 1. Register OfX in the Dependency Injection Container
+
 Add the OfX to your service configuration to register OfX:
 
 ```csharp
@@ -52,7 +65,9 @@ builder.Services.AddOfX(cfg =>
     cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 });
 ```
+
 StronglyTypeIdRegister Example:
+
 ```csharp
 // StronglyTypeIdRegisters example:
 public sealed class StronglyTypeIdRegisters : IStronglyTypeConverter<UserId>
@@ -65,6 +80,7 @@ public sealed class StronglyTypeIdRegisters : IStronglyTypeConverter<UserId>
 ```
 
 ### Function Descriptions
+
 #### AddAttributesContainNamespaces
 
 Registers assemblies that contain the attributes, used by OfX for data mapping.
@@ -94,7 +110,8 @@ Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where y
 
 #### AddReceivedPipelines
 
-When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server, where you fetching and response to client!
+When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server,
+where you fetching and response to client!
 
 Parameters:
 `Action<ReceivedPipeline>`: add the pipelines.
@@ -107,7 +124,8 @@ Example:
 
 #### AddSendPipelines
 
-When you want to create pipelines to handle the send request for `OfXAttribute`. You should use it on the client, where you send request to get data!
+When you want to create pipelines to handle the send request for `OfXAttribute`. You should use it on the client, where
+you send request to get data!
 
 Parameters:
 `Action<SendPipeline>`: add the pipelines.
@@ -119,17 +137,23 @@ cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericPipeline<>)).OfType<OtherPi
 ```
 
 #### AddStronglyTypeIdConverter
-When your models(entities) are using Strongly Type Id, you have to configure to tell how OfX can convert from general ID type(string) to your strongly type ID.
+
+When your models(entities) are using Strongly Type Id, you have to configure to tell how OfX can convert from general ID
+type(string) to your strongly type ID.
 
 Parameters:
 `Action<StronglyTypeIdRegister>` the strongly type ID register delegate.
 
 #### OfType
-You have to create a class and implement interface `IStronglyTypeConverter<T>`, then you have to override 2 methods(`Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
+
+You have to create a class and implement interface `IStronglyTypeConverter<T>`, then you have to override 2 methods(
+`Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
 Please check the example above!
 
 ### 2. Integrate the `OfXAttribute` into Your Models, Entities, or DTOs
+
 Apply the attribute to your properties like this:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -161,7 +185,8 @@ public sealed class SomeDataResponse
 }
 ```
 
-### 3. Annotate `OfXConfigForAttribute` your models with `OfXAttribute` to then `OfX` will dynamic create relevant proxy handler for model and `OfXAttribute`
+### 3. Annotate `OfXConfigForAttribute` your models with `OfXAttribute` to then
+`OfX` will dynamic create relevant proxy handler for model and `OfXAttribute`
 
 Example:
 
@@ -178,11 +203,13 @@ public class User
 
 ### 4. Write the Handlers in Your Service to Fetch the Data(when you are using `OfX` only).
 
-`Note:` If you use OfX-gRPC, OfX-Nats, OfX-RabbitMq... or other transport data layer(next version extension packages), there are no need to create Handlers anymore, they should be dynamic proxy handlers!
+`Note:` If you use OfX-gRPC, OfX-Nats, OfX-RabbitMq... or other transport data layer(next version extension packages),
+there are no need to create Handlers anymore, they should be dynamic proxy handlers!
 
 Implement a handler to process data requests.
 
 Example:
+
 ```csharp
 public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 {
@@ -195,15 +222,19 @@ public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 
 ### 5. Unlock the Full Power of `Expressions` 🚀
 
-Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how **Expressions** work and what makes them so versatile.
+Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go
+beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how *
+*Expressions** work and what makes them so versatile.
 
 #### Default Data vs. External Data
+
 - **Default Data**: Automatically fetched using `OfX Attribute`. No `Expression` is required.
 - **External Data**: Define an `Expression` to fetch specific or relational data from other tables.
 
 Here’s how you can harness the power of **Expressions** in different scenarios:
 
 #### Fetching Data on the Same Table
+
 Simple case: fetching additional fields from the same table.
 
 ```csharp
@@ -221,6 +252,7 @@ public sealed class SomeDataResponse
 ```
 
 `User` structure:
+
 ```csharp
 [OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
 public sealed class User
@@ -231,11 +263,17 @@ public sealed class User
     ...
 }
 ```
+
 Generated SQL:
+
 ```SQL
- SELECT u."Id", u.Name, u."Email" FROM "Users" AS u WHERE u."Id" IN (@__SomeUserIds__)
+ SELECT u."Id", u.Name, u."Email"
+ FROM "Users" AS u
+ WHERE u."Id" IN (@__SomeUserIds__)
 ```
+
 #### Fetching Data from Navigated Tables
+
 Expressions also support navigation through navigated tables.
 
 ```csharp
@@ -251,6 +289,7 @@ public sealed class SomeDataResponse
 }    
 
 ```
+
 In this case, `Expression = "Country.Name"` means:
 
 - Start from the `Provinces` table.
@@ -260,6 +299,7 @@ In this case, `Expression = "Country.Name"` means:
 - Fetch the `Name` field from the Countries table.
 
 Structures:
+
 ```csharp
 [OfXConfigFor<ProvinceOfAttribute>(nameof(Id), nameof(Name))]
 public sealed class Province
@@ -280,16 +320,22 @@ public class Country
     public List<Province> Provinces { get; set; }
 }
 ```
-If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can extend the `Expression` to *thousand kilometers :D*. Like this one: `Expression = "Country.[SingleNavigator]...[Universal]`.
+
+If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can
+extend the `Expression` to *thousand kilometers :D*. Like this one:
+`Expression = "Country.[SingleNavigator]...[Universal]`.
 
 Generated SQL:
+
 ```SQL
-SELECT p."Id", c."Name" FROM "Provinces" AS p
-LEFT JOIN "Countries" AS c ON p."CountryId" = c."Id"
+SELECT p."Id", c."Name"
+FROM "Provinces" AS p
+         LEFT JOIN "Countries" AS c ON p."CountryId" = c."Id"
 WHERE p."Id" IN (@__SomeProvinceIds___)
 ```
 
 #### Mapping Objects Dynamically.
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -302,6 +348,7 @@ public sealed class SomeDataResponse
     ...
 }    
 ```
+
 ```csharp
 public sealed class CountryDTO
 {
@@ -309,27 +356,37 @@ public sealed class CountryDTO
     public string Name {get; set;}
 }
 ```
+
 `Note`: The DTO structure (e.g., `CountryDTO`) must match the source model's structure.
+
 - Only properties directly on the source model (e.g., `Id`, `Name`) are selected.
 - Navigators (e.g., `Provinces`) are ignored.
 
-`Note`: When you map an object, the correlation DTO should have the same structure with `Model` like the `CountryDTO` above.
+`Note`: When you map an object, the correlation DTO should have the same structure with `Model` like the `CountryDTO`
+above.
 
 #### Array Mapping:
+
 Unlock powerful features for mapping collections!
+
 #### 1. All Items: [`asc|desc` `Property`]
+
 - Retrieves all items ordered by the specified property.
 - Example:
+
 ```csharp
 [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
 public List<ProvinceDTO> Provinces { get; set; }
 ```
 
-`Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries` table.
+`Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries`
+table.
 
 #### 2.Single Item: [`0|-1` `asc|desc` `Property`]example above:
+
 - Fetches the first (`0`) or last (`-1`) item in the collection.
 - Example:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -344,6 +401,7 @@ public sealed class SomeDataResponse
 ```
 
 When you select one item, you can navigate to the next level of the Table. Like this one:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -358,6 +416,7 @@ public sealed class SomeDataResponse
 ```
 
 ### 3.Offset & Limit: [`Offset` `Limit` `asc|desc` `Property`]
+
 - Retrieves a slice of the collection.
 - Example:
 
@@ -375,9 +434,13 @@ public sealed class SomeDataResponse
 ```
 
 ### 6. `OfX Attribute Order`
-On the chapter [5. Unlock the Full Power of Expressions](https://github.com/quyvu01/OfX?tab=readme-ov-file#5-unlock-the-full-power-of-expressions-) we have dive into the Expression power.
+
+On the
+chapter [5. Unlock the Full Power of Expressions](https://github.com/quyvu01/OfX?tab=readme-ov-file#5-unlock-the-full-power-of-expressions-)
+we have dive into the Expression power.
 On this one, we will explore the `Order` on the `OfX Attribute`.
 Look at the first example model:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -408,17 +471,25 @@ public sealed class SomeDataResponse
     // Add other properties as needed
 }
 ```
-You can define Order data using `OfX Attributes` such as `[ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]` or `[CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]`.
 
-By default, the `Order` value is 0, which means that properties marked with `OfX Attributes` will be fetched and set first. Afterward, properties will be fetched and set according to their defined Order values in ascending order.
+You can define Order data using `OfX Attributes` such as
+`[ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]` or
+`[CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]`.
 
-You can also specify negative Order values like `Order = -1` or `Order = -2`... In such cases, properties with negative Order values will still follow the same ordering rules and be processed accordingly.
+By default, the `Order` value is 0, which means that properties marked with `OfX Attributes` will be fetched and set
+first. Afterward, properties will be fetched and set according to their defined Order values in ascending order.
 
-When mapping data, imagine that you need `Property A` to be resolved first. If the required data is available, it will then be used as input to resolve the next set of `Properties`, ensuring an organized and logical flow.
+You can also specify negative Order values like `Order = -1` or `Order = -2`... In such cases, properties with negative
+Order values will still follow the same ordering rules and be processed accordingly.
 
-#### Conclusion: 
-The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered. Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
+When mapping data, imagine that you need `Property A` to be resolved first. If the required data is available, it will
+then be used as input to resolve the next set of `Properties`, ensuring an organized and logical flow.
 
+#### Conclusion:
+
+The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex
+relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered.
+Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
 
 That all, Enjoy your moment!
 
@@ -428,6 +499,7 @@ That all, Enjoy your moment!
 | [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | This Document                                                                            |
 | **Data Providers**                 |                                                                                                         |
 | [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
 | **Transports**                     |                                                                                                         |
 | [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
@@ -437,8 +509,15 @@ That all, Enjoy your moment!
 ---
 
 [OfX.nuget]: https://www.nuget.org/packages/OfX/
+
 [OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
+
+[OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
+
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
+
 [OfX-Nats.nuget]: https://www.nuget.org/packages/OfX-Nats/
+
 [OfX-RabbitMq.nuget]: https://www.nuget.org/packages/OfX-RabbitMq/
+
 [OfX-Kafka.nuget]: https://www.nuget.org/packages/OfX-Kafka/
