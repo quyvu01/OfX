@@ -37,9 +37,9 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
         var filter = BuildFilter(context.Query);
 
         var result = await _collection.Find(filter)
-            .Project(BuildResponse(context.Query))
             .ToListAsync(context.CancellationToken);
-        return new ItemsResponse<OfXDataResponse>([]);
+        var items = result.Select(BuildResponse(context.Query).Compile());
+        return new ItemsResponse<OfXDataResponse>([..items]);
     }
 
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)

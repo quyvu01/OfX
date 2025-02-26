@@ -17,8 +17,8 @@ public class MemberResponse
 
     public string MemberSocialId { get; set; }
 
-    // [MemberSocialOf(nameof(MemberSocialId))]
-    // public string MemberSocialName { get; set; }
+    [MemberSocialOf(nameof(MemberSocialId))]
+    public string MemberSocialName { get; set; }
     
     public string MemberAdditionalId { get; set; }
     
