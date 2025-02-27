@@ -8,6 +8,7 @@ using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Services;
 using OfX.EntityFrameworkCore.Statics;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Statics;
 using OfX.Wrappers;
@@ -52,7 +53,8 @@ public static class EntityFrameworkExtensions
             modelTypeLookUp.Value.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
             return matchingServiceType;
         });
-
+        if (OfXStatics.ModelConfigurationAssembly is null)
+            throw new OfXException.ModelConfigurationMustBeSet();
         OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
         {
             var modelType = m.ModelType;

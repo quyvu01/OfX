@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.MongoDb.ApplicationModels;
 using OfX.MongoDb.Statics;
@@ -22,6 +23,8 @@ public static class MongoDbExtensions
         var registrar = new OfXMongoDbRegistrar(ofXServiceInjector.OfXRegister.ServiceCollection);
         registrarAction.Invoke(registrar);
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        if (OfXStatics.ModelConfigurationAssembly is null)
+            throw new OfXException.ModelConfigurationMustBeSet();
         OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
         {
             if (!OfXMongoDbStatics.ModelTypes.Contains(m.ModelType)) return;
