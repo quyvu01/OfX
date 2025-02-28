@@ -35,7 +35,7 @@ public static class OfXStatics
         Lazy<IReadOnlyCollection<(Type ModelType, Type OfXAttributeType, IOfXConfigAttribute OfXConfigAttribute)>>
         OfXConfigureStorage = new(() =>
         [
-            ..ModelConfigurationAssembly
+            ..ModelConfigurationAssembly?
                 .ExportedTypes
                 .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
                 .Where(a => a.GetCustomAttributes().Any(x =>
@@ -56,6 +56,6 @@ public static class OfXStatics
                     }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });
                     return (ModelType: a, configAttribute.OfXAttribute,
                         OfXAttributeData: configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
-                })
+                }) ?? []
         ]);
 }
