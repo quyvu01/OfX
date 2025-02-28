@@ -166,7 +166,8 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                     var serializeObjectMethod = typeof(SerializeObjects)
                         .GetMethod(nameof(SerializeObjects.SerializeObject), [typeof(object)]);
 
-                    var serializeCall = Expression.Call(serializeObjectMethod!, currentExpression);
+                    var serializeCall = Expression.Call(serializeObjectMethod!,
+                        Expression.Convert(currentExpression, typeof(object)));
 
                     var bindings = new List<MemberBinding>();
                     if (expr is { })
