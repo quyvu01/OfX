@@ -1,7 +1,6 @@
 using System.Reflection;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Exceptions;
 using OfX.Responses;
 
 namespace OfX.Statics;
@@ -11,6 +10,8 @@ public static class OfXStatics
     internal static List<Assembly> AttributesRegister { get; set; } = [];
     internal static Assembly HandlersRegister { get; set; }
     internal static List<Type> StronglyTypeConfigurations { get; } = [];
+    
+    internal static bool ThrowIfExceptions { get; set; } = false;
 
     public static readonly Type OfXValueType = typeof(OfXValueResponse);
 

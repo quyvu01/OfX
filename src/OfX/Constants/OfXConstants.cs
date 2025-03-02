@@ -1,6 +1,7 @@
 namespace OfX.Constants;
 
-internal static class OfXConstants
+public static class OfXConstants
 {
-    internal static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(100);
+    public static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(100);
+    public static string ErrorDetail => nameof(ErrorDetail);
 }

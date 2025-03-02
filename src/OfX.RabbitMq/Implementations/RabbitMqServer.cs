@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OfX.ApplicationModels;
 using OfX.Cached;
+using OfX.Constants;
 using OfX.Exceptions;
 using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
@@ -68,6 +70,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             });
 
             using var scope = serviceProvider.CreateScope();
+
             var server = scope.ServiceProvider.GetService(rabbitMqServerRpcType);
 
             if (server is not IRabbitMqServerRpc serverRpc)
@@ -81,16 +84,22 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
                 var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
                 var headers = props.Headers?
                     .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-                var response = await serverRpc.GetResponseAsync(message, headers, CancellationToken.None);
+                var response = await serverRpc.GetResponseAsync(message, headers, ea.CancellationToken);
                 var responseAsString = JsonSerializer.Serialize(response);
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
                     mandatory: true, basicProperties: replyProps, body: responseBytes);
             }
-            catch
+            catch (Exception e)
             {
+                var logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
+                var attributeType = Type.GetType(props.Type!);
+                logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
+                    attributeType?.Name, e);
                 var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
+                replyProps.Headers ??= new Dictionary<string, object>();
+                replyProps.Headers.Add(OfXConstants.ErrorDetail, e.Message);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
                     mandatory: true, basicProperties: replyProps, body: responseBytes);
             }

@@ -19,6 +19,8 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void AddModelConfigurationsFromNamespaceContaining<TAssembly>() =>
         OfXStatics.ModelConfigurationAssembly = typeof(TAssembly).Assembly;
 
+    public void ThrowIfException() => OfXStatics.ThrowIfExceptions = true;
+
     public List<Type> OfXAttributeTypes => OfXAttributeTypesCached ??=
     [
         ..OfXStatics.AttributesRegister.SelectMany(a => a.ExportedTypes)

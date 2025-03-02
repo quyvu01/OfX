@@ -1,5 +1,6 @@
 using System.Reflection;
 using Kernel;
+using Kernel.Attributes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
@@ -7,6 +8,7 @@ using OfX.Extensions;
 using OfX.Nats.Extensions;
 using WorkerService1;
 using WorkerService1.Contexts;
+using WorkerService1.Pipelines;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
@@ -15,6 +17,7 @@ builder.Services.AddOfX(cfg =>
         // cfg.AddRabbitMq(config => config.Host("localhost", "/"));
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+        cfg.AddReceivedPipelines(c => c.OfType<TestSendPipeline<UserOfAttribute>>());
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
