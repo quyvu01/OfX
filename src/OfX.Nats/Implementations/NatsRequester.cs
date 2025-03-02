@@ -1,6 +1,8 @@
 using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Constants;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Nats.Abstractions;
 using OfX.Nats.Extensions;
@@ -19,6 +21,9 @@ internal sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
         var reply = await client.NatsClient
             .RequestAsync<RequestOf<TAttribute>, ItemsResponse<OfXDataResponse>>(typeof(TAttribute).GetNatsSubject(),
                 requestContext!.Query, natsHeaders, cancellationToken: requestContext.CancellationToken);
+        if (reply.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var errorDetail) ?? false)
+            throw new OfXException.ReceivedException(errorDetail);
+
         return reply.Data;
     }
 }

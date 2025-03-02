@@ -14,8 +14,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     public Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
     {
         var handler = handlers.FirstOrDefault(x => x is not DefaultQueryOfHandler);
-        if (handler is null)
-            throw new OfXException.CannotFindHandlerForOfAttribute(typeof(TAttribute));
+        if (handler is null) throw new OfXException.CannotFindHandlerForOfAttribute(typeof(TAttribute));
         return behaviors.Reverse()
             .Aggregate(() => handler.GetDataAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();

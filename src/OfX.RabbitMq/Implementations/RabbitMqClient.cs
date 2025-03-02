@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Constants;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.RabbitMq.Abstractions;
@@ -17,7 +19,8 @@ namespace OfX.RabbitMq.Implementations;
 
 internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
 {
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _callbackMapper = new();
+    // private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _callbackMapper = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>> _eventArgsMapper = new();
     private IConnection _connection;
     private IChannel _channel;
     private AsyncEventingBasicConsumer _consumer;
@@ -47,9 +50,8 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         {
             var correlationId = ea.BasicProperties.CorrelationId;
             if (string.IsNullOrEmpty(correlationId)) return Task.CompletedTask;
-            if (!_callbackMapper.TryRemove(correlationId, out var tcs)) return Task.CompletedTask;
-            var body = ea.Body.ToArray();
-            tcs.TrySetResult(body);
+            if (!_eventArgsMapper.TryRemove(correlationId, out var tcs)) return Task.CompletedTask;
+            tcs.TrySetResult(ea);
             return Task.CompletedTask;
         };
         await _channel.BasicConsumeAsync(_replyQueueName, true, _consumer);
@@ -71,8 +73,8 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         props.Headers ??= new Dictionary<string, object>();
         requestContext.Headers?.ForEach(h => props.Headers.Add(h.Key, h.Value));
 
-        var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _callbackMapper.TryAdd(correlationId, tcs);
+        var tcs = new TaskCompletionSource<BasicDeliverEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _eventArgsMapper.TryAdd(correlationId, tcs);
         var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
         var messageBytes = Encoding.UTF8.GetBytes(messageSerialize);
         await _channel.BasicPublishAsync(exchangeName, routingKey: routingKey,
@@ -80,12 +82,15 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
 
         await using var ctr = cancellationToken.Register(() =>
         {
-            _callbackMapper.TryRemove(correlationId, out _);
+            _eventArgsMapper.TryRemove(correlationId, out _);
             tcs.SetCanceled(cancellationToken);
         });
 
-        var resultAsByte = await tcs.Task;
-        var resultAsString = Encoding.UTF8.GetString(resultAsByte);
+        var eventArgs = await tcs.Task;
+        if (eventArgs.BasicProperties.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var error) ?? false)
+            throw new OfXException.ReceivedException(error?.ToString());
+
+        var resultAsString = Encoding.UTF8.GetString(eventArgs.Body.ToArray());
         return JsonSerializer.Deserialize<ItemsResponse<OfXDataResponse>>(resultAsString)!;
     }
 

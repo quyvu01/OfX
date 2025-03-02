@@ -63,6 +63,7 @@ builder.Services.AddOfX(cfg =>
     // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
     cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
     cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
+    cfg.ThrowIfException(); // Add this when you want to handle the error and know why the errors are occupied
 });
 ```
 
@@ -186,6 +187,7 @@ public sealed class SomeDataResponse
 ```
 
 ### 3. Annotate `OfXConfigForAttribute` your models with `OfXAttribute` to then
+
 `OfX` will dynamic create relevant proxy handler for model and `OfXAttribute`
 
 Example:

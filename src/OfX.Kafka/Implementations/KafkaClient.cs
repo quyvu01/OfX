@@ -5,6 +5,7 @@ using Confluent.Kafka.Admin;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Exceptions;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
@@ -20,7 +21,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
     private readonly IConsumer<string, string> _consumer;
     private readonly string _relyTo;
 
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<ItemsResponse<OfXDataResponse>>>
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<KafkaMessage>>
         _pendingRequests = [];
 
     public KafkaClient()
@@ -58,7 +59,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
                 var consumeResult = _consumer.Consume();
                 if (!_pendingRequests.TryGetValue(consumeResult.Message.Key, out var tcs)) continue;
                 var response = JsonSerializer
-                    .Deserialize<ItemsResponse<OfXDataResponse>>(consumeResult.Message.Value);
+                    .Deserialize<KafkaMessage>(consumeResult.Message.Value);
                 tcs.TrySetResult(response);
             }
             catch (Exception)
@@ -73,7 +74,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var correlationId = Guid.NewGuid().ToString();
-        var tcs = new TaskCompletionSource<ItemsResponse<OfXDataResponse>>();
+        var tcs = new TaskCompletionSource<KafkaMessage>();
         _pendingRequests.TryAdd(correlationId, tcs);
 
         try
@@ -94,7 +95,10 @@ internal class KafkaClient : IKafkaClient, IDisposable
             });
 
             // Wait for response with timeout
-            return await tcs.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            var kafkaMessage = await tcs.Task.WaitAsync(requestContext.CancellationToken);
+            if (kafkaMessage.IsSucceed)
+                return kafkaMessage.Response;
+            throw new OfXException.ReceivedException(kafkaMessage.ErrorDetail);
         }
         finally
         {
