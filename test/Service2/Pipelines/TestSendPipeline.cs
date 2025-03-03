@@ -9,7 +9,6 @@ public sealed class TestSendPipeline<TAttribute> : IReceivedPipelineBehavior<TAt
     public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
-        throw new NotImplementedException();
         var result = await next.Invoke();
         return result;
     }
