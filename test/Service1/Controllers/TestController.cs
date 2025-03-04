@@ -18,8 +18,8 @@ public sealed class TestController : ControllerBase
             .. Enumerable.Range(1, 3).Select(a => new MemberResponse
             {
                 Id = a.ToString(), 
-                UserId = a.ToString(), MemberAdditionalId = a.ToString(),
-                MemberAddressId = a.ToString(),
+                // UserId = a.ToString(), MemberAdditionalId = a.ToString(),
+                // MemberAddressId = a.ToString(),
                 MemberSocialId = a.ToString()
             })
         ];

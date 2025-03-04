@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using MongoDB.Driver;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Implementations;

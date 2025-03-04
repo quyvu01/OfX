@@ -189,11 +189,10 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                 }
             }));
 
-        var ofXValuesExpression = Expression.ListInit(
-            Expression.New(typeof(List<OfXValueResponse>)), // Create new List<OfXValueResponse>
-            ofXValueExpression.Where(x => x is not null)
-                .Select(expr => expr.Body)); // Extract body expressions
-        
+        // Create new OfXValueResponse[] then extract body expressions
+        var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
+            ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
+
         var idAsStringExpression = IdMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
         {
             var idProperty = Expression.Property(ModelParameterExpression, id);
@@ -204,7 +203,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var bindings = new List<MemberBinding>
         {
             Expression.Bind(OfXStatics.OfXIdProp, idAsStringExpression),
-            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesExpression)
+            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray)
         };
         var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)), bindings);
 
