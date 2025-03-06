@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Statics;
 
@@ -21,6 +20,12 @@ public class OfXRegister(IServiceCollection serviceCollection)
         OfXStatics.ModelConfigurationAssembly = typeof(TAssembly).Assembly;
 
     public void ThrowIfException() => OfXStatics.ThrowIfExceptions = true;
+
+    public void SetMaxObjectSpawnTimes(int maxObjectSpawnTimes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxObjectSpawnTimes);
+        OfXStatics.MaxObjectSpawnTimes = maxObjectSpawnTimes;
+    }
 
     public List<Type> OfXAttributeTypes => OfXAttributeTypesCached ??=
     [

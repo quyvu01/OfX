@@ -105,7 +105,7 @@ internal static class ReflectionHelpers
                     d.Select(a => a.Expression), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
-        List<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
+        IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
     {
         var dataWithExpression = dataFetched
             .Select(a => a.ItemsResponse.Items

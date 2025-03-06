@@ -1,3 +1,5 @@
+using OfX.Statics;
+
 namespace OfX.Exceptions;
 
 public static class OfXException
@@ -10,13 +12,13 @@ public static class OfXException
         : Exception("Request must not be add more than one times!");
 
     public sealed class CurrentIdTypeWasNotSupported() :
-        Exception("Current Id type was not supported. Please create a join us to contribute more!");
+        Exception("Current Id type was not supported. Create the IdConverter!");
 
     public sealed class TypeIsNotReceivedPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with ReceivedPipelineBehavior. Please check again!");
+        Exception($"The input type: {type.Name} is not matched with ReceivedPipelineBehavior!");
 
     public sealed class TypeIsNotSendPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior. Please check again!");
+        Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior!");
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");
@@ -28,7 +30,8 @@ public static class OfXException
         : Exception("Strongly type Id configuration must not be null!");
 
     public sealed class OfXMappingObjectsSpawnReachableTimes()
-        : Exception("OfX could cannot be mapped because of objects spawn reach the deep!");
+        : Exception(
+            $"OfX mapping engine has been reach out the current max deep: {OfXStatics.MaxObjectSpawnTimes}! Set the MaxObjectSpawnTimes on method `SetMaxObjectSpawnTimes`");
 
     public sealed class ModelConfigurationMustBeSet()
         : Exception(

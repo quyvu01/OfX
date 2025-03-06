@@ -171,7 +171,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                         Expression.Convert(currentExpression, typeof(object)));
 
                     var bindings = new List<MemberBinding>();
-                    if (expr is { })
+                    if (expr is not null)
                         bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
                     bindings.Add(Expression.Bind(OfXStatics.ValueValueTypeProp!, serializeCall));
 

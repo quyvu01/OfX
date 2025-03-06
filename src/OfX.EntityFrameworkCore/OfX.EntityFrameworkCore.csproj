@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>5.0.11</Version>
+        <Version>5.0.12</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX-EFCore</PackageId>
         <Description>OfX extension. Use EntityFramework as Data Querying</Description>
