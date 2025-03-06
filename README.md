@@ -64,6 +64,7 @@ builder.Services.AddOfX(cfg =>
     cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
     cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
     cfg.ThrowIfException(); // Add this when you want to handle the error and know why the errors are occupied
+    cfg.SetMaxObjectSpawnTimes(16); // Add this when you want to limit the maxObject spawn times. It mean you can be noticed that your objects are so complex...
 });
 ```
 
@@ -150,6 +151,22 @@ Parameters:
 You have to create a class and implement interface `IStronglyTypeConverter<T>`, then you have to override 2 methods(
 `Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
 Please check the example above!
+
+#### ThrowIfException
+
+This function enables strict error handling within `OfX`.
+When added, it ensures that any exceptions encountered during data mapping, request handling, or pipeline execution are
+not silently ignored but instead explicitly thrown.
+This helps developers quickly identify and debug issues by surfacing errors, making it easier to track down problems in
+the OfX processing flow.
+
+#### SetMaxObjectSpawnTimes
+
+This function sets an upper limit on the number of times an object can be spawned during recursive data mapping.
+By default (Max spawn times: `32`), OfX allows objects to be dynamically created and mapped, but in complex object
+structures, excessive recursive mapping can lead to performance issues or infinite loops.
+Setting maxTimes helps prevent excessive nesting by defining a safe threshold, ensuring that the mapping process remains
+efficient and controlled.
 
 ### 2. Integrate the `OfXAttribute` into Your Models, Entities, or DTOs
 
