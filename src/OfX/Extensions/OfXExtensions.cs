@@ -62,7 +62,7 @@ public static class OfXExtensions
         });
 
         serviceCollection.AddTransient<IDataMappableService>(sp =>
-            new DataMappableService(sp, OfXStatics.AttributesRegister));
+            new DataMappableService(sp));
 
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
 

@@ -8,7 +8,7 @@ public class MemberResponse
     public string Id { get; set; }
 
     public string MemberAddressId { get; set; }
-
+    
     [MemberAddressOf(nameof(MemberAddressId))]
     public string MemberProvinceId { get; set; }
     
@@ -16,7 +16,7 @@ public class MemberResponse
     public string MemberProvinceName { get; set; }
 
     public string MemberSocialId { get; set; }
-
+    
     [MemberSocialOf(nameof(MemberSocialId))]
     public string MemberSocialName { get; set; }
     

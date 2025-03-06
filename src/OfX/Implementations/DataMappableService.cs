@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -6,25 +6,25 @@ using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Helpers;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Implementations;
 
-internal sealed class DataMappableService(
-    IServiceProvider serviceProvider,
-    IEnumerable<Assembly> ofXAttributeAssemblies) : IDataMappableService
+internal sealed class DataMappableService(IServiceProvider serviceProvider) : IDataMappableService
 {
-    private const int MaxObjectSpawnTimes = 32;
     private int _currentObjectSpawnTimes;
 
-    private readonly Lazy<IReadOnlyCollection<Type>> _attributeLazyStorage = new(() =>
+    private static readonly Lazy<IReadOnlyCollection<Type>> _attributeLazyStorage = new(() =>
     [
-        ..ofXAttributeAssemblies.SelectMany(x => x.ExportedTypes)
+        ..OfXStatics.AttributesRegister.SelectMany(x => x.ExportedTypes)
             .Where(x => typeof(OfXAttribute).IsAssignableFrom(x) && !x.IsAbstract && !x.IsInterface)
     ]);
 
+    private static readonly ConcurrentDictionary<Type, Type> _attributeMapSendPipelineOrchestrators = new();
+
     public async Task MapDataAsync(object value, IContext context = null)
     {
-        if (_currentObjectSpawnTimes >= MaxObjectSpawnTimes)
+        if (_currentObjectSpawnTimes >= OfXStatics.MaxObjectSpawnTimes)
             throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
         var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
         var ofXTypesData = ReflectionHelpers
@@ -49,10 +49,11 @@ internal sealed class DataMappableService(
 
                 var selectorsByType = selectors.Where(c => c is not null).Distinct().ToList();
                 if (selectorsByType is not { Count: > 0 }) return emptyResponse;
-                var sendPipelineWrapped = serviceProvider
-                    .GetService(typeof(SendPipelinesOrchestrator<>).MakeGenericType(x.OfXAttributeType));
+                var sendPipelineType = _attributeMapSendPipelineOrchestrators
+                    .GetOrAdd(x.OfXAttributeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
+                var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
                 if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped) return emptyResponse;
-                // To use merge expression without creating `Expressions` we have to merge the `Expression` into MessageDeserializable.Expression by serialize List<string> of Expression
+                // To use merge expression without creating `Expressions` we have to merge the `Expression` into MessageDeserializable.Expression by serialize an array string of Expression
                 var result = await pipelinesWrapped.ExecuteAsync(
                     new MessageDeserializable
                     {
@@ -62,7 +63,7 @@ internal sealed class DataMappableService(
                 return (x.OfXAttributeType, Response: result);
             });
             var orderedTasks = await Task.WhenAll(tasks);
-            ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks.ToList());
+            ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks);
         }
 
         var nextMappableData = allPropertyDatas

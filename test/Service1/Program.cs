@@ -26,6 +26,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.ThrowIfException();
+        cfg.SetMaxObjectSpawnTimes(16);
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection));

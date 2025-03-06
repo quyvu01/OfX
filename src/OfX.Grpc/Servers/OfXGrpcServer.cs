@@ -6,6 +6,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
+using OfX.Extensions;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
 

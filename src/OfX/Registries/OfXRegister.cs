@@ -21,6 +21,12 @@ public class OfXRegister(IServiceCollection serviceCollection)
 
     public void ThrowIfException() => OfXStatics.ThrowIfExceptions = true;
 
+    public void SetMaxObjectSpawnTimes(int maxObjectSpawnTimes)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maxObjectSpawnTimes);
+        OfXStatics.MaxObjectSpawnTimes = maxObjectSpawnTimes;
+    }
+
     public List<Type> OfXAttributeTypes => OfXAttributeTypesCached ??=
     [
         ..OfXStatics.AttributesRegister.SelectMany(a => a.ExportedTypes)

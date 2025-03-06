@@ -12,7 +12,7 @@ public interface IMappableRequestHandler<TAttribute> : IOfXBase<TAttribute>, IMa
     Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext);
 }
 
-public class DefaultMappableRequestHandler<TAttribute> : IMappableRequestHandler<TAttribute>
+internal class DefaultMappableRequestHandler<TAttribute> : IMappableRequestHandler<TAttribute>
     where TAttribute : OfXAttribute
 {
     public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext) =>

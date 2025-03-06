@@ -10,8 +10,8 @@ public static class OfXStatics
     internal static List<Assembly> AttributesRegister { get; set; } = [];
     internal static Assembly HandlersRegister { get; set; }
     internal static List<Type> StronglyTypeConfigurations { get; } = [];
-    
-    internal static bool ThrowIfExceptions { get; set; } = false;
+    internal static int MaxObjectSpawnTimes { get; set; } = 32;
+    internal static bool ThrowIfExceptions { get; set; }
 
     public static readonly Type OfXValueType = typeof(OfXValueResponse);
 

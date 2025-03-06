@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Helpers;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Queryable;
 using OfX.Responses;
@@ -36,22 +37,27 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        var filter = BuildFilter(context.Query);
-
-        var result = await _collectionInternal.Collection.Find(filter)
-            .ToListAsync(context.CancellationToken);
-        var items = result.Select(BuildResponse(context.Query).Compile());
-        return new ItemsResponse<OfXDataResponse>([..items]);
-    }
-
-    private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
-    {
         var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
         var idType = idProperty.Type;
+        if (GeneralHelpers.IsPrimitiveType(idType))
+        {
+            var primitiveIdFilter = Builders<TModel>.Filter.In(idPropertyName, context.Query.SelectorIds);
+            var resultForPrimitiveId = await _collectionInternal.Collection.Find(primitiveIdFilter)
+                .ToListAsync(context.CancellationToken);
+            var itemsForPrimitiveId = resultForPrimitiveId.Select(BuildResponse(context.Query).Compile());
+            return new ItemsResponse<OfXDataResponse>([..itemsForPrimitiveId]);
+        }
+        // Create the expression filter
         var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
-        var selectorsConstant = IdConverter.ConstantExpression(query.SelectorIds, idType);
+        var selectorsConstant = IdConverter.ConstantExpression(context.Query.SelectorIds, idType);
         var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
-        return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
+        var filter = Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
+        
+        var result = await _collectionInternal.Collection.Find(filter)
+            .ToListAsync(context.CancellationToken);
+
+        var items = result.Select(BuildResponse(context.Query).Compile());
+        return new ItemsResponse<OfXDataResponse>([..items]);
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
@@ -61,6 +67,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions
+            .AsParallel()
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(expr ?? defaultPropertyName, expression =>
             {
                 try
@@ -166,8 +173,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                     var serializeObjectMethod = typeof(SerializeObjects)
                         .GetMethod(nameof(SerializeObjects.SerializeObject), [typeof(object)]);
 
-                    var serializeCall = Expression.Call(serializeObjectMethod!,
-                        Expression.Convert(currentExpression, typeof(object)));
+                    var serializeCall = Expression.Call(serializeObjectMethod!, currentExpression);
 
                     var bindings = new List<MemberBinding>();
                     if (expr is { })
@@ -188,10 +194,9 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                 }
             }));
 
-        var ofXValuesListInit = Expression.ListInit(
-            Expression.New(typeof(List<OfXValueResponse>)), // Create new List<OfXValueResponse>
-            ofXValueExpression.Where(x => x is not null)
-                .Select(expr => expr.Body)); // Extract body expressions
+        // Create new OfXValueResponse[] then extract body expressions
+        var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
+            ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
         var idAsStringExpression = IdMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
         {
@@ -203,7 +208,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
         var bindings = new List<MemberBinding>
         {
             Expression.Bind(OfXStatics.OfXIdProp, idAsStringExpression),
-            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesListInit)
+            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray)
         };
         var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)), bindings);
 

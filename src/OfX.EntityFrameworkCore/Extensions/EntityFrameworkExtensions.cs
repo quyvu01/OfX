@@ -20,7 +20,6 @@ public static class EntityFrameworkExtensions
     private static readonly Lazy<ConcurrentDictionary<Type, int>> modelTypeLookUp = new(() => []);
     private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
     private static readonly ConcurrentDictionary<Type, bool> modelTypeCache = new();
-
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
         Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
 

@@ -12,6 +12,8 @@ internal class IdConverterService(IServiceProvider serviceProvider) : IIdConvert
     private static readonly Lazy<ConcurrentDictionary<Type, StronglyTypeIdCachedData>>
         StronglyTypeMethodInfoStorage = new(() => new ConcurrentDictionary<Type, StronglyTypeIdCachedData>());
 
+    private static readonly Lazy<ConcurrentDictionary<Type, Type>> IdTypeMapConverters = new(() => []);
+
     public ConstantExpression ConstantExpression(List<string> selectorIds, Type idType)
     {
         if (idType == typeof(string)) return ParseStrings(selectorIds);
@@ -152,11 +154,10 @@ internal class IdConverterService(IServiceProvider serviceProvider) : IIdConvert
     private static ConstantExpression ParseStronglyTypes(IServiceProvider serviceProvider, List<string> selectorIds,
         Type idType)
     {
-        // This is temporary for test, we have to add cache and using Expression to cache the data!
-        var serviceType = typeof(IStronglyTypeConverter<>).MakeGenericType(idType);
-        var stronglyTypeService = serviceProvider.GetService(typeof(IStronglyTypeConverter<>).MakeGenericType(idType));
-        if (stronglyTypeService is null)
-            throw new OfXException.CurrentIdTypeWasNotSupported();
+        var serviceType = IdTypeMapConverters.Value
+            .GetOrAdd(idType, type => typeof(IStronglyTypeConverter<>).MakeGenericType(type));
+        var stronglyTypeService = serviceProvider.GetService(serviceType);
+        if (stronglyTypeService is null) throw new OfXException.CurrentIdTypeWasNotSupported();
         var idDataCached = StronglyTypeMethodInfoStorage.Value.GetOrAdd(idType, _ =>
         {
             var methods = serviceType.GetMethods();
@@ -181,7 +182,6 @@ internal class IdConverterService(IServiceProvider serviceProvider) : IIdConvert
                 idDataCached.AddMethod.Invoke(stronglyTypedList, [convertedValue]);
             });
 
-        // Return the strongly-typed list as a constant expression
         return Expression.Constant(stronglyTypedList, idDataCached.ListType);
     }
 
