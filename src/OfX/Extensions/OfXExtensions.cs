@@ -50,7 +50,7 @@ public static class OfXExtensions
         }
 
         var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
-        newOfRegister.OfXAttributeTypes.ForEach(attributeType =>
+        OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
             // So the interface with the default method is a best choice!

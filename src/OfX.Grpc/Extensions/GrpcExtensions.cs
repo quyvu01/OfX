@@ -48,8 +48,8 @@ public static class GrpcExtensions
             ]);
             return itemsResponse;
         });
-        Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
-            typeof(IOfXGrpcRequestClient<>), [..attributeRegisters]);
+        Clients.ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection,
+            typeof(IOfXGrpcRequestClient<>));
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,

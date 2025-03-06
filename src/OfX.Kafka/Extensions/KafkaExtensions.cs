@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Clients;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.BackgroundServices;
@@ -15,8 +16,7 @@ public static class KafkaExtensions
         options.Invoke(config);
         ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
         ofXRegister.ServiceCollection.AddSingleton<IKafkaClient, KafkaClient>();
-        Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
-            typeof(IOfXKafkaClient<>), [..ofXRegister.OfXAttributeTypes]);
+        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXKafkaClient<>));
         ofXRegister.ServiceCollection.AddHostedService<KafkaServerWorker>();
     }
 }
