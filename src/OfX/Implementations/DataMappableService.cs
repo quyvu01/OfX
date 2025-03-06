@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
-using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Helpers;
 using OfX.Responses;
@@ -15,12 +14,6 @@ namespace OfX.Implementations;
 internal sealed class DataMappableService(IServiceProvider serviceProvider) : IDataMappableService
 {
     private int _currentObjectSpawnTimes;
-
-    private static readonly Lazy<IReadOnlyCollection<Type>> _attributeLazyStorage = new(() =>
-    [
-        ..OfXStatics.AttributesRegister.SelectMany(x => x.ExportedTypes)
-            .Where(x => typeof(OfXAttribute).IsAssignableFrom(x) && !x.IsAbstract && !x.IsInterface)
-    ]);
 
     private static readonly ConcurrentDictionary<Type, Type> _attributeMapSendPipelineOrchestrators = new();
 
@@ -34,7 +27,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                 throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
             var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
             var ofXTypesData = ReflectionHelpers
-                .GetOfXTypesData(allPropertyDatas, _attributeLazyStorage.Value);
+                .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
             var ofXTypesDataGrouped = ofXTypesData
                 .GroupBy(a => a.Order)
                 .OrderBy(a => a.Key);

@@ -8,9 +8,6 @@ public static class OfXException
         : Exception(
             "You have to call the method: `AddAttributesContainNamespaces` with assemblies to scanning your `OfXAttributes`!");
 
-    public sealed class RequestMustNotBeAddMoreThanOneTimes()
-        : Exception("Request must not be add more than one times!");
-
     public sealed class CurrentIdTypeWasNotSupported() :
         Exception("Current Id type was not supported. Create the IdConverter!");
 

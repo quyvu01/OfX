@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Net;
+using OfX.Clients;
 using OfX.Nats.Abstractions;
 using OfX.Nats.ApplicationModels;
 using OfX.Nats.BackgroundServices;
@@ -17,11 +18,9 @@ public static class NatsExtensions
     {
         var newClientsRegister = new NatsClientSetting();
         options.Invoke(newClientsRegister);
-
         ofXRegister.ServiceCollection.AddSingleton(_ => new NatsClientWrapper(new NatsClient(NatsStatics.NatsUrl)));
         ClientsRegister(ofXRegister.ServiceCollection);
-        Clients.ClientsInstaller.InstallMappableRequestHandlers(ofXRegister.ServiceCollection,
-            typeof(IOfXNatsClient<>), [..ofXRegister.OfXAttributeTypes]);
+        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXNatsClient<>));
         ofXRegister.ServiceCollection.AddSingleton(typeof(INatsServerRpc<,>), typeof(NatsServerRpc<,>));
         ofXRegister.ServiceCollection.AddHostedService<NatsServerWorker>();
     }

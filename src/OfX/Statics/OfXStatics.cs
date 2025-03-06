@@ -59,4 +59,10 @@ public static class OfXStatics
                         OfXAttributeData: configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
                 }) ?? []
         ]);
+
+    public static readonly Lazy<IReadOnlyCollection<Type>> OfXAttributeTypes = new(() =>
+    [
+        ..AttributesRegister.SelectMany(a => a.ExportedTypes)
+            .Where(a => typeof(OfXAttribute).IsAssignableFrom(a) && !a.IsInterface && !a.IsAbstract && a.IsClass)
+    ]);
 }
