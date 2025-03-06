@@ -5,10 +5,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
+using OfX.Clients;
 using OfX.Extensions;
-using OfX.Grpc.Abstractions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
+using OfX.Grpc.Implementations;
 using OfX.Grpc.Servers;
 using OfX.Grpc.Statics;
 using OfX.Helpers;
@@ -26,7 +27,6 @@ public static class GrpcExtensions
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
         var hostMapAttributes = GrpcStatics.HostMapAttributes;
-        var attributeRegisters = hostMapAttributes.SelectMany(a => a.Value);
 
         ofXRegister.ServiceCollection.TryAddScoped<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
         {
@@ -37,19 +37,16 @@ public static class GrpcExtensions
                 .Key;
             var result = await GetOfXItemsAsync(host, context, query, attributeType);
             var itemsResponse = new ItemsResponse<OfXDataResponse>([
-                ..result.Items.Select(x => new OfXDataResponse
+                ..result.Items.Select(x =>
                 {
-                    Id = x.Id,
-                    OfXValues =
-                    [
-                        ..x.OfxValues.Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value })
-                    ]
+                    var values = x.OfxValues
+                        .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
+                    return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
                 })
             ]);
             return itemsResponse;
         });
-        Clients.ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection,
-            typeof(IOfXGrpcRequestClient<>));
+        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXGrpcRequestClient<>));
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,
@@ -60,13 +57,13 @@ public static class GrpcExtensions
         var metadata = new Metadata();
         context?.Headers?.ForEach(h => metadata.Add(h.Key, h.Value));
         var grpcQuery = new GetOfXGrpcQuery();
-        var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None);
+        using var cancellationTokenSource = CancellationTokenSource
+            .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
         cancellationTokenSource.CancelAfter(defaultRequestTimeout);
         grpcQuery.SelectorIds.AddRange(query.SelectorIds ?? []);
         grpcQuery.Expression = query.Expression;
         grpcQuery.AttributeAssemblyType = attributeType.GetAssemblyName();
-        return await client.GetItemsAsync(grpcQuery, metadata,
-            cancellationToken: context?.CancellationToken ?? cancellationTokenSource.Token);
+        return await client.GetItemsAsync(grpcQuery, metadata, cancellationToken: cancellationTokenSource.Token);
     }
 
     public static void MapOfXGrpcService(this IEndpointRouteBuilder builder)
