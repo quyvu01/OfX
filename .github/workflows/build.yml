@@ -1,9 +1,9 @@
-# This workflow will build and test your .NET project for both .NET 8 and .NET 9
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+# This workflow will build and publish all OfX ecosystem packages when the version changes.
 
 name: Build OfX and Publish
 env:
   OFX_VERSION: 5.0.13
+
 on:
   push:
     branches: [ "main" ]
@@ -37,7 +37,7 @@ jobs:
     steps:
       - id: v
         run: |
-          if [ "${{ github.ref }}" = 'refs/heads/master' ]; then
+          if [ "${{ github.ref }}" = 'refs/heads/main' ]; then
             echo "version=${OFX_VERSION}" >> $GITHUB_OUTPUT
           else
             echo "version=${OFX_VERSION}-develop.${{ github.run_number }}" >> $GITHUB_OUTPUT
@@ -47,16 +47,12 @@ jobs:
     name: Build and Publish NuGets
     timeout-minutes: 60
     runs-on: windows-latest
-    if: (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') && success()
-    env:
-      DOTNET_INSTALL_DIR: D:\dotnet
-      NUGET_PACKAGES: D:\.nuget\packages
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && success()
     needs:
       - calc-version
     steps:
       - name: Version Output Check
-        run: |
-          echo "${{ needs.calc-version.outputs.version }}"
+        run: echo "Publishing version ${{ needs.calc-version.outputs.version }}"
 
       - name: Check out code
         uses: actions/checkout@v4
@@ -66,13 +62,20 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Build and Pack Solution
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build All Projects
+        run: dotnet build -c Release -p:Version=${{ needs.calc-version.outputs.version }}
+
+      - name: Pack All Projects
         run: |
-          dotnet build -c Release -p:Version=${{ needs.calc-version.outputs.version }}
           dotnet pack --no-build -c Release -p:PackageVersion=${{ needs.calc-version.outputs.version }} -o ./artifacts
+
+      - name: List Packed Files
+        run: ls -al ./artifacts
 
       - name: Publish NuGets
         working-directory: artifacts
         run: |
-          dotnet nuget push * -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate --no-symbols
-  
+          dotnet nuget push "*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate --no-symbols
