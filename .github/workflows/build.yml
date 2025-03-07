@@ -24,10 +24,8 @@ jobs:
           dotnet-version: ${{ matrix.dotnet-version }}
       - name: Restore dependencies
         run: dotnet restore
-        working-director: ./
       - name: Build
         run: dotnet build --no-restore
-        working-directory: ./
   
   calc-version:
     name: Calculate Version
