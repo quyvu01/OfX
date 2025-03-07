@@ -48,6 +48,9 @@ jobs:
     timeout-minutes: 60
     runs-on: windows-latest
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && success()
+    env:
+      DOTNET_INSTALL_DIR: D:\dotnet
+      NUGET_PACKAGES: D:\.nuget\packages
     needs:
       - calc-version
     steps:
