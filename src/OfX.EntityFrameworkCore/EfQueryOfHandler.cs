@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Queryable;
@@ -23,7 +24,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     where TModel : class
     where TAttribute : OfXAttribute
 {
-    private static readonly Lazy<ConcurrentDictionary<string, Expression<Func<TModel, OfXValueResponse>>>>
+    private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
     private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
@@ -62,11 +63,12 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions
-            .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(expr ?? defaultPropertyName, expression =>
+            .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
             {
                 try
                 {
-                    var expressionParts = expression.Split('.');
+                    var expOrDefault = expression.Expression ?? defaultPropertyName;
+                    var expressionParts = expOrDefault.Split('.');
                     Expression currentExpression = ModelParameterExpression;
                     var currentType = typeof(TModel);
 
@@ -84,7 +86,9 @@ public class EfQueryOfHandler<TModel, TAttribute>(
                                 .Split(' ');
 
                             if (collectionItems is not
-                                { Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit })
+                                {
+                                    Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit
+                                })
                                 throw new ArgumentException(
                                     $"""
                                      Collection data [{collectionPropertyName}] must be defined as 
@@ -172,14 +176,16 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 
                     var bindings = new List<MemberBinding>();
                     if (expr is not null)
-                        bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
+                        bindings.Add(
+                            Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
                     bindings.Add(Expression.Bind(OfXStatics.ValueValueTypeProp!, serializeCall));
 
                     // Create a new OfXDataResponse object
                     var newExpression = Expression.MemberInit(Expression.New(OfXStatics.OfXValueType), bindings);
 
                     // Return the lambda expression
-                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression, ModelParameterExpression);
+                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression,
+                        ModelParameterExpression);
                 }
                 catch (Exception e)
                 {

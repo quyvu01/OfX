@@ -8,6 +8,7 @@ using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using Service1;
 using Service1.Contexts;
+using Service1.GraphQls;
 using Service1.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,6 +50,13 @@ builder.Services.AddDbContextPool<OtherService1Context>(options =>
     });
 }, 128);
 
+builder.AddGraphQL()
+    .AddGraphQLServer()
+    .AddQueryType<Query>()
+    .AddType<MemberResolvers>()
+    .AddDataLoader<UserNameDataLoader>();
+
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -62,5 +70,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapControllers();
+
+app.MapGraphQL();
 
 app.Run();

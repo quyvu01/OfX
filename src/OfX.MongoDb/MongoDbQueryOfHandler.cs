@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Helpers;
 using OfX.MongoDb.Abstractions;
@@ -24,10 +25,11 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
     where TModel : class
     where TAttribute : OfXAttribute
 {
-    private static readonly Lazy<ConcurrentDictionary<string, Expression<Func<TModel, OfXValueResponse>>>>
+    private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
-    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
+    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression =
+        new(() => []);
 
     private readonly IMongoCollectionInternal<TModel> _collectionInternal =
         serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
@@ -47,12 +49,13 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
             var itemsForPrimitiveId = resultForPrimitiveId.Select(BuildResponse(context.Query).Compile());
             return new ItemsResponse<OfXDataResponse>([..itemsForPrimitiveId]);
         }
+
         // Create the expression filter
         var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
         var selectorsConstant = IdConverter.ConstantExpression(context.Query.SelectorIds, idType);
         var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
         var filter = Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
-        
+
         var result = await _collectionInternal.Collection.Find(filter)
             .ToListAsync(context.CancellationToken);
 
@@ -68,11 +71,12 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
         var ofXValueExpression = expressions
             .AsParallel()
-            .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(expr ?? defaultPropertyName, expression =>
+            .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
             {
                 try
                 {
-                    var expressionParts = expression.Split('.');
+                    var expOrDefault = expression.Expression ?? defaultPropertyName;
+                    var expressionParts = expOrDefault.Split('.');
                     Expression currentExpression = ModelParameterExpression;
                     var currentType = typeof(TModel);
 

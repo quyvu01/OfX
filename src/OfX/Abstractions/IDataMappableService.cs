@@ -1,3 +1,7 @@
+using OfX.Attributes;
+using OfX.Queries;
+using OfX.Responses;
+
 namespace OfX.Abstractions;
 
 /// <summary>
@@ -6,4 +10,7 @@ namespace OfX.Abstractions;
 public interface IDataMappableService
 {
     Task MapDataAsync(object value, IContext context = null);
+
+    Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null)
+        where TAttribute : OfXAttribute;
 }

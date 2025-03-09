@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
+using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Helpers;
+using OfX.Queries;
 using OfX.Responses;
 using OfX.Statics;
 
@@ -86,5 +88,22 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             _logger?.LogError("Error while mapping data: {@Error}", e.Message);
             if (OfXStatics.ThrowIfExceptions) throw;
         }
+    }
+
+    public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
+        IContext context = null) where TAttribute : OfXAttribute
+    {
+        var sendPipelineType = _attributeMapSendPipelineOrchestrators
+            .GetOrAdd(typeof(TAttribute), type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
+        var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
+        if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
+            return new ItemsResponse<OfXDataResponse>([]);
+        var result = await pipelinesWrapped.ExecuteAsync(
+            new MessageDeserializable
+            {
+                SelectorIds = query.SelectorIds,
+                Expression = JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))
+            }, context);
+        return result;
     }
 }
