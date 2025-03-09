@@ -1,3 +1,7 @@
+using System.Text.Json;
+using Kernel.Attributes;
+using OfX.Abstractions;
+using OfX.Queries;
 using Service1.Contract.Responses;
 
 namespace Service1.GraphQls;
@@ -29,13 +33,23 @@ public class MemberResolvers
     }
 }
 
-public class UserNameDataLoader(IBatchScheduler batchScheduler, DataLoaderOptions options)
+public class UserNameDataLoader(
+    IBatchScheduler batchScheduler,
+    DataLoaderOptions options,
+    IDataMappableService dataMappableService)
     : BatchDataLoader<string, string>(batchScheduler, options)
 {
     protected override async Task<IReadOnlyDictionary<string, string>> LoadBatchAsync(
         IReadOnlyList<string> keys, CancellationToken cancellationToken)
     {
-        await Task.Yield();
-        return keys.ToDictionary(userId => userId, userId => $"user-{userId}");
+        var result = await dataMappableService
+            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery([..keys], [null]));
+        return result.Items.ToDictionary(kv => kv.Id,
+            kv =>
+            {
+                var value = kv.OfXValues.FirstOrDefault(a => a.Expression == null)
+                    ?.Value;
+                return value == null ? null : JsonSerializer.Deserialize<string>(value);
+            });
     }
 }
