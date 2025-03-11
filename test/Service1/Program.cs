@@ -8,6 +8,7 @@ using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using Service1;
 using Service1.Contexts;
+using Service1.Contract.Responses;
 using Service1.GraphQls;
 using Service1.Models;
 
@@ -50,11 +51,14 @@ builder.Services.AddDbContextPool<OtherService1Context>(options =>
     });
 }, 128);
 
+builder.Services.AddSingleton<ICurrentContextProvider, CurrentContextProvider>();
+
 builder.AddGraphQL()
     .AddGraphQLServer()
     .AddQueryType<Query>()
-    .AddType<MemberResolvers>()
-    .AddDataLoader<UserNameDataLoader>();
+    .AddType(typeof(ResponseType<>).MakeGenericType(typeof(MemberResponse)))
+    .AddResolver(typeof(MemberResolvers<>).MakeGenericType(typeof(MemberResponse)))
+    .AddDataLoader<DataMappingLoader>();
 
 
 builder.Services.AddControllers();

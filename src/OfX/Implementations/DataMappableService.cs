@@ -6,6 +6,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
+using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Queries;
 using OfX.Responses;
@@ -17,7 +18,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 {
     private int _currentObjectSpawnTimes;
 
-    private static readonly ConcurrentDictionary<Type, Type> _attributeMapSendPipelineOrchestrators = new();
+    private static readonly ConcurrentDictionary<Type, Type> AttributeMapSendPipelineOrchestrators = new();
 
     private readonly ILogger<DataMappableService> _logger = serviceProvider.GetService<ILogger<DataMappableService>>();
 
@@ -50,7 +51,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
                     var selectorsByType = selectors.Where(c => c is not null).Distinct().ToList();
                     if (selectorsByType is not { Count: > 0 }) return emptyResponse;
-                    var sendPipelineType = _attributeMapSendPipelineOrchestrators
+                    var sendPipelineType = AttributeMapSendPipelineOrchestrators
                         .GetOrAdd(x.OfXAttributeType,
                             type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
                     var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
@@ -93,8 +94,26 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
     public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
         IContext context = null) where TAttribute : OfXAttribute
     {
-        var sendPipelineType = _attributeMapSendPipelineOrchestrators
+        var sendPipelineType = AttributeMapSendPipelineOrchestrators
             .GetOrAdd(typeof(TAttribute), type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
+        var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
+        if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
+            return new ItemsResponse<OfXDataResponse>([]);
+        var result = await pipelinesWrapped.ExecuteAsync(
+            new MessageDeserializable
+            {
+                SelectorIds = query.SelectorIds,
+                Expression = JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))
+            }, context);
+        return result;
+    }
+
+    public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
+        IContext context = null)
+    {
+        runtimeType.MustBeOfXAttribute();
+        var sendPipelineType = AttributeMapSendPipelineOrchestrators
+            .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
         if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
             return new ItemsResponse<OfXDataResponse>([]);
