@@ -27,7 +27,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
-    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression = new(() => []);
+    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> _idMethodCallExpression = new(() => []);
 
     private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
         .Invoke(typeof(TModel)).GetCollection<TModel>();
@@ -199,7 +199,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idAsStringExpression = IdMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
+        var idAsStringExpression = _idMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
         {
             var idProperty = Expression.Property(ModelParameterExpression, id);
             var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);

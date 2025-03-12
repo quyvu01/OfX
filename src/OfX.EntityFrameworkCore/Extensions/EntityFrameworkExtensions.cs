@@ -17,11 +17,11 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    private static readonly Lazy<ConcurrentDictionary<Type, int>> modelTypeLookUp = new(() => []);
-    private static readonly Type efQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
-    private static readonly ConcurrentDictionary<Type, bool> modelTypeCache = new();
+    private static readonly Lazy<ConcurrentDictionary<Type, int>> ModelTypeLookUp = new(() => []);
+    private static readonly Type EfQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
+    private static readonly ConcurrentDictionary<Type, bool> ModelTypeCache = new();
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> efQueryOfHandlerCache = new();
+        Func<IServiceProvider, string, string, object>> EfQueryOfHandlerCache = new();
 
 
     public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
@@ -43,13 +43,13 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
-            if (modelTypeLookUp.Value.TryGetValue(modelType, out var contextIndex))
+            if (ModelTypeLookUp.Value.TryGetValue(modelType, out var contextIndex))
                 return sp.GetServices<IOfXEfDbContext>().ElementAt(contextIndex);
             var contexts = sp.GetServices<IOfXEfDbContext>().ToList();
             var matchingServiceType = contexts.FirstOrDefault(a => a.HasCollection(modelType));
             if (matchingServiceType is null)
                 throw new OfXEntityFrameworkException.ThereAreNoDbContextHasModel(modelType);
-            modelTypeLookUp.Value.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
+            ModelTypeLookUp.Value.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
             return matchingServiceType;
         });
         if (OfXStatics.ModelConfigurationAssembly is null)
@@ -63,17 +63,17 @@ public static class EntityFrameworkExtensions
             serviceCollection.AddScoped(serviceInterfaceType, sp =>
             {
                 var ofXDbContexts = sp.GetServices<IOfXEfDbContext>();
-                var modelCached = modelTypeCache
+                var modelCached = ModelTypeCache
                     .GetOrAdd(modelType, mt => ofXDbContexts.Any(x => x.HasCollection(mt)));
 
                 var (defaultPropertyId, defaultPropertyName) =
                     (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
 
-                var efQueryOfHandlerFactory = efQueryOfHandlerCache
+                var efQueryOfHandlerFactory = EfQueryOfHandlerCache
                     .GetOrAdd((modelType, attributeType), types =>
                     {
                         var efQueryHandlerType = modelCached
-                            ? efQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType)
+                            ? EfQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType)
                             : OfXStatics.DefaultQueryOfHandlerType.MakeGenericType(types.ModelType,
                                 types.AttributeType);
 

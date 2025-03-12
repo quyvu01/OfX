@@ -13,9 +13,9 @@ namespace OfX.MongoDb.Extensions;
 public static class MongoDbExtensions
 {
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> mongoDbQueryOfHandlerCache = new();
+        Func<IServiceProvider, string, string, object>> MongoDbQueryOfHandlerCache = new();
 
-    private static readonly Type mongoDbQueryOfHandlerType = typeof(MongoDbQueryOfHandler<,>);
+    private static readonly Type MongoDbQueryOfHandlerType = typeof(MongoDbQueryOfHandler<,>);
 
     public static OfXRegisterWrapped AddMongoDb(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXMongoDbRegistrar> registrarAction)
@@ -35,10 +35,10 @@ public static class MongoDbExtensions
             {
                 var (defaultPropertyId, defaultPropertyName) =
                     (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
-                var efQueryOfHandlerFactory = mongoDbQueryOfHandlerCache
+                var efQueryOfHandlerFactory = MongoDbQueryOfHandlerCache
                     .GetOrAdd((modelType, attributeType), types =>
                     {
-                        var handlerType = mongoDbQueryOfHandlerType
+                        var handlerType = MongoDbQueryOfHandlerType
                             .MakeGenericType(types.ModelType, types.AttributeType);
                         var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
                         var idParam = Expression.Parameter(typeof(string));

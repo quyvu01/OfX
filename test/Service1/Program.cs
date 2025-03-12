@@ -4,8 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.HotChocolate.Extensions;
+using OfX.HotChocolate.Implementations;
+using OfX.HotChocolate.Resolvers;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
+using Serilog;
 using Service1;
 using Service1.Contexts;
 using Service1.Contract.Responses;
@@ -14,6 +18,10 @@ using Service1.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -21,6 +29,10 @@ builder.Services.AddOpenApi();
 var client = new MongoClient("mongodb://localhost:27017");
 var database = client.GetDatabase("Service1MongoDb");
 var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
+
+var registerBuilder = builder.Services.AddGraphQLServer()
+    .AddQueryType<Query>();
+
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
@@ -31,7 +43,8 @@ builder.Services.AddOfX(cfg =>
         cfg.SetMaxObjectSpawnTimes(16);
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
-    .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection));
+    .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))
+    .AddHotChocolate(cfg => cfg.AddRequestExecutorBuilder(registerBuilder));
 
 builder.Services.AddDbContextPool<Service1Context>(options =>
 {
@@ -50,15 +63,6 @@ builder.Services.AddDbContextPool<OtherService1Context>(options =>
         b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
     });
 }, 128);
-
-builder.Services.AddSingleton<ICurrentContextProvider, CurrentContextProvider>();
-
-builder.AddGraphQL()
-    .AddGraphQLServer()
-    .AddQueryType<Query>()
-    .AddType(typeof(ResponseType<>).MakeGenericType(typeof(MemberResponse)))
-    .AddResolver(typeof(MemberResolvers<>).MakeGenericType(typeof(MemberResponse)))
-    .AddDataLoader<DataMappingLoader>();
 
 
 builder.Services.AddControllers();
