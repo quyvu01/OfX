@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.HotChocolate.Implementations;
+using OfX.HotChocolate.Middlewares;
 using OfX.HotChocolate.Resolvers;
 
 namespace OfX.HotChocolate.ApplicationModels;
@@ -30,5 +31,6 @@ public sealed class OfXHotChocolateRegister
                     .AddResolver(typeof(ResponseResolvers<>).MakeGenericType(objectType));
             }
         });
+        builder.UseField<DependencyAwareMiddleware>();
     }
 }
