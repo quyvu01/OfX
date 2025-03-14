@@ -5,7 +5,6 @@ using OfX.Extensions;
 using OfX.Helpers;
 using OfX.HotChocolate.Helpers;
 using OfX.HotChocolate.Implementations;
-using OfX.HotChocolate.Middlewares;
 using OfX.HotChocolate.Resolvers;
 using OfX.HotChocolate.Statics;
 
@@ -38,14 +37,5 @@ public sealed class OfXHotChocolateRegister
                     .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));
             }
         });
-        builder
-            .UseRequest(next => async context =>
-            {
-                Console.WriteLine($"Before next: {context.Document}");
-                await next.Invoke(context);
-                Console.WriteLine($"After next: {context.Document}");
-            });
-        // builder.UseRequest<DependencyAwareRequestMiddleware>();
-        // builder.UseField<DependencyAwareMiddleware>();
     }
 }

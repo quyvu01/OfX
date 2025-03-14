@@ -10,17 +10,17 @@ internal class DataMappingLoader(
     IBatchScheduler batchScheduler,
     DataLoaderOptions options,
     IDataMappableService dataMappableService)
-    : BatchDataLoader<ExpressionData, string>(batchScheduler, options)
+    : BatchDataLoader<FieldBearing, string>(batchScheduler, options)
 {
-    protected override async Task<IReadOnlyDictionary<ExpressionData, string>> LoadBatchAsync(
-        IReadOnlyList<ExpressionData> keys, CancellationToken cancellationToken)
+    protected override async Task<IReadOnlyDictionary<FieldBearing, string>> LoadBatchAsync(
+        IReadOnlyList<FieldBearing> keys, CancellationToken cancellationToken)
     {
-        var clonedKeys = keys.Select(a =>
-            new ExpressionData(a.ParentObject, a.Expression, a.Order, a.AttributeType, a.TargetPropertyInfo,
-                a.RequiredPropertyInfo) { SelectorId = a.SelectorId });
-        var resultData = new List<Dictionary<ExpressionData, string>>();
-        var previousMapResult = new Dictionary<ExpressionData, string>();
-        foreach (var requestGrouped in clonedKeys.GroupBy(a => a.Order).OrderBy(a => a.Key))
+        var resultData = new List<Dictionary<FieldBearing, string>>();
+        var previousMapResult = new Dictionary<FieldBearing, string>();
+
+        var keysGrouped = keys.GroupBy(k => k.Order).OrderBy(a => a.Key);
+
+        foreach (var requestGrouped in keysGrouped)
         {
             // Implement how to map next value with previous value
             var mapResult = previousMapResult;
@@ -28,10 +28,10 @@ internal class DataMappingLoader(
                 .Select(async gr =>
                 {
                     var matchedExpressionData = mapResult.Where(a =>
-                        gr.Any(x => x.NextObject == a.Key.PreviousObject));
+                        gr.Any(x => x.NextComparable == a.Key.PreviousComparable));
 
-                    // Re-set Id to expressionData
-                    gr.Join(matchedExpressionData, g => g.NextObject, j => j.Key.PreviousObject, (g, j) =>
+                    // Re-set Id for `FieldBearing`
+                    gr.Join(matchedExpressionData, g => g.NextComparable, j => j.Key.PreviousComparable, (g, j) =>
                     {
                         var value = j.Value;
                         g.SelectorId = value is null
@@ -40,8 +40,7 @@ internal class DataMappingLoader(
                         return g;
                     }).IteratorVoid();
 
-                    IEnumerable<string> idsRaw = [..gr.Select(k => k.SelectorId)];
-                    var ids = idsRaw.Where(a => a is not null).Distinct().ToList();
+                    List<string> ids = [..gr.Select(k => k.SelectorId).Where(a => a is not null).Distinct()];
                     if (ids is not { Count: > 0 }) return [];
                     var expressions = gr.Select(k => k.Expression).Distinct().OrderBy(k => k);
                     var result = await dataMappableService
@@ -55,7 +54,7 @@ internal class DataMappingLoader(
             previousMapResult = result.SelectMany(a => a).ToDictionary(kv => kv.Key, kv => kv.Value);
             resultData.AddRange(result);
         }
-
+        
         return keys.ToDictionary(a => a,
             ex => resultData.Select(k => k.FirstOrDefault(x => x.Key.Equals(ex)).Value)
                 .FirstOrDefault(x => x != null));

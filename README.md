@@ -6,6 +6,9 @@ public string XId { get; set; }
 OfX is an open-source, which focus on Attribute-based data mapping, streamlines data handling across services, reduces
 boilerplate code, and improves maintainability
 
+> [!WARNING]  
+> All OfX* packages need to have the same version.
+
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
 ## Project Highlights

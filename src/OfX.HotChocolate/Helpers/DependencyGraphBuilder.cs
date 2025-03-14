@@ -16,7 +16,7 @@ public class DependencyGraphBuilder
                 .OrderByDescending(GetOrder)
                 .ToArray();
 
-            if (dependencies.Any()) graph[property] = dependencies;
+            if (dependencies.Length != 0) graph[property] = dependencies;
         }
 
         return graph;
@@ -26,8 +26,7 @@ public class DependencyGraphBuilder
         PropertyInfo[] allProperties, HashSet<PropertyInfo> visited = null)
     {
         visited ??= [];
-        if (!visited.Add(property))
-            yield break; // Avoid circular dependencies
+        if (!visited.Add(property)) yield break; // Avoid circular dependencies
 
         foreach (var attribute in property.GetCustomAttributes(true))
         {

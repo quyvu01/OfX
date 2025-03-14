@@ -35,6 +35,6 @@ internal class OfXObjectType<T> : ObjectType<T> where T : class
                 await next(context);
             })
             .ResolveWith<DataResolvers<T>>(x =>
-                x.GetDataAsync(null!, null!, CancellationToken.None!))
+                x.GetDataAsync(null!, null!))
             .Type(data.TargetPropertyInfo.PropertyType));
 }

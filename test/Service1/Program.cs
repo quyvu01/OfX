@@ -5,14 +5,11 @@ using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.HotChocolate.Extensions;
-using OfX.HotChocolate.Implementations;
-using OfX.HotChocolate.Resolvers;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using Serilog;
 using Service1;
 using Service1.Contexts;
-using Service1.Contract.Responses;
 using Service1.GraphQls;
 using Service1.Models;
 
