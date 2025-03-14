@@ -6,7 +6,7 @@ using OfX.HotChocolate.Implementations;
 
 namespace OfX.HotChocolate.Resolvers;
 
-public sealed class ResponseResolvers<TResponse>
+public sealed class DataResolvers<TResponse> where TResponse : class
 {
     public async Task<object> GetDataAsync(
         [Parent] TResponse response, IResolverContext resolverContext, CancellationToken ct)

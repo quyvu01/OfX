@@ -1,5 +1,8 @@
 # OfX
-
+```csharp
+public string XId { get; set; } 
+[XOf(nameof(XId))] public string X { get; set; } 
+```
 OfX is an open-source, which focus on Attribute-based data mapping, streamlines data handling across services, reduces
 boilerplate code, and improves maintainability
 
@@ -17,15 +20,43 @@ automatically retrieve the UserName based on UserId, without writing custom code
 Example:
 
 ```csharp
+// Basic Config
+builder.Services.AddOfX(cfg =>
+{
+    cfg.AddAttributesContainNamespaces(typeof(UserOfAttribute).Namespace!);
+    cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
+});
+
+// Define a custom OfXAttribute
+public sealed class UserOfAttribute(string propertyName) : OfXAttribute(propertyName);
+
+// Tell OfX which model the attribute applies to
+[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
+public sealed class User
+{
+    public string Id { get; set; } 
+    public string Name { get; set; } 
+    public string Email { get; set; } 
+    // Add other properties as needed
+}
+
+// Sample DTO
 public sealed class SomeDataResponse
 {
-    public string Id { get; set; }
-    public string UserId { get; set; }
-    [UserOf(nameof(UserId), Expression = "Email")]
-    public string UserEmail { get; set; }
-    [UserOf(nameof(UserId))] public string UserName { get; set; }
-    ...
+    public string Id { get; set; } 
+    public string UserId { get; set; } 
+    
+    [UserOf(nameof(UserId), Expression = nameof(User.Email))]
+    public string UserEmail { get; set; } 
+
+    [UserOf(nameof(UserId))]
+    public string UserName { get; set; } 
+
+    // Add other properties as needed
 }
+
+// You are touching the OfX!
+
 ```
 
 The `[UserOf]` annotation acts as a directive to automatically retrieve `UserName` based on `UserId`,you can also fetch
@@ -68,22 +99,13 @@ builder.Services.AddOfX(cfg =>
 });
 ```
 
-StronglyTypeIdRegister Example:
-
-```csharp
-// StronglyTypeIdRegisters example:
-public sealed class StronglyTypeIdRegisters : IStronglyTypeConverter<UserId>
-{
-    public UserId Convert(string input) => new UserId(input);
-    public bool CanConvert(string input) => true;
-}
-
-// You can also implement many IStronglyTypeConverter<T>
-```
-
 ### Function Descriptions
 
 #### AddAttributesContainNamespaces
+
+```csharp
+cfg.AddAttributesContainNamespaces(typeof(WhereTheAttributeDefined).Assembly);
+```
 
 Registers assemblies that contain the attributes, used by OfX for data mapping.
 
@@ -93,6 +115,11 @@ Parameters:
 `Assembly`: The assembly containing the (OfX) attributes.
 
 #### AddHandlersFromNamespaceContaining
+
+```csharp
+cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>(); //<- Add this one when you want to self-handle the request as the example at the end of this guide. Otherwise, if you install the package OfX-gRPC or OfX-Nats...(like OfX transport extension package), there is no need to add this one anymore!
+
+```
 
 Add assemblies that contain handlers responsible for processing queries or commands for data retrieval.
 
@@ -111,7 +138,9 @@ cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
 #### AddReceivedPipelines
-
+```csharp
+cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericReceivedPipeline<>).OfType<OtherReceivedPipeline>());
+```
 When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server,
 where you fetching and response to client!
 
@@ -121,11 +150,13 @@ Parameters:
 Example:
 
 ```csharp
-    cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
+cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
 ```
 
 #### AddSendPipelines
-
+```csharp
+cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
+```
 When you want to create pipelines to handle the send request for `OfXAttribute`. You should use it on the client, where
 you send request to get data!
 
@@ -139,7 +170,10 @@ cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericPipeline<>)).OfType<OtherPi
 ```
 
 #### AddStronglyTypeIdConverter
-
+```csharp
+// When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
+cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
+```
 When your models(entities) are using Strongly Type Id, you have to configure to tell how OfX can convert from general ID
 type(string) to your strongly type ID.
 
@@ -152,8 +186,16 @@ You have to create a class and implement interface `IStronglyTypeConverter<T>`, 
 `Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
 Please check the example above!
 
-#### ThrowIfException
+#### AddModelConfigurationsFromNamespaceContaining
+```csharp
+cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
+```
+Locate your models and OfX will dynamic create the handler relevant to Model and OfXAttribute
 
+#### ThrowIfException
+```csharp
+cfg.ThrowIfException(); // Add this when you want to handle the error and know why the errors are occupied
+```
 This function enables strict error handling within `OfX`.
 When added, it ensures that any exceptions encountered during data mapping, request handling, or pipeline execution are
 not silently ignored but instead explicitly thrown.
@@ -161,7 +203,9 @@ This helps developers quickly identify and debug issues by surfacing errors, mak
 the OfX processing flow.
 
 #### SetMaxObjectSpawnTimes
-
+```csharp
+cfg.SetMaxObjectSpawnTimes(16); // Add this when you want to limit the maxObject spawn times. It mean you can be noticed that your objects are so complex...
+```
 This function sets an upper limit on the number of times an object can be spawned during recursive data mapping.
 By default (Max spawn times: `32`), OfX allows objects to be dynamically created and mapped, but in complex object
 structures, excessive recursive mapping can lead to performance issues or infinite loops.

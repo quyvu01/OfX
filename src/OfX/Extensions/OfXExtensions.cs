@@ -72,6 +72,8 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
 
+        serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(ExceptionPipelineBehavior<>));
+
         OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
         {
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
