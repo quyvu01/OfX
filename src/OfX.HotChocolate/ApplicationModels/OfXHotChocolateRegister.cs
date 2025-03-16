@@ -26,16 +26,13 @@ public sealed class OfXHotChocolateRegister
             if (genericType != typeof(ObjectType<>)) return;
             var objectType = dataType.GetGenericArguments().FirstOrDefault();
             if (objectType is null) return;
-            if (objectType.IsClass && !objectType.IsAbstract && !GeneralHelpers.IsPrimitiveType(objectType))
-            {
-                var dependencyGraphs = DependencyGraphBuilder
-                    .BuildDependencyGraph(objectType);
-                if (dependencyGraphs is { Count: > 0 })
-                    OfXHotChocolateStatics.DependencyGraphs.Add(objectType, dependencyGraphs);
-                builder
-                    .AddType(typeof(OfXObjectType<>).MakeGenericType(objectType))
-                    .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));
-            }
+            if (!objectType.IsClass || objectType.IsAbstract || GeneralHelpers.IsPrimitiveType(objectType)) return;
+            var dependencyGraphs = DependencyGraphBuilder.BuildDependencyGraph(objectType);
+            if (dependencyGraphs is { Count: > 0 })
+                OfXHotChocolateStatics.DependencyGraphs.Add(objectType, dependencyGraphs);
+            builder
+                .AddType(typeof(OfXObjectType<>).MakeGenericType(objectType))
+                .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));
         });
     }
 }

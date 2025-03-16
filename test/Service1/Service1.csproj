@@ -23,6 +23,7 @@
       <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\src\OfX.HotChocolate\OfX.HotChocolate.csproj" />
       <ProjectReference Include="..\..\src\OfX.MongoDb\OfX.MongoDb.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Nats\OfX.Nats.csproj" />
       <ProjectReference Include="..\Service1.Contract\Service1.Contract.csproj" />
     </ItemGroup>
 
