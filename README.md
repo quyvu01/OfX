@@ -1,8 +1,10 @@
 # OfX
+
 ```csharp
 public string XId { get; set; } 
 [XOf(nameof(XId))] public string X { get; set; } 
 ```
+
 OfX is an open-source, which focus on Attribute-based data mapping, streamlines data handling across services, reduces
 boilerplate code, and improves maintainability
 
@@ -141,9 +143,11 @@ cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
 
 #### AddReceivedPipelines
+
 ```csharp
 cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericReceivedPipeline<>).OfType<OtherReceivedPipeline>());
 ```
+
 When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server,
 where you fetching and response to client!
 
@@ -157,9 +161,11 @@ cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(O
 ```
 
 #### AddSendPipelines
+
 ```csharp
 cfg.AddSendPipelines(c => c.OfType(typeof(GenericSendPipeline<>).OfType(typeof(OtherSendPipeline<>)));    
 ```
+
 When you want to create pipelines to handle the send request for `OfXAttribute`. You should use it on the client, where
 you send request to get data!
 
@@ -173,10 +179,12 @@ cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericPipeline<>)).OfType<OtherPi
 ```
 
 #### AddStronglyTypeIdConverter
+
 ```csharp
 // When you have the stronglyTypeId, you have to create the config how to resolve the Id(from string type) to StronglyTypeId
 cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
 ```
+
 When your models(entities) are using Strongly Type Id, you have to configure to tell how OfX can convert from general ID
 type(string) to your strongly type ID.
 
@@ -190,15 +198,19 @@ You have to create a class and implement interface `IStronglyTypeConverter<T>`, 
 Please check the example above!
 
 #### AddModelConfigurationsFromNamespaceContaining
+
 ```csharp
 cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
 ```
+
 Locate your models and OfX will dynamic create the handler relevant to Model and OfXAttribute
 
 #### ThrowIfException
+
 ```csharp
 cfg.ThrowIfException(); // Add this when you want to handle the error and know why the errors are occupied
 ```
+
 This function enables strict error handling within `OfX`.
 When added, it ensures that any exceptions encountered during data mapping, request handling, or pipeline execution are
 not silently ignored but instead explicitly thrown.
@@ -206,9 +218,11 @@ This helps developers quickly identify and debug issues by surfacing errors, mak
 the OfX processing flow.
 
 #### SetMaxObjectSpawnTimes
+
 ```csharp
 cfg.SetMaxObjectSpawnTimes(16); // Add this when you want to limit the maxObject spawn times. It mean you can be noticed that your objects are so complex...
 ```
+
 This function sets an upper limit on the number of times an object can be spawned during recursive data mapping.
 By default (Max spawn times: `32`), OfX allows objects to be dynamically created and mapped, but in complex object
 structures, excessive recursive mapping can lead to performance issues or infinite loops.
@@ -559,18 +573,20 @@ Stay tuned for even more exciting updates as we expand the capabilities of `Expr
 
 That all, Enjoy your moment!
 
-| Package Name                       | Description                                                                                             | .NET Version | Document                                                                                 |
-|------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
-| **Core**                           |                                                                                                         |
-| [OfX][OfX.nuget]                   | OfX core                                                                                                | 8.0, 9.0     | This Document                                                                            |
-| **Data Providers**                 |                                                                                                         |
-| [OfX-EFCore][OfX-EFCore.nuget]     | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-MongoDb][OfX-MongoDb.nuget]   | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
-| **Transports**                     |                                                                                                         |
-| [OfX-gRPC][OfX-gRPC.nuget]         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
-| [OfX-Kafka][OfX-Kafka.nuget]       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
-| [OfX-Nats][OfX-Nats.nuget]         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
-| [OfX-RabbitMq][OfX-RabbitMq.nuget] | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
+| Package Name                               | Description                                                                                             | .NET Version | Document                                                                                 |
+|--------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
+| **Core**                                   |                                                                                                         |
+| [OfX][OfX.nuget]                           | OfX core                                                                                                | 8.0, 9.0     | This Document                                                                            |
+| **Data Providers**                         |                                                                                                         |
+| [OfX-EFCore][OfX-EFCore.nuget]             | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]           | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
+| **Integrations**                           |                                                                                                         |
+| [OfX-HotChocolate][OfX-HotChocolate.nuget] | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
+| **Transports**                             |                                                                                                         |
+| [OfX-gRPC][OfX-gRPC.nuget]                 | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
+| [OfX-Kafka][OfX-Kafka.nuget]               | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
+| [OfX-Nats][OfX-Nats.nuget]                 | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
+| [OfX-RabbitMq][OfX-RabbitMq.nuget]         | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
 
 ---
 
@@ -579,6 +595,8 @@ That all, Enjoy your moment!
 [OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
 
 [OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
+
+[OfX-HotChocolate.nuget]: https://www.nuget.org/packages/OfX-HotChocolate/
 
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
 
