@@ -4,6 +4,6 @@ namespace OfX.HotChocolate.Abstractions;
 
 internal interface ICurrentContextProvider
 {
-    CurrentFieldContext CreateContext();
-    CurrentFieldContext GetContext();
+    FieldContext CreateContext();
+    FieldContext GetContext();
 }

@@ -1,19 +1,20 @@
 using System.Reflection;
 using OfX.Attributes;
+using OfX.HotChocolate.GraphqlContexts;
 
 namespace OfX.HotChocolate.Helpers;
 
-public class DependencyGraphBuilder
+internal class DependencyGraphBuilder
 {
-    public static Dictionary<PropertyInfo, PropertyInfo[]> BuildDependencyGraph(Type type)
+    internal static Dictionary<PropertyInfo, FieldContext[]> BuildDependencyGraph(Type type)
     {
-        var graph = new Dictionary<PropertyInfo, PropertyInfo[]>();
+        var graph = new Dictionary<PropertyInfo, FieldContext[]>();
         var properties = type.GetProperties();
 
         foreach (var property in properties)
         {
             var dependencies = GetDependenciesRecursive(property, properties)
-                .OrderByDescending(GetOrder)
+                .OrderByDescending(x => GetOrder(x.TargetPropertyInfo))
                 .ToArray();
 
             if (dependencies.Length != 0) graph[property] = dependencies;
@@ -22,7 +23,7 @@ public class DependencyGraphBuilder
         return graph;
     }
 
-    private static IEnumerable<PropertyInfo> GetDependenciesRecursive(PropertyInfo property,
+    private static IEnumerable<FieldContext> GetDependenciesRecursive(PropertyInfo property,
         PropertyInfo[] allProperties, HashSet<PropertyInfo> visited = null)
     {
         visited ??= [];
@@ -33,7 +34,16 @@ public class DependencyGraphBuilder
             if (attribute is not OfXAttribute ofXAttribute) continue;
             var dependentProperty = allProperties.FirstOrDefault(p => p.Name == ofXAttribute.PropertyName);
             if (dependentProperty == null) continue;
-            yield return dependentProperty;
+            var fieldContext = new FieldContext
+            {
+                TargetPropertyInfo = property,
+                Expression = ofXAttribute.Expression,
+                SelectorPropertyName = dependentProperty.Name,
+                RuntimeAttributeType = attribute.GetType(),
+                Order = ofXAttribute.Order,
+                RequiredPropertyInfo = dependentProperty
+            };
+            yield return fieldContext;
 
             // Recursively get dependencies of the dependent property
             foreach (var nestedDependency in GetDependenciesRecursive(dependentProperty, allProperties, visited))

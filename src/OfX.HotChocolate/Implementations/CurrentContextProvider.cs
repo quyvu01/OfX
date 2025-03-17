@@ -5,13 +5,13 @@ namespace OfX.HotChocolate.Implementations;
 
 internal class CurrentContextProvider : ICurrentContextProvider
 {
-    private static readonly AsyncLocal<CurrentFieldContext> AsyncLocal = new();
+    private static readonly AsyncLocal<FieldContext> AsyncLocal = new();
 
-    public CurrentFieldContext CreateContext()
+    public FieldContext CreateContext()
     {
-        AsyncLocal.Value = new CurrentFieldContext();
+        AsyncLocal.Value = new FieldContext();
         return AsyncLocal.Value;
     }
 
-    public CurrentFieldContext GetContext() => AsyncLocal.Value;
+    public FieldContext GetContext() => AsyncLocal.Value;
 }

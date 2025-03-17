@@ -2,7 +2,7 @@ using System.Reflection;
 
 namespace OfX.HotChocolate.GraphqlContexts;
 
-public class CurrentFieldContext
+internal sealed class FieldContext
 {
     public PropertyInfo TargetPropertyInfo { get; set; }
     public string Expression { get; set; }

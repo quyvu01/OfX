@@ -29,7 +29,7 @@ public sealed class OfXHotChocolateRegister
             if (!objectType.IsClass || objectType.IsAbstract || GeneralHelpers.IsPrimitiveType(objectType)) return;
             var dependencyGraphs = DependencyGraphBuilder.BuildDependencyGraph(objectType);
             if (dependencyGraphs is { Count: > 0 })
-                OfXHotChocolateStatics.DependencyGraphs.Add(objectType, dependencyGraphs);
+                OfXHotChocolateStatics.DependencyGraphs.TryAdd(objectType, dependencyGraphs);
             builder
                 .AddType(typeof(OfXObjectType<>).MakeGenericType(objectType))
                 .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));
