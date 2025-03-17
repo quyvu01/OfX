@@ -5,7 +5,7 @@ using OfX.HotChocolate.Abstractions;
 
 namespace OfX.HotChocolate.Resolvers;
 
-internal class OfXObjectType<T> : ObjectType<T> where T : class
+internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : class
 {
     protected override void Configure(IObjectTypeDescriptor<T> descriptor) => typeof(T)
         .GetProperties()

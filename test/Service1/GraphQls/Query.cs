@@ -1,3 +1,4 @@
+using HotChocolate.Types;
 using Service1.Contract.Responses;
 
 namespace Service1.GraphQls;
@@ -16,5 +17,14 @@ public class Query
                 MemberSocialId = a.ToString()
             })
         ];
+    }
+}
+
+public sealed class MembersType : ObjectTypeExtension<MemberResponse>
+{
+    protected override void Configure(IObjectTypeDescriptor<MemberResponse> descriptor)
+    {
+        descriptor.Field(x => x.Id)
+            .Resolve(_ => "Hello");
     }
 }

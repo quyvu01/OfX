@@ -31,7 +31,7 @@ public sealed class OfXHotChocolateRegister
             if (dependencyGraphs is { Count: > 0 })
                 OfXHotChocolateStatics.DependencyGraphs.TryAdd(objectType, dependencyGraphs);
             builder
-                .AddType(typeof(OfXObjectType<>).MakeGenericType(objectType))
+                .AddType(typeof(OfXObjectTypeExtension<>).MakeGenericType(objectType))
                 .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));
         });
     }

@@ -41,8 +41,6 @@ Install-Package OfX-HotChocolate
 
 Add OfX-HotChocolate to your service configuration during application startup:
 
-For Client:
-
 ```csharp
 var registerBuilder = builder.Services.AddGraphQLServer()
     .AddQueryType<Query>();
@@ -59,8 +57,9 @@ builder.Services.AddOfX(cfg =>
 var app = builder.Build();
 
 app.Run();
-
 ```
+`Note:` OfX-HotChocolate will dynamic create the `ObjectTypeExtension<T>` for **ResponseType**. So If you want to create **ObjectType** for some object e.g: `UserResponse`,
+please use `ObjectTypeExtension<T>` instead of `ObjectType<T>`.
 
 That All, enjoy your moment!
 
