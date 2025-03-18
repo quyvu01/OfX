@@ -29,8 +29,17 @@ public sealed class DataResolvers<TResponse> where TResponse : class
 
         await Task.WhenAll(allTasks);
         var data = allTasks.First().Result;
-        var result = JsonSerializer.Deserialize(data, currentContext.TargetPropertyInfo.PropertyType);
-        return result;
+        try
+        {
+            var result = JsonSerializer.Deserialize(data, currentContext.TargetPropertyInfo.PropertyType);
+            return result;
+        }
+        catch (Exception)
+        {
+            if (currentContext.TargetPropertyInfo.PropertyType == typeof(string)) return data;
+            throw new Exception($"Could not deserialize {currentContext.TargetPropertyInfo.PropertyType.Name}.");
+        }
+
 
         async Task<string> FieldResultAsync(FieldContext fieldContext)
         {
