@@ -28,7 +28,8 @@ var database = client.GetDatabase("Service1MongoDb");
 var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
 
 var registerBuilder = builder.Services.AddGraphQLServer()
-    .AddQueryType<Query>();
+    .AddQueryType<Query>()
+    .AddType<MembersType>();
 
 builder.Services.AddOfX(cfg =>
     {

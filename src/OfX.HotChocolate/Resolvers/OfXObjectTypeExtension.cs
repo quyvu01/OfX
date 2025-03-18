@@ -25,8 +25,8 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
             {
                 var currentContext = context.Service<ICurrentContextProvider>();
                 var ctx = currentContext.CreateContext();
-                ctx.TargetPropertyInfo = data.TargetPropertyInfo;
                 var attribute = data.Attribute;
+                ctx.TargetPropertyInfo = data.TargetPropertyInfo;
                 ctx.Expression = attribute.Expression;
                 ctx.RuntimeAttributeType = attribute.GetType();
                 ctx.SelectorPropertyName = attribute.PropertyName;
