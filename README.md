@@ -51,7 +51,7 @@ public sealed class SomeDataResponse
     public string Id { get; set; } 
     public string UserId { get; set; } 
     
-    [UserOf(nameof(UserId), Expression = nameof(User.Email))]
+    [UserOf(nameof(UserId), Expression = "Email")]
     public string UserEmail { get; set; } 
 
     [UserOf(nameof(UserId))]
