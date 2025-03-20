@@ -9,7 +9,7 @@ public class Query
     {
         return
         [
-            .. Enumerable.Range(1, 1).Select(a => new MemberResponse
+            .. Enumerable.Range(1, 3).Select(a => new MemberResponse
             {
                 Id = a.ToString(),
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
