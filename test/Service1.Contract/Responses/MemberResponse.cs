@@ -19,6 +19,11 @@ public class MemberResponse
     [MemberAdditionalOf(nameof(MemberAdditionalId))]
     public string MemberAdditionalName { get; set; }
 
+    public string MemberSocialId { get; set; }
+
+    [MemberSocialOf(nameof(MemberSocialId))]
+    public string MemberSocialName { get; set; }
+
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 
@@ -33,10 +38,10 @@ public class MemberResponse
 
     [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
     public string CountryName { get; set; }
-    
+
     [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
     public string CountryId { get; set; }
-    
+
     [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]", Order = 2)]
     public List<ProvinceResponse> Provinces { get; set; }
 }

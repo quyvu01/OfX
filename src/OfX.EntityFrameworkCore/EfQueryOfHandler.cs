@@ -10,6 +10,7 @@ using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Queryable;
+using OfX.EntityFrameworkCore.Statics;
 using OfX.Responses;
 using OfX.Serializable;
 using OfX.Statics;
@@ -26,8 +27,6 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 {
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
-
-    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> _idMethodCallExpression = new(() => []);
 
     private readonly DbSet<TModel> _collection = serviceProvider.GetRequiredService<GetEfDbContext>()
         .Invoke(typeof(TModel)).GetCollection<TModel>();
@@ -199,12 +198,12 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idAsStringExpression = _idMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
-        {
-            var idProperty = Expression.Property(ModelParameterExpression, id);
-            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
-            return Expression.Call(idProperty, toStringMethod!);
-        });
+        var idAsStringExpression = EntityFrameworkCoreStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
+            {
+                var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
+                var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+                return Expression.Call(idProperty, toStringMethod!);
+            });
 
         var bindings = new List<MemberBinding>
         {

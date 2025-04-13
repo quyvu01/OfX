@@ -11,6 +11,7 @@ using OfX.Attributes;
 using OfX.Helpers;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Queryable;
+using OfX.MongoDb.Statics;
 using OfX.Responses;
 using OfX.Serializable;
 using OfX.Statics;
@@ -27,9 +28,6 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 {
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
-
-    private readonly Lazy<ConcurrentDictionary<string, MethodCallExpression>> IdMethodCallExpression =
-        new(() => []);
 
     private readonly IMongoCollectionInternal<TModel> _collectionInternal =
         serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
@@ -202,9 +200,9 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idAsStringExpression = IdMethodCallExpression.Value.GetOrAdd(idPropertyName, id =>
+        var idAsStringExpression = OfXMongoDbStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
         {
-            var idProperty = Expression.Property(ModelParameterExpression, id);
+            var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
             var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
             return Expression.Call(idProperty, toStringMethod!);
         });

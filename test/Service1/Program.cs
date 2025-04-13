@@ -1,8 +1,10 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.HotChocolate.Extensions;
+using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using Serilog;
 using Service1;
@@ -22,6 +24,23 @@ Log.Logger = new LoggerConfiguration()
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+var client = new MongoClient("mongodb://localhost:27017");
+var database = client.GetDatabase("Service1MongoDb");
+var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
+
+// Seeding MemberSocials
+
+foreach (var memberSocialId in Enumerable.Range(1, 3))
+{
+    var existed = await memberSocialCollection
+        .Find(m => m.Id.Equals(memberSocialId))
+        .FirstOrDefaultAsync();
+    if (existed is null)
+        await memberSocialCollection.InsertOneAsync(new MemberSocial
+            { Id = memberSocialId, Name = $"Social name: {memberSocialId}" });
+}
+
+
 var registerBuilder = builder.Services.AddGraphQLServer()
     .AddQueryType<Query>()
     .AddType<MembersType>();
@@ -35,6 +54,7 @@ builder.Services.AddOfX(cfg =>
         cfg.SetMaxObjectSpawnTimes(16);
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
+    .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))
     .AddHotChocolate(cfg => cfg.AddRequestExecutorBuilder(registerBuilder));
 
 List<string> provinceIds =
