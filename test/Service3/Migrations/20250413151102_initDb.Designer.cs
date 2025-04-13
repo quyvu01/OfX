@@ -12,7 +12,7 @@ using Service3Api.Contexts;
 namespace Service3Api.Migrations
 {
     [DbContext(typeof(Service3Context))]
-    [Migration("20250110084318_initDb")]
+    [Migration("20250413151102_initDb")]
     partial class initDb
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Service3Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -41,6 +41,7 @@ namespace Service3Api.Migrations
             modelBuilder.Entity("Service3Api.Models.Province", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("CountryId")

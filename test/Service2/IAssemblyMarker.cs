@@ -1,3 +1,3 @@
-namespace WorkerService1;
+namespace Service2;
 
 public interface IAssemblyMarker;

@@ -1,5 +1,5 @@
 using OfX.Attributes;
 
-namespace Kernel.Attributes;
+namespace Shared.Attributes;
 
 public class MemberAdditionalOfAttribute(string propertyName) : OfXAttribute(propertyName);

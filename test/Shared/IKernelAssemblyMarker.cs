@@ -1,3 +1,3 @@
-namespace Kernel;
+namespace Shared;
 
 public interface IKernelAssemblyMarker;

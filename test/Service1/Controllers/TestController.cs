@@ -1,9 +1,9 @@
-using Kernel.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OfX.Abstractions;
 using OfX.Queries;
 using Service1.Contract.Responses;
+using Shared.Attributes;
 
 namespace Service1.Controllers;
 
@@ -21,8 +21,7 @@ public sealed class TestController : ControllerBase
             {
                 Id = a.ToString(),
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
-                MemberAddressId = a.ToString(),
-                MemberSocialId = a.ToString()
+                MemberAddressId = a.ToString()
             })
         ];
         await dataMappableService.MapDataAsync(members);

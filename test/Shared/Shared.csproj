@@ -15,4 +15,8 @@
       <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" />
+    </ItemGroup>
+
 </Project>

@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OfX.Kafka", "src\OfX.Kafka\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test", "Test", "{64A3D1BD-40CB-438B-BF40-797E6BA137EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kernel", "test\Kernel\Kernel.csproj", "{7CA494D8-0D88-4646-A486-A3A89829C5AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "test\Shared\Shared.csproj", "{7CA494D8-0D88-4646-A486-A3A89829C5AA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service1.Contract", "test\Service1.Contract\Service1.Contract.csproj", "{A95E2CCB-C09D-4287-A6EE-F42E4308EB45}"
 EndProject

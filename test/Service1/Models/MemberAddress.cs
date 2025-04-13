@@ -1,5 +1,5 @@
-using Kernel.Attributes;
 using OfX.Attributes;
+using Shared.Attributes;
 
 namespace Service1.Models;
 

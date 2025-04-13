@@ -2,7 +2,7 @@ using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Responses;
 
-namespace WorkerService1.Pipelines;
+namespace Service2.Pipelines;
 
 public sealed class TestSendPipeline<TAttribute> : IReceivedPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
 {

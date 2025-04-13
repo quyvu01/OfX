@@ -1,5 +1,5 @@
 using OfX.Attributes;
 
-namespace Kernel.Attributes;
+namespace Shared.Attributes;
 
 public sealed class MemberAddressOfAttribute(string propertyName) : OfXAttribute(propertyName);

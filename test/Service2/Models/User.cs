@@ -1,7 +1,7 @@
-using Kernel.Attributes;
 using OfX.Attributes;
+using Shared.Attributes;
 
-namespace WorkerService1.Models;
+namespace Service2.Models;
 
 [OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
 public sealed class User

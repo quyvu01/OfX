@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using WorkerService1.Models;
+using Service2.Models;
 
-namespace WorkerService1.Contexts;
+namespace Service2.Contexts;
 
 public class Service2Context(DbContextOptions<Service2Context> options) : DbContext(options)
 {
