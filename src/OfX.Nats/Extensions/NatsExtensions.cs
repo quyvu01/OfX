@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using NATS.Client.Core;
 using NATS.Net;
 using OfX.Clients;
 using OfX.Nats.Abstractions;
@@ -18,7 +19,15 @@ public static class NatsExtensions
     {
         var newClientsRegister = new NatsClientSetting();
         options.Invoke(newClientsRegister);
-        ofXRegister.ServiceCollection.AddSingleton(_ => new NatsClientWrapper(new NatsClient(NatsStatics.NatsUrl)));
+        var opts = new NatsOpts
+        {
+            Url = NatsStatics.NatsUrl,
+            RequestTimeout = NatsStatics.DefaultRequestTimeout,
+            ConnectTimeout = NatsStatics.DefaultConnectTimeout,
+            CommandTimeout = NatsStatics.DefaultCommandTimeout,
+        };
+        var client = new NatsClientWrapper(new NatsClient(opts));
+        ofXRegister.ServiceCollection.AddSingleton(_ => client);
         ClientsRegister(ofXRegister.ServiceCollection);
         ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXNatsClient<>));
         ofXRegister.ServiceCollection.AddSingleton(typeof(INatsServerRpc<,>), typeof(NatsServerRpc<,>));
