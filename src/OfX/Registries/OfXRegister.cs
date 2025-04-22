@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Constants;
 using OfX.Statics;
 
 namespace OfX.Registries;
@@ -23,5 +24,11 @@ public class OfXRegister(IServiceCollection serviceCollection)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maxObjectSpawnTimes);
         OfXStatics.MaxObjectSpawnTimes = maxObjectSpawnTimes;
+    }
+
+    public void SetRequestTimeOut(TimeSpan timeout)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
+        OfXConstants.DefaultRequestTimeout = timeout;
     }
 }
