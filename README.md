@@ -13,6 +13,9 @@ boilerplate code, and improves maintainability
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
+## Give a Star! :star:
+If you like this project, learn something or you are using it in your applications, please give it a star. Thanks!
+
 ## Project Highlights
 
 Attribute-based Data Mapping in OfX is a feature that lets developers annotate properties in their data models with
