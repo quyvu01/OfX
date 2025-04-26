@@ -25,7 +25,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     private IChannel _channel;
     private AsyncEventingBasicConsumer _consumer;
     private string _replyQueueName;
-    private const string routingKey = OfXRabbitMqConstants.RoutingKey;
+    private const string RoutingKey = OfXRabbitMqConstants.RoutingKey;
 
     // We have to wait this one and ensure that everything is initialized
     public RabbitMqClient() => StartAsync().Wait();
@@ -34,14 +34,14 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     {
         var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
         var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
-        var _connectionFactory = new ConnectionFactory
+        var connectionFactory = new ConnectionFactory
         {
             HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
             Port = RabbitMqStatics.RabbitMqPort,
             UserName = userName, Password = password
         };
 
-        _connection = await _connectionFactory.CreateConnectionAsync();
+        _connection = await connectionFactory.CreateConnectionAsync();
         _channel = await _connection.CreateChannelAsync();
         var queueDeclareResult = await _channel.QueueDeclareAsync();
         _replyQueueName = queueDeclareResult.QueueName;
@@ -49,8 +49,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         _consumer.ReceivedAsync += (_, ea) =>
         {
             var correlationId = ea.BasicProperties.CorrelationId;
-            if (string.IsNullOrEmpty(correlationId)) return Task.CompletedTask;
-            if (!_eventArgsMapper.TryRemove(correlationId, out var tcs)) return Task.CompletedTask;
+            if (string.IsNullOrEmpty(correlationId) || !_eventArgsMapper.TryRemove(correlationId, out var tcs)) return Task.CompletedTask;
             tcs.TrySetResult(ea);
             return Task.CompletedTask;
         };
@@ -77,7 +76,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         _eventArgsMapper.TryAdd(correlationId, tcs);
         var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
         var messageBytes = Encoding.UTF8.GetBytes(messageSerialize);
-        await _channel.BasicPublishAsync(exchangeName, routingKey: routingKey,
+        await _channel.BasicPublishAsync(exchangeName, routingKey: RoutingKey,
             mandatory: true, basicProperties: props, body: messageBytes, cancellationToken: cancellationToken);
 
         await using var ctr = cancellationToken.Register(() =>
