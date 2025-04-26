@@ -52,6 +52,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.ThrowIfException();
         cfg.SetMaxObjectSpawnTimes(16);
+        cfg.SetRequestTimeOut(TimeSpan.FromSeconds(10));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

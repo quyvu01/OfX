@@ -9,7 +9,6 @@ using Service2.Contexts;
 using Service2.Models;
 using Shared;
 using Shared.RunSqlMigration;
-using WorkerService1;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>

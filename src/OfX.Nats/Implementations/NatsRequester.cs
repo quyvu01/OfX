@@ -20,7 +20,9 @@ internal sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
         requestContext?.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
         var reply = await client.NatsClient
             .RequestAsync<RequestOf<TAttribute>, ItemsResponse<OfXDataResponse>>(typeof(TAttribute).GetNatsSubject(),
-                requestContext!.Query, natsHeaders, cancellationToken: requestContext.CancellationToken);
+                requestContext!.Query, natsHeaders,
+                replyOpts: new NatsSubOpts { Timeout = OfXConstants.DefaultRequestTimeout },
+                cancellationToken: requestContext.CancellationToken);
         if (reply.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var errorDetail) ?? false)
             throw new OfXException.ReceivedException(errorDetail);
 

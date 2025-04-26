@@ -10,6 +10,7 @@ public class TestReceivedPipeline<TAttribute> : IReceivedPipelineBehavior<TAttri
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
         var result = await next.Invoke();
+        await Task.Delay(7000);
         return result;
     }
 }
