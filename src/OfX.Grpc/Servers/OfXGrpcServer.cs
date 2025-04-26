@@ -14,13 +14,13 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private readonly Lazy<ConcurrentDictionary<string, Type>> attributeAssemblyTypeMapReceivedPipelines = new(() => []);
+    private readonly Lazy<ConcurrentDictionary<string, Type>> _attributeAssemblyTypeMapReceivedPipelines = new(() => []);
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
         {
-            var receivedPipelineType = attributeAssemblyTypeMapReceivedPipelines.Value
+            var receivedPipelineType = _attributeAssemblyTypeMapReceivedPipelines.Value
                 .GetOrAdd(request.AttributeAssemblyType, attributeAssemblyType =>
                 {
                     var attributeType = Type.GetType(attributeAssemblyType);
