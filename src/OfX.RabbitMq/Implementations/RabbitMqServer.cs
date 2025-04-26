@@ -20,7 +20,7 @@ namespace OfX.RabbitMq.Implementations;
 internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>>
-        attributeAssemblyCached = new(() => []);
+        AttributeAssemblyCached = new(() => []);
 
     public async Task ConsumeAsync()
     {
@@ -60,7 +60,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var props = ea.BasicProperties;
             var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
 
-            var rabbitMqServerRpcType = attributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
+            var rabbitMqServerRpcType = AttributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
                 if (!OfXCached.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))

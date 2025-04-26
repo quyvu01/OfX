@@ -56,6 +56,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
     public async Task StartAsync()
     {
+        await Task.Yield();
         _consumer.Subscribe(_requestTopic);
 
         while (true)
@@ -63,53 +64,58 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
             try
             {
                 var consumeResult = _consumer.Consume(CancellationToken.None);
-                var messageUnWrapped = JsonSerializer
-                    .Deserialize<KafkaMessageWrapped<MessageDeserializable>>(consumeResult.Message.Value);
-
-                var serviceScope = _serviceProvider.CreateScope();
-
-                var pipeline = serviceScope.ServiceProvider
-                    .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
-
-                var message = messageUnWrapped.Message;
-
-                var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
-                var headers = consumeResult.Message.Headers
-                    .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes()));
-
-                var cancellationToken = CancellationToken.None;
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-
-                var requestContext = new RequestContextImpl<TAttribute>(query, headers, cts.Token);
-
-                try
-                {
-                    var response = await pipeline.ExecuteAsync(requestContext);
-                    var kafkaMessage = new KafkaMessage { Response = response, IsSucceed = true };
-                    await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
-                    {
-                        Key = consumeResult.Message.Key,
-                        Value = JsonSerializer.Serialize(kafkaMessage)
-                    }, cts.Token);
-                }
-                catch (Exception e)
-                {
-                    var logger = serviceScope.ServiceProvider.GetService<ILogger<KafkaServer<TModel, TAttribute>>>();
-                    logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
-                        typeof(TAttribute).Name, e);
-                    var kafkaMessage = new KafkaMessage { ErrorDetail = e.Message, IsSucceed = false };
-                    await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
-                    {
-                        Key = consumeResult.Message.Key,
-                        Value = JsonSerializer.Serialize(kafkaMessage)
-                    }, cts.Token);
-                }
+                _ = ProcessMessageAsync(consumeResult);
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error processing request Kafka message: {@Error}", ex.Message);
             }
+        }
+    }
+
+    private async Task ProcessMessageAsync(ConsumeResult<string, string> consumeResult)
+    {
+        var messageUnWrapped = JsonSerializer
+            .Deserialize<KafkaMessageWrapped<MessageDeserializable>>(consumeResult.Message.Value);
+
+        var serviceScope = _serviceProvider.CreateScope();
+
+        var pipeline = serviceScope.ServiceProvider
+            .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
+
+        var message = messageUnWrapped.Message;
+
+        var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+        var headers = consumeResult.Message.Headers
+            .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes()));
+
+        var cancellationToken = CancellationToken.None;
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+
+        var requestContext = new RequestContextImpl<TAttribute>(query, headers, cts.Token);
+
+        try
+        {
+            var response = await pipeline.ExecuteAsync(requestContext);
+            var kafkaMessage = new KafkaMessage { Response = response, IsSucceed = true };
+            await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
+            {
+                Key = consumeResult.Message.Key,
+                Value = JsonSerializer.Serialize(kafkaMessage)
+            }, cts.Token);
+        }
+        catch (Exception e)
+        {
+            var logger = serviceScope.ServiceProvider.GetService<ILogger<KafkaServer<TModel, TAttribute>>>();
+            logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
+                typeof(TAttribute).Name, e);
+            var kafkaMessage = new KafkaMessage { ErrorDetail = e.Message, IsSucceed = false };
+            await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
+            {
+                Key = consumeResult.Message.Key,
+                Value = JsonSerializer.Serialize(kafkaMessage)
+            }, cts.Token);
         }
     }
 

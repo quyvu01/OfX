@@ -45,10 +45,11 @@ public sealed class TestController : ControllerBase
         var newFunc = async () =>
         {
             await Task.Delay(1000);
-            var k = await dataMappableService
-                .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["xyz"],[null]));
+            return await dataMappableService
+                .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["xyz"], [null]));
         };
-        await Task.WhenAll(result, newFunc());
-        return Ok();
+        var result2 = newFunc.Invoke();
+        await Task.WhenAll(result, result2);
+        return Ok(new { Res1 = result.Result, Res2 = result2.Result });
     }
 }
