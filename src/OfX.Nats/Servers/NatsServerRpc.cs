@@ -21,16 +21,17 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
     private readonly ILogger<NatsServerRpc<TModel, TAttribute>> _logger =
         serviceProvider.GetService<ILogger<NatsServerRpc<TModel, TAttribute>>>();
 
+    private readonly NatsClientWrapper _natsClientWrapper = serviceProvider.GetRequiredService<NatsClientWrapper>();
+
     public async Task StartAsync()
     {
-        var natsClient = serviceProvider.GetRequiredService<NatsClientWrapper>();
-        var natsScribeAsync = natsClient.NatsClient
+        var natsScribeAsync = _natsClientWrapper.NatsClient
             .SubscribeAsync<MessageDeserializable>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
-            _ = ProcessMessageAsync(message, natsClient);
+            _ = ProcessMessageAsync(message);
     }
 
-    private async Task ProcessMessageAsync(NatsMsg<MessageDeserializable> message, NatsClientWrapper natsClient)
+    private async Task ProcessMessageAsync(NatsMsg<MessageDeserializable> message)
     {
         try
         {
@@ -53,7 +54,7 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
             _logger?.LogError("Error while responding <{@Attribute}> with message : {@Error}",
                 typeof(TAttribute).Name, e);
             var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, e.Message } };
-            await natsClient.NatsClient
+            await _natsClientWrapper.NatsClient
                 .PublishAsync(message.ReplyTo!, new ItemsResponse<OfXDataResponse>([]),
                     new NatsHeaders(errors));
         }
