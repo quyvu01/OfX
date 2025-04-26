@@ -25,31 +25,33 @@ internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider service
         var natsScribeAsync = natsClient.NatsClient
             .SubscribeAsync<MessageDeserializable>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
-        {
-            try
+            _ = Task.Run(async () =>
             {
-                if (message.Data is null) continue;
-                using var serviceScope = serviceProvider.CreateScope();
-                var pipeline = serviceScope.ServiceProvider
-                    .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
-                var headers = message.Headers?
-                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-                var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
-                var cancellationToken = CancellationToken.None;
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-                var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, CancellationToken.None);
-                var response = await pipeline.ExecuteAsync(requestContext);
-                await message.ReplyAsync(response, cancellationToken: cts.Token);
-            }
-            catch (Exception e)
-            {
-                logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
-                    typeof(TAttribute).Name, e);
-                var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, e.Message } };
-                await natsClient.NatsClient
-                    .PublishAsync(message.ReplyTo!, new ItemsResponse<OfXDataResponse>([]), new NatsHeaders(errors));
-            }
-        }
+                try
+                {
+                    if (message.Data is null) return;
+                    using var serviceScope = serviceProvider.CreateScope();
+                    var pipeline = serviceScope.ServiceProvider
+                        .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
+                    var headers = message.Headers?
+                        .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
+                    var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
+                    var cancellationToken = CancellationToken.None;
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+                    var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, CancellationToken.None);
+                    var response = await pipeline.ExecuteAsync(requestContext);
+                    await message.ReplyAsync(response, cancellationToken: cts.Token);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
+                        typeof(TAttribute).Name, e);
+                    var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, e.Message } };
+                    await natsClient.NatsClient
+                        .PublishAsync(message.ReplyTo!, new ItemsResponse<OfXDataResponse>([]),
+                            new NatsHeaders(errors));
+                }
+            });
     }
 }

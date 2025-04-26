@@ -50,7 +50,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
-        cfg.ThrowIfException();
+        // cfg.ThrowIfException();
         cfg.SetMaxObjectSpawnTimes(16);
         cfg.SetRequestTimeOut(TimeSpan.FromSeconds(10));
     })
