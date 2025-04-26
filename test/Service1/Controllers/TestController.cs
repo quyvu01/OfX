@@ -36,4 +36,19 @@ public sealed class TestController : ControllerBase
             .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1", "2", "3"], [null, "Name", "Email"]));
         return Ok(result);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> FetchConcurrents([FromServices] IDataMappableService dataMappableService)
+    {
+        var result = dataMappableService
+            .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["abc"], [null]));
+        var newFunc = async () =>
+        {
+            await Task.Delay(1000);
+            var k = await dataMappableService
+                .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["xyz"],[null]));
+        };
+        await Task.WhenAll(result, newFunc());
+        return Ok();
+    }
 }
