@@ -50,8 +50,8 @@ public static class OfXStatics
                     var configAttribute = attributes.Select(x =>
                     {
                         var attributeType = x.GetType();
-                        if (!attributeType.IsGenericType) return (null, null);
-                        if (attributeType.GetGenericTypeDefinition() != typeof(OfXConfigForAttribute<>))
+                        if (!attributeType.IsGenericType ||
+                            attributeType.GetGenericTypeDefinition() != typeof(OfXConfigForAttribute<>))
                             return (null, null);
                         return (OfXConfigAttribute: x, OfXAttribute: attributeType.GetGenericArguments()[0]);
                     }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });

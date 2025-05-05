@@ -6,6 +6,12 @@ using OfX.Responses;
 
 namespace OfX.InternalPipelines;
 
+/// <summary>
+/// This internal pipeline is used for routing the request to the correct handler!
+/// If we found the handler, we will call the ReceivedPipelinesImpl instead of sending via the message!
+/// </summary>
+/// <param name="serviceProvider"></param>
+/// <typeparam name="TAttribute"></typeparam>
 internal sealed class SendPipelineRoutingBehavior<TAttribute>(
     IServiceProvider serviceProvider) :
     ISendPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
@@ -15,7 +21,7 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
     public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
-        // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesImpl<,> instead of sending via message!
+        // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesOrchestrator<,> instead of sending via the message!
         var existedHandler = OfXCached.AttributeMapHandlers;
         if (!existedHandler.TryGetValue(typeof(TAttribute), out var handlerType) || !handlerType.IsGenericType)
             return await next.Invoke();

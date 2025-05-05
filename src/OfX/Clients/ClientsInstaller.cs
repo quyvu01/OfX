@@ -10,6 +10,7 @@ public static class ClientsInstaller
 {
     /// <summary>
     /// RequestHandlerImplGenericType must be implemented from IMappableRequestHandler and have only IServiceProvider!
+    /// This is reflection and run one time at the program startup, so don't worry about performance.'
     /// </summary>
     /// <param name="serviceCollection"></param>
     /// <param name="requestHandlerImplGenericType"></param>
