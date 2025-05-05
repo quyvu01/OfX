@@ -16,6 +16,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+        cfg.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipeline<>)));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 

@@ -7,7 +7,7 @@ namespace OfX.ApplicationModels;
 
 public sealed class SendPipeline(IServiceCollection serviceCollection)
 {
-    private static readonly Type sendPipelineInterface = typeof(ISendPipelineBehavior<>);
+    private static readonly Type SendPipelineInterface = typeof(ISendPipelineBehavior<>);
 
     public SendPipeline OfType<TSendPipeline>(ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
@@ -15,11 +15,11 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
         return this;
     }
 
-    // Hmmm, this one is temporary!. I think should test more case!
+    // Hmmm, this one is temporary!. I think we should test more cases!
     public SendPipeline OfType(Type pipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
         var signatureInterfaceTypes = pipelineType.GetInterfaces()
-            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == sendPipelineInterface)
+            .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == SendPipelineInterface)
             .ToList();
 
         if (signatureInterfaceTypes is not { Count: > 0 })
@@ -28,7 +28,7 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
         {
             if (pipelineType.ContainsGenericParameters)
             {
-                var serviceDescriptor = new ServiceDescriptor(sendPipelineInterface, pipelineType, serviceLifetime);
+                var serviceDescriptor = new ServiceDescriptor(SendPipelineInterface, pipelineType, serviceLifetime);
                 serviceCollection.TryAdd(serviceDescriptor);
                 return this;
             }

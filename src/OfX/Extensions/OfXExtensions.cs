@@ -70,9 +70,9 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
 
-        serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(SendPipelineRoutingBehavior<>));
-
-        serviceCollection.AddTransient(typeof(ISendPipelineBehavior<>), typeof(ExceptionPipelineBehavior<>));
+        newOfRegister.AddSendPipelines(c => c
+            .OfType(typeof(SendPipelineRoutingBehavior<>))
+            .OfType(typeof(ExceptionPipelineBehavior<>)));
 
         OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
         {

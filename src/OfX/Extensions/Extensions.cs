@@ -14,7 +14,7 @@ public static class Extensions
 
     internal static void MustBeOfXAttribute(this Type type)
     {
-        if (type is null) throw new ArgumentNullException(nameof(type));
+        ArgumentNullException.ThrowIfNull(type);
         if (!typeof(OfXAttribute).IsAssignableFrom(type)) throw new OfXException.TypeIsNotOfXAttribute(type);
     }
 }
