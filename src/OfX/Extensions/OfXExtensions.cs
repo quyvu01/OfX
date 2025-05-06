@@ -24,7 +24,8 @@ public static class OfXExtensions
         var targetInterface = typeof(IMappableRequestHandler<>);
         if (OfXStatics.HandlersRegister is { } handlersRegister)
         {
-            // We don't need to care this so much, exactly. Because if there are not any handlers. It should be return an empty collection!
+            // We don't need to care about this so much, exactly.
+            // Because if there are not any handlers. It should be return an empty collection!
             handlersRegister.ExportedTypes
                 .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
                             x is { IsInterface: false, IsAbstract: false, IsClass: true })
@@ -53,16 +54,15 @@ public static class OfXExtensions
         OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
-            // So the interface with the default method is a best choice!
+            // So the interface with the default method is the best choice!
             var parentType = targetInterface.MakeGenericType(attributeType);
             var defaultImplementedService = defaultImplementedInterface.MakeGenericType(attributeType);
-            // Using TryAddScoped is pretty cool. We don't need to check if the service is register or not!
-            // So we have to replace the default service if existed -> Good!
+            // Using TryAddScoped is pretty cool. We don't need to check if the service is registered or not!
+            // So we have to replace the default service if it existed -> Good!
             serviceCollection.TryAddScoped(parentType, defaultImplementedService);
         });
 
-        serviceCollection.AddTransient<IDataMappableService>(sp =>
-            new DataMappableService(sp));
+        serviceCollection.AddTransient<IDataMappableService>(sp => new DataMappableService(sp));
 
         serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
 
