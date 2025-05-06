@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,9 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     where TModel : class
     where TAttribute : OfXAttribute
 {
+    private static MemberExpression _idMemberExpression;
+    private static MethodInfo _selectorsConstantMethod;
+
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
@@ -47,11 +51,11 @@ public class EfQueryOfHandler<TModel, TAttribute>(
 
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
-        var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
-        var idType = idProperty.Type;
-        var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
+        _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
+        var idType = _idMemberExpression.Type;
+        _selectorsConstantMethod ??= typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
         var selectorsConstant = IdConverter.ConstantExpression(query.SelectorIds, idType);
-        var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
+        var containsCall = Expression.Call(selectorsConstant, _selectorsConstantMethod!, _idMemberExpression);
         return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
     }
 
@@ -198,7 +202,8 @@ public class EfQueryOfHandler<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idAsStringExpression = EntityFrameworkCoreStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
+        var idAsStringExpression = EntityFrameworkCoreStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel),
+            _ =>
             {
                 var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
                 var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
