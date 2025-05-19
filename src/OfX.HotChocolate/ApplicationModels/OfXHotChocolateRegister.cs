@@ -3,7 +3,6 @@ using HotChocolate.Execution.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Extensions;
 using OfX.Helpers;
-using OfX.HotChocolate.Helpers;
 using OfX.HotChocolate.Implementations;
 using OfX.HotChocolate.Resolvers;
 using OfX.HotChocolate.Statics;

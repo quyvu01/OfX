@@ -1,10 +1,12 @@
 using System.Text.Json;
 using HotChocolate.Resolvers;
+using OfX.Helpers;
 using OfX.HotChocolate.Abstractions;
 using OfX.HotChocolate.ApplicationModels;
-using OfX.HotChocolate.GraphqlContexts;
+using OfX.HotChocolate.GraphQlContext;
 using OfX.HotChocolate.Implementations;
 using OfX.HotChocolate.Statics;
+using OfX.ObjectContexts;
 
 namespace OfX.HotChocolate.Resolvers;
 
@@ -25,7 +27,9 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         if (OfXHotChocolateStatics.DependencyGraphs
                 .TryGetValue(typeof(TResponse), out var dependenciesGraph) &&
             dependenciesGraph.TryGetValue(currentContext.TargetPropertyInfo, out var infos))
-            allTasks.AddRange(infos.Select(FieldResultAsync));
+        {
+            allTasks.AddRange(infos.Select(p => FieldResultAsync(new FieldContext)));
+        }
 
         await Task.WhenAll(allTasks);
         var data = allTasks.First().Result;
@@ -41,16 +45,16 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         }
 
 
-        async Task<string> FieldResultAsync(FieldContext fieldContext)
+        async Task<string> FieldResultAsync(FieldContext propertyContext)
         {
-            var selectorId = fieldContext
+            var selectorId = propertyContext
                 .RequiredPropertyInfo?
                 .GetValue(response)?.ToString();
             // Fetch the dependency fields
             var fieldResult = await dataMappingLoader
-                .LoadAsync(new FieldBearing(response, fieldContext.Expression, fieldContext.Order,
-                    fieldContext.RuntimeAttributeType, fieldContext.TargetPropertyInfo,
-                    fieldContext.RequiredPropertyInfo) { SelectorId = selectorId }, resolverContext.RequestAborted);
+                .LoadAsync(new FieldBearing(response, propertyContext.Expression, propertyContext.Order,
+                    propertyContext.RuntimeAttributeType, propertyContext.TargetPropertyInfo,
+                    propertyContext.RequiredPropertyInfo) { SelectorId = selectorId }, resolverContext.RequestAborted);
             return fieldResult;
         }
     }

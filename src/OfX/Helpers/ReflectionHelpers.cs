@@ -5,6 +5,7 @@ using System.Reflection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Extensions;
+using OfX.ObjectContexts;
 using OfX.Responses;
 using OfX.Serializable;
 
@@ -14,6 +15,8 @@ internal static class ReflectionHelpers
 {
     private static readonly ConcurrentDictionary<PropertyInfo, MappableDataPropertyCache>
         OfXPropertiesCache = new();
+
+    private static readonly ConcurrentDictionary<Type, Dictionary<PropertyInfo, PropertyContext[]>> Graphs = [];
 
     internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
@@ -52,11 +55,16 @@ internal static class ReflectionHelpers
                     var propExpression = Expression.Property(paramExpression, ofXAttribute.PropertyName);
                     var expression = Expression.Lambda(propExpression, paramExpression);
                     var func = expression.Compile();
+                    var graph = Graphs.GetOrAdd(currentType, _ => DependencyGraphBuilder.BuildDependencyGraph(currentType));
+                    var order = graph.TryGetValue(property, out var dependencies) switch
+                    {
+                        true => dependencies.Length - 1,
+                        _ => 0
+                    };
                     yield return new MappableDataProperty(property, currentObject, ofXAttribute, func,
-                        ofXAttribute.Expression, ofXAttribute.Order);
+                        ofXAttribute.Expression, order);
                     OfXPropertiesCache.TryAdd(property,
-                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression,
-                            ofXAttribute.Order));
+                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression, order));
                     continue;
                 }
 

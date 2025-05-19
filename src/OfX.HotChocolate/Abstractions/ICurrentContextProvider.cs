@@ -1,4 +1,5 @@
-using OfX.HotChocolate.GraphqlContexts;
+using OfX.HotChocolate.GraphQlContext;
+using OfX.ObjectContexts;
 
 namespace OfX.HotChocolate.Abstractions;
 

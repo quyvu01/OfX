@@ -1,29 +1,28 @@
 using System.Reflection;
 using OfX.Attributes;
-using OfX.HotChocolate.GraphqlContexts;
+using OfX.ObjectContexts;
 
-namespace OfX.HotChocolate.Helpers;
+namespace OfX.Helpers;
 
-internal class DependencyGraphBuilder
+public class DependencyGraphBuilder
 {
-    internal static Dictionary<PropertyInfo, FieldContext[]> BuildDependencyGraph(Type type)
+    public static Dictionary<PropertyInfo, PropertyContext[]> BuildDependencyGraph(Type type)
     {
-        var graph = new Dictionary<PropertyInfo, FieldContext[]>();
+        var graph = new Dictionary<PropertyInfo, PropertyContext[]>();
         var properties = type.GetProperties();
 
         foreach (var property in properties)
         {
             var dependencies = GetDependenciesRecursive(property, properties)
-                .OrderByDescending(x => GetOrder(x.TargetPropertyInfo))
                 .ToArray();
 
-            if (dependencies.Length != 0) graph[property] = dependencies;
+            if (dependencies is { Length: > 0 }) graph[property] = dependencies;
         }
 
         return graph;
     }
 
-    private static IEnumerable<FieldContext> GetDependenciesRecursive(PropertyInfo property,
+    private static IEnumerable<PropertyContext> GetDependenciesRecursive(PropertyInfo property,
         PropertyInfo[] allProperties, HashSet<PropertyInfo> visited = null)
     {
         visited ??= [];
@@ -34,13 +33,12 @@ internal class DependencyGraphBuilder
             if (attribute is not OfXAttribute ofXAttribute) continue;
             var dependentProperty = allProperties.FirstOrDefault(p => p.Name == ofXAttribute.PropertyName);
             if (dependentProperty == null) continue;
-            var fieldContext = new FieldContext
+            var fieldContext = new PropertyContext
             {
                 TargetPropertyInfo = property,
                 Expression = ofXAttribute.Expression,
                 SelectorPropertyName = dependentProperty.Name,
                 RuntimeAttributeType = attribute.GetType(),
-                Order = ofXAttribute.Order,
                 RequiredPropertyInfo = dependentProperty
             };
             yield return fieldContext;
@@ -49,13 +47,5 @@ internal class DependencyGraphBuilder
             foreach (var nestedDependency in GetDependenciesRecursive(dependentProperty, allProperties, visited))
                 yield return nestedDependency;
         }
-    }
-
-    private static int GetOrder(PropertyInfo property)
-    {
-        var orderAttribute = property.GetCustomAttributes(true)
-            .OfType<OfXAttribute>()
-            .FirstOrDefault();
-        return orderAttribute?.Order ?? 0;
     }
 }
