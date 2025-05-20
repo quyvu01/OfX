@@ -1,12 +1,10 @@
 using System.Text.Json;
 using HotChocolate.Resolvers;
-using OfX.Helpers;
 using OfX.HotChocolate.Abstractions;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.HotChocolate.GraphQlContext;
 using OfX.HotChocolate.Implementations;
 using OfX.HotChocolate.Statics;
-using OfX.ObjectContexts;
 
 namespace OfX.HotChocolate.Resolvers;
 
@@ -28,7 +26,20 @@ public sealed class DataResolvers<TResponse> where TResponse : class
                 .TryGetValue(typeof(TResponse), out var dependenciesGraph) &&
             dependenciesGraph.TryGetValue(currentContext.TargetPropertyInfo, out var infos))
         {
-            allTasks.AddRange(infos.Select(p => FieldResultAsync(new FieldContext)));
+            allTasks.AddRange(infos.Select(p =>
+            {
+                var order = dependenciesGraph.TryGetValue(p.TargetPropertyInfo, out var dependencies) switch
+                {
+                    true => dependencies.Length - 1,
+                    _ => 0
+                };
+                return FieldResultAsync(new FieldContext
+                {
+                    TargetPropertyInfo = p.TargetPropertyInfo, Expression = p.Expression,
+                    SelectorPropertyName = p.SelectorPropertyName, RequiredPropertyInfo = p.RequiredPropertyInfo,
+                    RuntimeAttributeType = p.RuntimeAttributeType, Order = order
+                });
+            }));
         }
 
         await Task.WhenAll(allTasks);
@@ -45,16 +56,16 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         }
 
 
-        async Task<string> FieldResultAsync(FieldContext propertyContext)
+        async Task<string> FieldResultAsync(FieldContext fieldContext)
         {
-            var selectorId = propertyContext
+            var selectorId = fieldContext
                 .RequiredPropertyInfo?
                 .GetValue(response)?.ToString();
             // Fetch the dependency fields
             var fieldResult = await dataMappingLoader
-                .LoadAsync(new FieldBearing(response, propertyContext.Expression, propertyContext.Order,
-                    propertyContext.RuntimeAttributeType, propertyContext.TargetPropertyInfo,
-                    propertyContext.RequiredPropertyInfo) { SelectorId = selectorId }, resolverContext.RequestAborted);
+                .LoadAsync(new FieldBearing(response, fieldContext.Expression, fieldContext.Order,
+                    fieldContext.RuntimeAttributeType, fieldContext.TargetPropertyInfo,
+                    fieldContext.RequiredPropertyInfo) { SelectorId = selectorId }, resolverContext.RequestAborted);
             return fieldResult;
         }
     }
