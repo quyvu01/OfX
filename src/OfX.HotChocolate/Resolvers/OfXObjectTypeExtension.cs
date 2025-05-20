@@ -30,11 +30,6 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                     return;
                 }
 
-                var order = dependencyGraphs.TryGetValue(data.TargetPropertyInfo, out var dependencies) switch
-                {
-                    true => dependencies.Length - 1,
-                    _ => 0
-                };
                 var currentContext = context.Service<ICurrentContextProvider>();
                 var ctx = currentContext.CreateContext();
                 var attribute = data.Attribute;
@@ -43,11 +38,10 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 ctx.RuntimeAttributeType = attribute.GetType();
                 ctx.SelectorPropertyName = attribute.PropertyName;
                 ctx.RequiredPropertyInfo = data.RequiredPropertyInfo;
-                ctx.Order = order;
+                ctx.Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo);
                 await next(context);
             })
             .ResolveWith<DataResolvers<T>>(x =>
                 x.GetDataAsync(null!, null!))
-            .Type(data.TargetPropertyInfo.PropertyType)
-        );
+            .Type(data.TargetPropertyInfo.PropertyType));
 }

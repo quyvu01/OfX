@@ -15,7 +15,6 @@ public class DependencyGraphBuilder
         {
             var dependencies = GetDependenciesRecursive(property, properties)
                 .ToArray();
-
             if (dependencies is { Length: > 0 }) graph[property] = dependencies;
         }
 
@@ -25,23 +24,21 @@ public class DependencyGraphBuilder
     private static IEnumerable<PropertyContext> GetDependenciesRecursive(PropertyInfo property,
         PropertyInfo[] allProperties, HashSet<PropertyInfo> visited = null)
     {
-        visited ??= [];
+        visited ??= []; 
         if (!visited.Add(property)) yield break; // Avoid circular dependencies
 
-        foreach (var attribute in property.GetCustomAttributes(true))
+        foreach (var attribute in property.GetCustomAttributes(true).OfType<OfXAttribute>())
         {
-            if (attribute is not OfXAttribute ofXAttribute) continue;
-            var dependentProperty = allProperties.FirstOrDefault(p => p.Name == ofXAttribute.PropertyName);
-            if (dependentProperty == null) continue;
-            var fieldContext = new PropertyContext
+            var dependentProperty = allProperties.FirstOrDefault(p => p.Name == attribute.PropertyName);
+            if (dependentProperty is null) continue;
+            yield return new PropertyContext
             {
                 TargetPropertyInfo = property,
-                Expression = ofXAttribute.Expression,
+                Expression = attribute.Expression,
                 SelectorPropertyName = dependentProperty.Name,
                 RuntimeAttributeType = attribute.GetType(),
                 RequiredPropertyInfo = dependentProperty
             };
-            yield return fieldContext;
 
             // Recursively get dependencies of the dependent property
             foreach (var nestedDependency in GetDependenciesRecursive(dependentProperty, allProperties, visited))

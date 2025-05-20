@@ -1,5 +1,6 @@
 using System.Text.Json;
 using HotChocolate.Resolvers;
+using OfX.Extensions;
 using OfX.HotChocolate.Abstractions;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.HotChocolate.GraphQlContext;
@@ -26,20 +27,13 @@ public sealed class DataResolvers<TResponse> where TResponse : class
                 .TryGetValue(typeof(TResponse), out var dependenciesGraph) &&
             dependenciesGraph.TryGetValue(currentContext.TargetPropertyInfo, out var infos))
         {
-            allTasks.AddRange(infos.Select(p =>
+            allTasks.AddRange(infos.Select(p => FieldResultAsync(new FieldContext
             {
-                var order = dependenciesGraph.TryGetValue(p.TargetPropertyInfo, out var dependencies) switch
-                {
-                    true => dependencies.Length - 1,
-                    _ => 0
-                };
-                return FieldResultAsync(new FieldContext
-                {
-                    TargetPropertyInfo = p.TargetPropertyInfo, Expression = p.Expression,
-                    SelectorPropertyName = p.SelectorPropertyName, RequiredPropertyInfo = p.RequiredPropertyInfo,
-                    RuntimeAttributeType = p.RuntimeAttributeType, Order = order
-                });
-            }));
+                TargetPropertyInfo = p.TargetPropertyInfo, Expression = p.Expression,
+                SelectorPropertyName = p.SelectorPropertyName, RequiredPropertyInfo = p.RequiredPropertyInfo,
+                RuntimeAttributeType = p.RuntimeAttributeType,
+                Order = dependenciesGraph.GetPropertyOrder(p.TargetPropertyInfo)
+            })));
         }
 
         await Task.WhenAll(allTasks);
