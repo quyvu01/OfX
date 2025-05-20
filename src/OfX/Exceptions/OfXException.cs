@@ -34,8 +34,6 @@ public static class OfXException
         : Exception(
             "You have to call the method: `AddModelConfigurationsFromNamespaceContaining<TAssembly>` to create handlers mapping!");
 
-    public sealed class TypeIsNotOfXAttribute(Type type) : Exception($"The input type: {type.Name} must be of type `OfXAttribute`!");
-
     public sealed class ReceivedException(string message)
         : Exception($"{AppDomain.CurrentDomain.FriendlyName} : {message}");
 }

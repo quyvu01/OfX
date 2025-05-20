@@ -4,7 +4,6 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
-using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Queries;
 using OfX.Responses;
@@ -99,7 +98,6 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
     public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
         IContext context = null)
     {
-        runtimeType.MustBeOfXAttribute();
         var sendPipelineType = AttributeMapSendPipelineOrchestrators
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);

@@ -7,5 +7,4 @@ public abstract class OfXAttribute(string propertyName) : Attribute, IDataMappab
 {
     public string PropertyName { get; } = propertyName;
     public string Expression { get; set; }
-    public int Order { get; set; }
 }

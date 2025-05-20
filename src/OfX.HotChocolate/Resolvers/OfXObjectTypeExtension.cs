@@ -2,6 +2,7 @@ using System.Reflection;
 using OfX.Attributes;
 using OfX.Extensions;
 using OfX.HotChocolate.Abstractions;
+using OfX.HotChocolate.Statics;
 
 namespace OfX.HotChocolate.Resolvers;
 
@@ -23,6 +24,12 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
         .ForEach(data => descriptor.Field(data.TargetPropertyInfo)
             .Use(next => async context =>
             {
+                if (!OfXHotChocolateStatics.DependencyGraphs.TryGetValue(typeof(T), out var dependencyGraphs))
+                {
+                    await next(context);
+                    return;
+                }
+
                 var currentContext = context.Service<ICurrentContextProvider>();
                 var ctx = currentContext.CreateContext();
                 var attribute = data.Attribute;
@@ -31,11 +38,10 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 ctx.RuntimeAttributeType = attribute.GetType();
                 ctx.SelectorPropertyName = attribute.PropertyName;
                 ctx.RequiredPropertyInfo = data.RequiredPropertyInfo;
-                ctx.Order = attribute.Order;
+                ctx.Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo);
                 await next(context);
             })
             .ResolveWith<DataResolvers<T>>(x =>
                 x.GetDataAsync(null!, null!))
-            .Type(data.TargetPropertyInfo.PropertyType)
-        );
+            .Type(data.TargetPropertyInfo.PropertyType));
 }

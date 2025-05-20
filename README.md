@@ -251,16 +251,16 @@ public sealed class SomeDataResponse
     [UserOf(nameof(UserId), Expression = "ProvinceId")]
     public string ProvinceId { get; set; }
     
-    [ProvinceOf(nameof(ProvinceId), Order = 1)]
+    [ProvinceOf(nameof(ProvinceId))]
     public string ProvinceName { get; set; }
     
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name")]
     public string CountryName { get; set; }
 
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
     public string CountryId { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name")]
     public string Province { get; set; }
     
     // Add other properties as needed
@@ -366,7 +366,7 @@ public sealed class SomeDataResponse
     [UserOf(nameof(UserId), Expression = "ProvinceId")]
     public string ProvinceId { get; set; }
     
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name")]
     public string CountryName { get; set; }
     ...
 }    
@@ -426,7 +426,7 @@ public sealed class SomeDataResponse
     [UserOf(nameof(UserId), Expression = "ProvinceId")]
     public string ProvinceId { get; set; }
     
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "Country")]
     public CountryDTO Country { get; set; }
     ...
 }    
@@ -474,10 +474,10 @@ table.
 public sealed class SomeDataResponse
 {
     ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
     public string CountryId { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]", Order = 2)]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]")]
     public ProvinceDTO Province { get; set; }
     ...
 }
@@ -489,10 +489,10 @@ When you select one item, you can navigate to the next level of the Table. Like 
 public sealed class SomeDataResponse
 {
     ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
     public string CountryId { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name")]
     public string ProvinceName { get; set; }
     ...
 }
@@ -507,66 +507,14 @@ public sealed class SomeDataResponse
 public sealed class SomeDataResponse
 {
     ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
+    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
     public string CountryId { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[2 10 asc Name]", Order = 2)]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[2 10 asc Name]")]
     public List<ProvinceDTO> Provinces { get; set; }
     ...
 }
 ```
-
-### 6. `OfX Attribute Order`
-
-On the
-chapter [5. Unlock the Full Power of Expressions](https://github.com/quyvu01/OfX?tab=readme-ov-file#5-unlock-the-full-power-of-expressions-)
-we have dive into the Expression power.
-On this one, we will explore the `Order` on the `OfX Attribute`.
-Look at the first example model:
-
-```csharp
-public sealed class SomeDataResponse
-{
-    public string Id { get; set; }
-    public string UserId { get; set; }
-
-    [UserOf(nameof(UserId), Expression = "Email")]
-    public string UserEmail { get; set; }
-
-    [UserOf(nameof(UserId))]
-    public string UserName { get; set; }
-
-    [UserOf(nameof(UserId), Expression = "ProvinceId")]
-    public string ProvinceId { get; set; }
-    
-    [ProvinceOf(nameof(ProvinceId), Order = 1)]
-    public string ProvinceName { get; set; }
-    
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]
-    public string CountryName { get; set; }
-
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId", Order = 1)]
-    public string CountryId { get; set; }
-
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]
-    public string Province { get; set; }
-    
-    // Add other properties as needed
-}
-```
-
-You can define Order data using `OfX Attributes` such as
-`[ProvinceOf(nameof(ProvinceId), Expression = "Country.Name", Order = 1)]` or
-`[CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name", Order = 2)]`.
-
-By default, the `Order` value is 0, which means that properties marked with `OfX Attributes` will be fetched and set
-first. Afterward, properties will be fetched and set according to their defined Order values in ascending order.
-
-You can also specify negative Order values like `Order = -1` or `Order = -2`... In such cases, properties with negative
-Order values will still follow the same ordering rules and be processed accordingly.
-
-When mapping data, imagine that you need `Property A` to be resolved first. If the required data is available, it will
-then be used as input to resolve the next set of `Properties`, ensuring an organized and logical flow.
 
 #### Conclusion:
 

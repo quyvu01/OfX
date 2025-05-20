@@ -5,6 +5,7 @@ using System.Reflection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Extensions;
+using OfX.ObjectContexts;
 using OfX.Responses;
 using OfX.Serializable;
 
@@ -15,14 +16,15 @@ internal static class ReflectionHelpers
     private static readonly ConcurrentDictionary<PropertyInfo, MappableDataPropertyCache>
         OfXPropertiesCache = new();
 
+    private static readonly ConcurrentDictionary<Type, Dictionary<PropertyInfo, PropertyContext[]>> Graphs = [];
+
     internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
-        if (rootObject is null) yield break;
-        var stack = new Stack<object>();
-        var rootType = rootObject.GetType();
-        if (typeof(IEnumerable).IsAssignableFrom(rootType) && rootType != typeof(string))
+        if (rootObject is null or string) yield break;
+        Stack<object> stack = [];
+        if (rootObject is IEnumerable rootObjectAsEnumerable)
         {
-            EnumerableObject(rootObject, stack);
+            EnumerableObject(rootObjectAsEnumerable, stack);
             goto startWithStack;
         }
 
@@ -30,15 +32,38 @@ internal static class ReflectionHelpers
         startWithStack:
         while (stack.Count > 0)
         {
-            var currentObject = stack.Pop();
-            if (currentObject == null) continue;
-            var currentType = currentObject.GetType();
-            var properties = currentType.GetProperties();
+            var obj = stack.Pop();
+            if (obj is null) continue;
+            var objType = obj.GetType();
+            if (Graphs.TryGetValue(objType, out var graphs))
+            {
+                foreach (var mappableDataProperty in IterateMappableProperties([..graphs.Keys], obj, objType))
+                    yield return mappableDataProperty;
+                continue;
+            }
+
+
+            var properties = objType.GetProperties();
+            foreach (var mappableDataProperty in IterateMappableProperties(properties, obj, objType))
+                yield return mappableDataProperty;
+        }
+
+        yield break;
+
+        IEnumerable<MappableDataProperty> IterateMappableProperties(PropertyInfo[] properties, object obj, Type objType)
+        {
+            if (obj is null or string) yield break;
+            if (obj is IEnumerable objectAsEnumerable)
+            {
+                EnumerableObject(objectAsEnumerable, stack);
+                yield break;
+            }
+
             foreach (var property in properties)
             {
                 if (OfXPropertiesCache.TryGetValue(property, out var propertyCache))
                 {
-                    yield return new MappableDataProperty(property, currentObject, propertyCache.Attribute,
+                    yield return new MappableDataProperty(property, obj, propertyCache.Attribute,
                         propertyCache.Func, propertyCache.Expression, propertyCache.Order);
                     continue;
                 }
@@ -48,36 +73,30 @@ internal static class ReflectionHelpers
                     .FirstOrDefault();
                 if (ofXAttribute is not null && Attribute.IsDefined(property, ofXAttribute.GetType()))
                 {
-                    var paramExpression = Expression.Parameter(currentObject.GetType());
+                    var paramExpression = Expression.Parameter(obj.GetType());
                     var propExpression = Expression.Property(paramExpression, ofXAttribute.PropertyName);
                     var expression = Expression.Lambda(propExpression, paramExpression);
                     var func = expression.Compile();
-                    yield return new MappableDataProperty(property, currentObject, ofXAttribute, func,
-                        ofXAttribute.Expression, ofXAttribute.Order);
+                    var graph = Graphs.GetOrAdd(objType, DependencyGraphBuilder.BuildDependencyGraph);
+                    var order = graph.GetPropertyOrder(property);
+                    yield return new MappableDataProperty(property, obj, ofXAttribute, func, ofXAttribute.Expression,
+                        order);
                     OfXPropertiesCache.TryAdd(property,
-                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression,
-                            ofXAttribute.Order));
+                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression, order));
                     continue;
                 }
 
                 try
                 {
-                    if (currentObject is IEnumerable and not string)
+                    var propertyValue = property.GetValue(obj);
+                    if (propertyValue is null or string) continue;
+                    if (propertyValue is IEnumerable propertyAsEnumerable)
                     {
-                        EnumerableObject(currentObject, stack);
+                        EnumerableObject(propertyAsEnumerable, stack);
                         continue;
                     }
 
-                    var propertyValue = property.GetValue(currentObject);
-                    if (propertyValue == null) continue;
-                    if (propertyValue is IEnumerable and not string)
-                    {
-                        EnumerableObject(propertyValue, stack);
-                        continue;
-                    }
-
-                    if (property.PropertyType.IsClass && property.PropertyType != typeof(string))
-                        stack.Push(propertyValue);
+                    if (property.PropertyType.IsClass) stack.Push(propertyValue);
                 }
                 catch (Exception)
                 {
@@ -87,11 +106,19 @@ internal static class ReflectionHelpers
         }
     }
 
-    private static void EnumerableObject(object propertyValue, Stack<object> stack)
+    private static void EnumerableObject(IEnumerable propertyValue, Stack<object> stack)
     {
-        foreach (var item in (IEnumerable)propertyValue)
-            if (item != null && !stack.Contains(item) && item.GetType() != typeof(string))
-                stack.Push(item);
+        foreach (var item in propertyValue)
+        {
+            if (item is null or string) continue;
+            if (item is IEnumerable enumerable)
+            {
+                EnumerableObject(enumerable, stack);
+                continue;
+            }
+
+            if (!stack.Contains(item)) stack.Push(item);
+        }
     }
 
     // To use merge-expression, we have to group by attribute only, exclude expression as the older version!
@@ -127,7 +154,7 @@ internal static class ReflectionHelpers
                 }
                 catch (Exception)
                 {
-                    // In case when we cannot know the response type, and we accept this is a string, just save the serializable data to a string. Self handle!
+                    // In case when we cannot know the response type, and we accept this is a string, just save the serializable data to a string. Self-handle!
                     if (ap.PropertyInfo.PropertyType == typeof(string))
                         ap.PropertyInfo.SetValue(ap.Model, value);
                 }

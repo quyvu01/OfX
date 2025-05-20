@@ -1,8 +1,9 @@
 using System.Text.Json;
 using HotChocolate.Resolvers;
+using OfX.Extensions;
 using OfX.HotChocolate.Abstractions;
 using OfX.HotChocolate.ApplicationModels;
-using OfX.HotChocolate.GraphqlContexts;
+using OfX.HotChocolate.GraphQlContext;
 using OfX.HotChocolate.Implementations;
 using OfX.HotChocolate.Statics;
 
@@ -25,7 +26,15 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         if (OfXHotChocolateStatics.DependencyGraphs
                 .TryGetValue(typeof(TResponse), out var dependenciesGraph) &&
             dependenciesGraph.TryGetValue(currentContext.TargetPropertyInfo, out var infos))
-            allTasks.AddRange(infos.Select(FieldResultAsync));
+        {
+            allTasks.AddRange(infos.Select(p => FieldResultAsync(new FieldContext
+            {
+                TargetPropertyInfo = p.TargetPropertyInfo, Expression = p.Expression,
+                SelectorPropertyName = p.SelectorPropertyName, RequiredPropertyInfo = p.RequiredPropertyInfo,
+                RuntimeAttributeType = p.RuntimeAttributeType,
+                Order = dependenciesGraph.GetPropertyOrder(p.TargetPropertyInfo)
+            })));
+        }
 
         await Task.WhenAll(allTasks);
         var data = allTasks.First().Result;
