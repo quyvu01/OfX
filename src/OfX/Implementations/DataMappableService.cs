@@ -40,7 +40,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                 if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
 
                 var selectors = propertyCalledStorages
-                    .Select(c => c.Func.DynamicInvoke(c.Model)?.ToString());
+                    .Select(c => c.Func.Invoke(c.Model)?.ToString());
 
                 var selectorsByType = selectors.Where(c => c is not null).Distinct().ToList();
                 if (selectorsByType is not { Count: > 0 }) return emptyResponse;

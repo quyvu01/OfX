@@ -73,9 +73,11 @@ internal static class ReflectionHelpers
                     .FirstOrDefault();
                 if (ofXAttribute is not null && Attribute.IsDefined(property, ofXAttribute.GetType()))
                 {
-                    var paramExpression = Expression.Parameter(obj.GetType());
-                    var propExpression = Expression.Property(paramExpression, ofXAttribute.PropertyName);
-                    var expression = Expression.Lambda(propExpression, paramExpression);
+                    var paramExpression = Expression.Parameter(typeof(object), nameof(obj));
+                    var castExpression = Expression.Convert(paramExpression, obj.GetType());
+                    var propExpression = Expression.Property(castExpression, ofXAttribute.PropertyName);
+                    var convertToObject = Expression.Convert(propExpression, typeof(object));
+                    var expression = Expression.Lambda<Func<object, object>>(convertToObject, paramExpression);
                     var func = expression.Compile();
                     var graph = Graphs.GetOrAdd(objType, DependencyGraphBuilder.BuildDependencyGraph);
                     var order = graph.GetPropertyOrder(property);
@@ -128,7 +130,7 @@ internal static class ReflectionHelpers
             .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Order })
             .Join(ofXAttributeTypes, d => d.Key.AttributeType, x => x,
                 (d, x) => new MappableTypeData(x, d
-                        .Select(a => new PropertyCalledLater(a.Model, a.Func)),
+                        .Select(a => new RuntimePropertyCalling(a.Model, a.Func)),
                     d.Select(a => a.Expression), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,

@@ -52,17 +52,17 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
-        var idType = _idMemberExpression.Type;
-        _selectorsConstantMethod ??= typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
-        var selectorsConstant = IdConverter.ConstantExpression(query.SelectorIds, idType);
-        var containsCall = Expression.Call(selectorsConstant, _selectorsConstantMethod!, _idMemberExpression);
+        _selectorsConstantMethod ??= typeof(List<>).MakeGenericType(_idMemberExpression.Type)
+            .GetMethod(nameof(IList.Contains));
+        ArgumentNullException.ThrowIfNull(_selectorsConstantMethod);
+        var selectorsConstant = IdConverter.ConstantExpression(query.SelectorIds, _idMemberExpression.Type);
+        var containsCall = Expression.Call(selectorsConstant, _selectorsConstantMethod, _idMemberExpression);
         return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         // Access the ID property on the model
-
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions
