@@ -37,6 +37,7 @@ jobs:
     steps:
       - id: v
         run: |
+          echo "environment version is: ${{inputs.OFX_VERSION}}"
           if [ "${{ github.ref }}" = 'refs/heads/main' ]; then
             echo "version=${OFX_VERSION}" >> $GITHUB_OUTPUT
           else
