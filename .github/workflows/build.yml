@@ -46,11 +46,8 @@ jobs:
   publish:
     name: Build and Publish NuGets
     timeout-minutes: 60
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && success()
-    env:
-      DOTNET_INSTALL_DIR: D:\dotnet
-      NUGET_PACKAGES: D:\.nuget\packages
     needs:
       - calc-version
     steps:
@@ -78,7 +75,7 @@ jobs:
       - name: List Packed Files
         run: ls -al ./artifacts
 
-      - name: Publish NuGets
-        working-directory: artifacts
-        run: |
-          dotnet nuget push "*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate --no-symbols
+#      - name: Publish NuGets
+#        working-directory: artifacts
+#        run: |
+#          dotnet nuget push "*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{secrets.NUGET_API_KEY}} --skip-duplicate --no-symbols
