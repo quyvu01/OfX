@@ -142,7 +142,7 @@ internal static class ReflectionHelpers
                 .Select(k => (a.OfXAttributeType, Data: k)))
             .SelectMany(x => x);
         allPropertyDatas.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
-                .DynamicInvoke(ap.Model)?.ToString()),
+                .Invoke(ap.Model)?.ToString()),
             dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>
             {
                 var value = dt.Data
