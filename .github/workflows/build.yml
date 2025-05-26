@@ -1,78 +1,78 @@
+# This workflow will build and publish all OfX ecosystem packages when the version changes.
+
 name: Build OfX and Publish
+env:
+  OFX_VERSION: 6.0.1
 
 on:
-  workflow_dispatch:
-    inputs:
-      OFX_VERSION:
-        description: "Version to publish"
-        required: true
   push:
     branches: [ "main" ]
-
-env:
-  NUGET_SOURCE: https://api.nuget.org/v3/index.json
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-
-  check-version:
-    name: Check OFX Version
-    runs-on: ubuntu-latest
-    outputs:
-      should-run: ${{ steps.check.outputs.should_run }}
-      version: ${{ steps.check.outputs.version }}
-    steps:
-      - name: Get current version from repo variables
-        id: get
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const varName = 'OFX_VERSION';
-            try {
-              const response = await github.rest.actions.getRepoVariable({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: varName
-              });
-              core.setOutput("current_version", response.data.value);
-            } catch (e) {
-              core.info("Variable not set yet.", e);
-              core.setOutput("current_version", "");
-            }
-
-      - name: Compare versions
-        id: check
-        run: |
-          INPUT_VERSION="${{ github.event.inputs.OFX_VERSION }}"
-          CURRENT_VERSION="${{ steps.get.outputs.current_version }}"
-          echo "Input version: $INPUT_VERSION"
-          echo "Stored version: $CURRENT_VERSION"
-          if [[ "$INPUT_VERSION" != "$CURRENT_VERSION" ]]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "version=$INPUT_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "No change in version. Skipping."
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          fi
-
   build:
-    name: Build and Pack
     runs-on: ubuntu-latest
-    needs: check-version
-    if: needs.check-version.outputs.should-run == 'true'
+    strategy:
+      matrix:
+        dotnet-version: [ "9.0.x" ]
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: ${{ matrix.dotnet-version }}
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build -c Release -p:Version=${{ needs.check-version.outputs.version }}
-      - name: Pack
+        run: dotnet build --no-restore
+  
+  calc-version:
+    name: Calculate Version
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
         run: |
-          dotnet pack --no-build -c Release -p:PackageVersion=${{ needs.check-version.outputs.version }} -o ./artifacts
-      - name: List artifacts
+          if [ "${{ github.ref }}" = 'refs/heads/main' ]; then
+            echo "version=${OFX_VERSION}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${OFX_VERSION}-develop.${{ github.run_number }}" >> $GITHUB_OUTPUT
+          fi
+  
+  publish:
+    name: Build and Publish NuGets
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') && success()
+    needs:
+      - calc-version
+    steps:
+      - name: Version Output Check
+        run: echo "Publishing version ${{ needs.calc-version.outputs.version }}"
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Build All Projects
+        run: dotnet build -c Release -p:Version=${{ needs.calc-version.outputs.version }}
+
+      - name: Pack All Projects
+        run: |
+          dotnet pack --no-build -c Release -p:PackageVersion=${{ needs.calc-version.outputs.version }} -o ./artifacts
+
+      - name: List Packed Files
         run: ls -al ./artifacts
 
       - name: Publish NuGets
@@ -80,22 +80,5 @@ jobs:
         run: |
           for file in OfX*.nupkg; do
             echo "Pushing $file"
-            dotnet nuget push "$file" -s ${{ env.NUGET_SOURCE }} -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate --no-symbols
+            dotnet nuget push "$file" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate --no-symbols
           done
-
-  update-version:
-    name: Update Repo OFX_VERSION
-    runs-on: ubuntu-latest
-    needs: build
-    if: success()
-    steps:
-      - name: Update repository variable
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.actions.updateRepoVariable({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: 'OFX_VERSION',
-              value: '${{ needs.check-version.outputs.version }}'
-            });
