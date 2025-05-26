@@ -35,7 +35,7 @@ jobs:
               });
               core.setOutput("current_version", response.data.value);
             } catch (e) {
-              core.info("Variable not set yet.");
+              core.info("Variable not set yet.", e);
               core.setOutput("current_version", "");
             }
 
