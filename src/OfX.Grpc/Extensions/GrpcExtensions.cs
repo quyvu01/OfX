@@ -29,29 +29,47 @@ public static class GrpcExtensions
         var newClientsRegister = new GrpcClientsRegister();
         options.Invoke(newClientsRegister);
         if (GrpcStatics.ServiceHosts is not { Count: > 0 }) return;
-        // Accept the first running to scanning the host map attributes!
-        var hostMapAttributes = GetHostMapAttributesAsync(GrpcStatics.ServiceHosts, null)
-            .GetAwaiter().GetResult();
+        ConcurrentDictionary<HostProbe, List<Type>> hostMapAttributes = [];
+        GrpcStatics.ServiceHosts.Distinct().ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
+        var semaphore = new SemaphoreSlim(1, 1);
 
         ofXRegister.ServiceCollection.TryAddScoped<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
         {
             if (!hostMapAttributes.Any(a => a.Value.Contains(attributeType)))
             {
-                var probeMissingHostWithAttribute = hostMapAttributes
-                    .Where(a => a.Value is not { Count: > 0 });
-                var missingTypes =
-                    await GetHostMapAttributesAsync(probeMissingHostWithAttribute.Select(a => a.Key), context);
-                missingTypes.Where(a => a.Value is { Count: > 0 })
-                    .ForEach(x => hostMapAttributes[x.Key] = x.Value);
-                if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                return new ItemsResponse<OfXDataResponse>([]);
+                await semaphore.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    var probeMissingHosts = hostMapAttributes
+                        .Where(a => !a.Key.IsProbed)
+                        .Select(a => a.Key.ServiceHost);
+                    var missingTypes = await GetHostMapAttributesAsync(probeMissingHosts, context);
+                    missingTypes.Where(a => a.Key.IsProbed)
+                        .ForEach(x =>
+                        {
+                            if (hostMapAttributes.Any(a => a.Key.ServiceHost == x.Key.ServiceHost))
+                            {
+                                var hostProbeKey = hostMapAttributes.First(a => a.Key.ServiceHost == x.Key.ServiceHost);
+                                hostMapAttributes.TryRemove(hostProbeKey);
+                            }
+
+                            hostMapAttributes.TryAdd(x.Key, x.Value);
+                        });
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    return new ItemsResponse<OfXDataResponse>([]);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
             }
 
             resolveData:
             var host = hostMapAttributes
                 .FirstOrDefault(a => a.Value.Contains(attributeType))
                 .Key;
-            var result = await GetOfXItemsAsync(host, context, query, attributeType);
+            var result = await GetOfXItemsAsync(host.ServiceHost, context, query, attributeType);
             var itemsResponse = new ItemsResponse<OfXDataResponse>([
                 ..result.Items.Select(x =>
                 {
@@ -65,13 +83,18 @@ public static class GrpcExtensions
         ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXGrpcRequestClient<>));
     }
 
-    private static async Task<ConcurrentDictionary<string, List<Type>>> GetHostMapAttributesAsync(
+    private static async Task<ConcurrentDictionary<HostProbe, List<Type>>> GetHostMapAttributesAsync(
         IEnumerable<string> serverHosts, IContext context)
     {
         var tasks = serverHosts.Select(a => (Host: a, OfXAttributesTask: GetAttributesByHost(a, context))).ToList();
         await Task.WhenAll(tasks.Select(a => a.OfXAttributesTask));
-        var result = new ConcurrentDictionary<string, List<Type>>();
-        tasks.ForEach(a => result.TryAdd(a.Host, a.OfXAttributesTask.Result));
+        var result = new ConcurrentDictionary<HostProbe, List<Type>>();
+        tasks.ForEach(a =>
+        {
+            var isProbed = a.OfXAttributesTask.Result.IsProbed;
+            var ofXAttributes = a.OfXAttributesTask.Result.OfXAttributeTypes;
+            result.TryAdd(new HostProbe(a.Host, isProbed), ofXAttributes);
+        });
         return result;
     }
 
@@ -92,7 +115,8 @@ public static class GrpcExtensions
         return await client.GetItemsAsync(grpcQuery, metadata, cancellationToken: cancellationTokenSource.Token);
     }
 
-    private static async Task<List<Type>> GetAttributesByHost(string serverHost, IContext context)
+    private static async Task<(bool IsProbed, List<Type> OfXAttributeTypes)> GetAttributesByHost(string serverHost,
+        IContext context)
     {
         try
         {
@@ -103,12 +127,12 @@ public static class GrpcExtensions
                 .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
             cancellationTokenSource.CancelAfter(defaultRequestTimeout);
             var response = await client.GetAttributesAsync(query, cancellationToken: cancellationTokenSource.Token);
-            return [..response.AttributeTypes.Select(Type.GetType)];
+            return (true, [..response.AttributeTypes.Select(Type.GetType)]);
         }
         catch (Exception)
         {
             if (OfXStatics.ThrowIfExceptions) throw;
-            return [];
+            return (false, []);
         }
     }
 
