@@ -1,23 +1,21 @@
-using OfX.Grpc.Exceptions;
+using OfX.Extensions;
 using OfX.Grpc.Statics;
 
 namespace OfX.Grpc.ApplicationModels;
 
 public class GrpcClientsRegister
 {
-    public GrpcClientsRegister AddGrpcHostWithOfXAttributes(string grpcHost, IEnumerable<Type> attributeTypes)
+    public void AddGrpcHosts(params string[] serviceHosts)
     {
-        if (grpcHost is null)
-            throw new OfXGrpcExceptions.GrpcHostMustNotBeNull();
-        if (attributeTypes is null)
-            throw new OfXGrpcExceptions.AttributeTypesCannotBeNull();
-        var typesAdding = attributeTypes.ToList();
-        if (GrpcStatics.HostMapAttributes.TryGetValue(grpcHost, out _))
-            throw new OfXGrpcExceptions.GrpcHostHasBeenRegistered(grpcHost);
-        var addTypes = GrpcStatics.HostMapAttributes.Values.SelectMany(a => a);
-        if (typesAdding.Intersect(addTypes).Any())
-            throw new OfXGrpcExceptions.SomeAttributesHasBeenRegisteredWithOtherHost();
-        GrpcStatics.HostMapAttributes.Add(grpcHost, typesAdding);
-        return this;
+        serviceHosts?.ForEach(a =>
+        {
+            if (!GrpcStatics.ServiceHosts.Contains(a)) GrpcStatics.ServiceHosts.Add(a);
+        });
+    }
+
+    public void AddGrpcHosts(string serviceHost)
+    {
+        ArgumentNullException.ThrowIfNull(serviceHost);
+        if (!GrpcStatics.ServiceHosts.Contains(serviceHost)) GrpcStatics.ServiceHosts.Add(serviceHost);
     }
 }

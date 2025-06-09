@@ -1,8 +1,12 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OfX.Abstractions;
 using OfX.Queries;
+using Service1.Contexts;
 using Service1.Contract.Responses;
+using Service1.Models;
 using Shared.Attributes;
 
 namespace Service1.Controllers;
@@ -38,18 +42,12 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> FetchConcurrents([FromServices] IDataMappableService dataMappableService)
+    public async Task<IActionResult> NativeDbContextTest([FromServices] OtherService1Context context)
     {
-        var result = dataMappableService
-            .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["abc"], [null]));
-        var newFunc = async () =>
-        {
-            await Task.Delay(1000);
-            return await dataMappableService
-                .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["xyz"], [null]));
-        };
-        var result2 = newFunc.Invoke();
-        await Task.WhenAll(result, result2);
-        return Ok(new { Res1 = result.Result, Res2 = result2.Result });
+        IEnumerable<string> ids = ["1", "2", "3"];
+        Expression<Func<MemberAddress, bool>> filter = x => ids.Contains(x.Id);
+        var result = await context.MemberAddresses
+            .Where(filter).ToListAsync();
+        return Ok(result);
     }
 }

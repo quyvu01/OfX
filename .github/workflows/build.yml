@@ -2,7 +2,7 @@
 
 name: Build OfX and Publish
 env:
-  OFX_VERSION: 6.0.1
+  OFX_VERSION: 7.0.0
 
 on:
   push:
@@ -37,7 +37,6 @@ jobs:
     steps:
       - id: v
         run: |
-          echo "environment version is: ${{env.OFX_VERSION}}"
           if [ "${{ github.ref }}" = 'refs/heads/main' ]; then
             echo "version=${OFX_VERSION}" >> $GITHUB_OUTPUT
           else

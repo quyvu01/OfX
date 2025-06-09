@@ -27,23 +27,16 @@ public sealed class OfXGrpcTests : ServicesBuilding
                         {
                             options.AddAttributesContainNamespaces(assembly);
                             options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                            options.AddGrpcClients(c =>
-                            {
-                                c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
-                                c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(ProvinceOfAttribute)]);
-                            });
+                            options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001"));
                             options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         })
-                        .AddOfXEFCore(options =>
-                        {
-                            options.AddDbContexts(typeof(TestDbContext));
-                        });
+                        .AddOfXEFCore(options => { options.AddDbContexts(typeof(TestDbContext)); });
                 })
                 .InstallAllServices();
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Assert.Equal(typeof(OfXGrpcExceptions.GrpcHostHasBeenRegistered), e.GetType());
+            // ignored
         }
     }
 
@@ -62,24 +55,16 @@ public sealed class OfXGrpcTests : ServicesBuilding
                         {
                             options.AddAttributesContainNamespaces(assembly);
                             options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                            options.AddGrpcClients(c =>
-                            {
-                                c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]);
-                                c.AddGrpcHostWithOfXAttributes("localhost:5002",
-                                    [typeof(UserOfAttribute), typeof(ProvinceOfAttribute)]);
-                            });
+                            options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001", "localhost:5002"));
                             options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                         })
-                        .AddOfXEFCore(options =>
-                        {
-                            options.AddDbContexts(typeof(TestDbContext));
-                        });
+                        .AddOfXEFCore(options => { options.AddDbContexts(typeof(TestDbContext)); });
                 })
                 .InstallAllServices();
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Assert.Equal(typeof(OfXGrpcExceptions.SomeAttributesHasBeenRegisteredWithOtherHost), e.GetType());
+            // ignored
         }
     }
 }

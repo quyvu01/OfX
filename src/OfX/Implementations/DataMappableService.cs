@@ -39,21 +39,20 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                 var propertyCalledStorages = x.PropertyCalledLaters.ToList();
                 if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
 
-                var selectors = propertyCalledStorages
-                    .Select(c => c.Func.Invoke(c.Model)?.ToString());
+                var selectorIds = propertyCalledStorages
+                    .Select(c => c.Func.Invoke(c.Model)?.ToString())
+                    .Where(c => c is not null).Distinct().ToList();
 
-                var selectorsByType = selectors.Where(c => c is not null).Distinct().ToList();
-                if (selectorsByType is not { Count: > 0 }) return emptyResponse;
+                if (selectorIds is not { Count: > 0 }) return emptyResponse;
                 var sendPipelineType = AttributeMapSendPipelineOrchestrators
-                    .GetOrAdd(x.OfXAttributeType,
-                        type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
+                    .GetOrAdd(x.OfXAttributeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
                 var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
                 if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped) return emptyResponse;
                 // To use merge expression without creating `Expressions` we have to merge the `Expression` into MessageDeserializable.Expression by serialize an array string of Expression
                 var result = await pipelinesWrapped.ExecuteAsync(
                     new MessageDeserializable
                     {
-                        SelectorIds = selectorsByType,
+                        SelectorIds = selectorIds,
                         Expression = JsonSerializer.Serialize(x.Expressions.Distinct().OrderBy(a => a))
                     }, context);
                 return (x.OfXAttributeType, Response: result);

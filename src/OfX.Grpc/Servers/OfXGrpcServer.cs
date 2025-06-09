@@ -8,7 +8,9 @@ using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Grpc.Exceptions;
+using OfX.Helpers;
 using OfX.Implementations;
+using OfX.Statics;
 
 namespace OfX.Grpc.Servers;
 
@@ -63,5 +65,15 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
             Debug.WriteLine($"Error while execute get items: {request.AttributeAssemblyType}, error: {e.Message}");
             throw;
         }
+    }
+
+    public override Task<AttributeTypeResponse> GetAttributes(GetAttributesQuery request, ServerCallContext context)
+    {
+        var ofXConfigureStorage = OfXStatics.OfXConfigureStorage;
+        var response = new AttributeTypeResponse();
+        var attributeTypes = ofXConfigureStorage.Value
+            .Select(a => a.OfXAttributeType.GetAssemblyName());
+        response.AttributeTypes.AddRange(attributeTypes);
+        return Task.FromResult(response);
     }
 }

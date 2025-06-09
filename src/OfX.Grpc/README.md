@@ -28,7 +28,6 @@ Or via the NuGet Package Manager:
 ```bash
 Install-Package OfX-gRPC
 ```
-
 ---
 
 ## How to Use
@@ -40,6 +39,7 @@ Add OfX-gRPC to your service configuration during application startup:
 For Client:
 
 ```csharp
+// Older version
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
@@ -48,6 +48,14 @@ builder.Services.AddOfX(cfg =>
         .AddGrpcHostWithOfXAttributes("http://localhost:5002", [typeof(CountryOfAttribute), typeof(ProvinceOfAttribute)...])
         ... //Other host configurations, you can also filter attributes by creating an interface and then filtering the attributes that implement the interface...
     ); //gRPC server host
+});
+```
+```csharp
+// Current version: OfX-gRPC is now smarter and stronger than ever.
+builder.Services.AddOfX(cfg =>
+{
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddGrpcClients(c => c.AddGrpcHosts("http://localhost:5001", "http://localhost:5013")); // You can also add multiple hosts!
 });
 ```
 
