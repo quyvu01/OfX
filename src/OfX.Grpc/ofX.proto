@@ -6,25 +6,34 @@ option csharp_namespace = "OfX.Grpc";
 
 package OfXTransport;
 
-service OfXTransportService{
+service OfXTransportService {
   rpc GetItems (GetOfXGrpcQuery) returns (OfXItemsGrpcResponse);
+  rpc GetAttributes (GetAttributesQuery) returns (AttributeTypeResponse);
 }
 
-message GetOfXGrpcQuery{
+message GetOfXGrpcQuery {
   repeated string selector_ids = 1;
   google.protobuf.StringValue expression = 2;
   google.protobuf.StringValue attribute_assembly_type = 3;
 }
 
-message OfXItemsGrpcResponse{
+message OfXItemsGrpcResponse {
   repeated ItemGrpc items = 1;
 }
 
-message ItemGrpc{
+message GetAttributesQuery {
+
+}
+
+message AttributeTypeResponse {
+  repeated string attribute_types = 1;
+}
+
+message ItemGrpc {
   string id = 1;
   repeated OfXValueItemGrpc ofx_values = 2;
 }
-message OfXValueItemGrpc{
+message OfXValueItemGrpc {
   google.protobuf.StringValue expression = 1;
   google.protobuf.StringValue value = 2;
 }

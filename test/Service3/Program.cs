@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Nats.Extensions;
+using OfX.Grpc.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Models;
@@ -14,12 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipeline<>)));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
-
+builder.Services.AddGrpc();
 Dictionary<string, List<string>> countryMapProvinces = new()
 {
     { "abc", ["01962f9a-f7f8-7f61-941c-6a086fe96cd2", "01962f9a-f7f8-7b4c-9b4d-eae8ea6e5fc7"] },
@@ -59,5 +59,5 @@ var app = builder.Build();
 
 await MigrationDatabase.MigrationDatabaseAsync<Service3Context>(app);
 
-
+app.MapOfXGrpcService();
 app.Run();

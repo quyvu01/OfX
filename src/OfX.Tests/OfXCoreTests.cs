@@ -4,7 +4,6 @@ using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
-using OfX.Tests.Attributes;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
 using OfX.Tests.Pipelines;
@@ -26,16 +25,12 @@ public class OfXCoreTests : ServicesBuilding
                     {
                         options.AddAttributesContainNamespaces(assembly);
                         options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                        options.AddGrpcClients(c =>
-                            c.AddGrpcHostWithOfXAttributes("localhost:5001", [typeof(UserOfAttribute)]));
+                        options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001"));
                         options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesOrchestrator<>)));
                         options.AddSendPipelines(c => c.OfType(typeof(TestSendPipelinesImpl<>)));
                         options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                     })
-                    .AddOfXEFCore(options =>
-                    {
-                        options.AddDbContexts(typeof(TestDbContext));
-                    });
+                    .AddOfXEFCore(options => { options.AddDbContexts(typeof(TestDbContext)); });
             })
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
