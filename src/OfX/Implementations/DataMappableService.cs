@@ -77,22 +77,8 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
         }
     }
 
-    public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
-        IContext context = null) where TAttribute : OfXAttribute
-    {
-        var sendPipelineType = AttributeMapSendPipelineOrchestrators
-            .GetOrAdd(typeof(TAttribute), type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
-        var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
-        if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
-            return new ItemsResponse<OfXDataResponse>([]);
-        var result = await pipelinesWrapped.ExecuteAsync(
-            new MessageDeserializable
-            {
-                SelectorIds = query.SelectorIds,
-                Expression = JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))
-            }, context);
-        return result;
-    }
+    public Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
+        IContext context = null) where TAttribute : OfXAttribute => FetchDataAsync(typeof(TAttribute), query, context);
 
     public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
         IContext context = null)
