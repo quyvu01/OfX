@@ -6,7 +6,6 @@ using OfX.Extensions;
 using OfX.Grpc.Extensions;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
-using OfX.Tests.Pipelines;
 using Xunit;
 
 namespace OfX.Tests;
@@ -19,19 +18,13 @@ public class OfXCoreTests : ServicesBuilding
         InstallService((serviceCollection, _) => serviceCollection
                 .AddDbContext<TestDbContext>(opts => opts
                     .UseInMemoryDatabase($"Test_{Guid.NewGuid()}")))
-            .InstallService((serviceCollection, _) =>
-            {
-                serviceCollection.AddOfX(options =>
-                    {
-                        options.AddAttributesContainNamespaces(assembly);
-                        options.AddHandlersFromNamespaceContaining<ITestAssemblyMarker>();
-                        options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001"));
-                        options.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipelinesOrchestrator<>)));
-                        options.AddSendPipelines(c => c.OfType(typeof(TestSendPipelinesImpl<>)));
-                        options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
-                    })
-                    .AddOfXEFCore(options => { options.AddDbContexts(typeof(TestDbContext)); });
-            })
+            .InstallService((serviceCollection, _) => serviceCollection.AddOfX(options =>
+                {
+                    options.AddAttributesContainNamespaces(assembly);
+                    options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001"));
+                    options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
+                })
+                .AddOfXEFCore(options => options.AddDbContexts(typeof(TestDbContext))))
             .InstallAllServices();
         var dbContext = ServiceProvider.GetRequiredService<TestDbContext>();
         dbContext.Users.AddRange(StaticData.StaticDataTest.Users);
