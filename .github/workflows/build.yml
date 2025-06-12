@@ -26,12 +26,35 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --no-restore
+    
+  testing:
+    name: "testing-database"
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mongo:latest
+        ports:
+          - 27017:27017
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Test Full
+        run: dotnet test -c Release --logger GitHubActions
+        working-directory: src/OfX.Tests
   
   calc-version:
     name: Calculate Version
     runs-on: ubuntu-latest
     needs:
       - build
+      - testing
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
