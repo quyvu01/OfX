@@ -28,7 +28,7 @@ jobs:
         run: dotnet build --no-restore
     
   testing:
-    name: "testing-database"
+    name: "testing-efCore;mongodb"
     timeout-minutes: 10
     runs-on: ubuntu-latest
     services:
@@ -46,7 +46,7 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Test Full
-        run: dotnet test -c Release --logger GitHubActions
+        run: dotnet test -c Release
         working-directory: src/OfX.Tests
   
   calc-version:
