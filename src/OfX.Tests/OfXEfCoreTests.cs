@@ -3,16 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
 using OfX.Tests.Contexts;
 using OfX.Tests.Models;
 using Xunit;
 
 namespace OfX.Tests;
 
-public class OfXCoreTests : ServicesBuilding
+public class OfXEfCoreTests : ServicesBuilding
 {
-    public OfXCoreTests()
+    public OfXEfCoreTests()
     {
         var assembly = typeof(ITestAssemblyMarker).Assembly;
         InstallService((serviceCollection, _) => serviceCollection
@@ -21,7 +20,6 @@ public class OfXCoreTests : ServicesBuilding
             .InstallService((serviceCollection, _) => serviceCollection.AddOfX(options =>
                 {
                     options.AddAttributesContainNamespaces(assembly);
-                    options.AddGrpcClients(c => c.AddGrpcHosts("localhost:5001"));
                     options.AddModelConfigurationsFromNamespaceContaining<ITestAssemblyMarker>();
                 })
                 .AddOfXEFCore(options => options.AddDbContexts(typeof(TestDbContext))))
