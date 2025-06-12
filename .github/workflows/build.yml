@@ -26,6 +26,7 @@ jobs:
         run: dotnet build --no-restore
     
   testing-efcore:
+    needs: build
     name: "testing-efCore"
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -45,6 +46,7 @@ jobs:
         working-directory: src/OfX.Tests
   
   testing-mongodb:
+    needs: build
     name: "testing-mongodb"
     timeout-minutes: 10
     runs-on: ubuntu-latest
