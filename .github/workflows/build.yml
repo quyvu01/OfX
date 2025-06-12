@@ -12,23 +12,40 @@ on:
 
 jobs:
   build:
+    name: 'build ofx project'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        dotnet-version: [ "9.0.x" ]
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ matrix.dotnet-version }}
+          dotnet-version: '9.0.x'
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
         run: dotnet build --no-restore
     
-  testing:
-    name: "testing-efCore;mongodb"
+  testing-efcore:
+    name: "testing-efCore"
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install .NET Core SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            8.0.x
+
+      - name: Test Full
+        run: dotnet test -c Release --filter "FullyQualifiedName~OfXEfCoreTests"
+        working-directory: src/OfX.Tests
+  
+  testing-mongodb:
+    name: "testing-mongodb"
     timeout-minutes: 10
     runs-on: ubuntu-latest
     services:
@@ -48,7 +65,7 @@ jobs:
             8.0.x
 
       - name: Test Full
-        run: dotnet test -c Release
+        run: dotnet test -c Release --filter "FullyQualifiedName~OfMongoDbTests"
         working-directory: src/OfX.Tests
   
   calc-version:
@@ -56,7 +73,8 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-      - testing
+      - testing-efcore
+      - testing-mongodb
     outputs:
       version: ${{ steps.v.outputs.version }}
     steps:
