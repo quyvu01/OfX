@@ -29,25 +29,22 @@ public static class OfXExtensions
             handlersRegister.ExportedTypes
                 .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
                             x is { IsInterface: false, IsAbstract: false, IsClass: true })
-                .ForEach(handlerType =>
-                {
-                    handlerType.GetInterfaces()
-                        .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == targetInterface)
-                        .ForEach(interfaceType =>
+                .ForEach(handlerType => handlerType.GetInterfaces()
+                    .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == targetInterface)
+                    .ForEach(interfaceType =>
+                    {
+                        var attributeArgument = interfaceType.GetGenericArguments()[0];
+                        var serviceType = targetInterface.MakeGenericType(attributeArgument);
+                        var existedService = serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
+                        if (existedService is null)
                         {
-                            var attributeArgument = interfaceType.GetGenericArguments()[0];
-                            var serviceType = targetInterface.MakeGenericType(attributeArgument);
-                            var existedService = serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
-                            if (existedService is null)
-                            {
-                                serviceCollection.AddScoped(serviceType, handlerType);
-                                return;
-                            }
+                            serviceCollection.AddScoped(serviceType, handlerType);
+                            return;
+                        }
 
-                            serviceCollection.Replace(new ServiceDescriptor(serviceType, handlerType,
-                                ServiceLifetime.Scoped));
-                        });
-                });
+                        serviceCollection.Replace(new ServiceDescriptor(serviceType, handlerType,
+                            ServiceLifetime.Scoped));
+                    }));
         }
 
         var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
