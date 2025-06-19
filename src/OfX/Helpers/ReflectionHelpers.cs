@@ -39,7 +39,6 @@ internal static class ReflectionHelpers
             {
                 foreach (var mappableDataProperty in IterateMappableProperties([..graphs.Keys], obj, objType))
                     yield return mappableDataProperty;
-                continue;
             }
 
 
