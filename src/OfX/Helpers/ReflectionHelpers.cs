@@ -41,9 +41,8 @@ internal static class ReflectionHelpers
                     yield return mappableDataProperty;
             }
 
-
-            var properties = objType.GetProperties();
-            foreach (var mappableDataProperty in IterateMappableProperties(properties, obj, objType))
+            var nextScanningProperties = objType.GetProperties().Except(graphs?.Keys.ToList() ?? []);
+            foreach (var mappableDataProperty in IterateMappableProperties([..nextScanningProperties], obj, objType))
                 yield return mappableDataProperty;
         }
 
