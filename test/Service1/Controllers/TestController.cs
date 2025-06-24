@@ -17,6 +17,21 @@ namespace Service1.Controllers;
 public sealed class TestController : ControllerBase
 {
     [HttpGet]
+    public async Task<IActionResult> GetComplexModels([FromServices] IDataMappableService dataMappableService)
+    {
+        List<ComplexModelResponse> models =
+        [
+            .. Enumerable.Range(1, 3).Select(a => new ComplexModelResponse
+            {
+                UserId = a.ToString(),
+                Users = [..Enumerable.Range(1, a).Select(k => new UserResponse { Id = k.ToString() })]
+            })
+        ];
+        await dataMappableService.MapDataAsync(models);
+        return Ok(models);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetMembers([FromServices] IDataMappableService dataMappableService)
     {
         List<MemberResponse> members =
