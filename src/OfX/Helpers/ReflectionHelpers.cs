@@ -22,10 +22,10 @@ internal static class ReflectionHelpers
     {
         if (rootObject is null || GeneralHelpers.IsPrimitiveType(rootObject)) yield break;
         Stack<object> stack = [];
-        switch (rootObject is IEnumerable)
+        switch (rootObject)
         {
-            case true:
-                EnumerableObject((IEnumerable)rootObject, stack);
+            case IEnumerable enumerable:
+                EnumerableObject(enumerable, stack);
                 break;
             default:
                 stack.Push(rootObject);
@@ -114,7 +114,7 @@ internal static class ReflectionHelpers
     {
         foreach (var item in propertyValue)
         {
-            if (item is null or string) continue;
+            if (item is null || GeneralHelpers.IsPrimitiveType(item)) continue;
             if (item is IEnumerable enumerable)
             {
                 EnumerableObject(enumerable, stack);
