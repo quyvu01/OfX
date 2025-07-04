@@ -18,13 +18,12 @@ public static class NatsExtensions
     {
         var newClientsRegister = new NatsClientSetting();
         options.Invoke(newClientsRegister);
-        ofXRegister.ServiceCollection.AddSingleton(_ => new NatsClientWrapper(new NatsClient(NatsStatics.NatsUrl)));
-        ClientsRegister(ofXRegister.ServiceCollection);
+        ofXRegister.ServiceCollection.AddSingleton(_ => NatsStatics.NatsOpts != null
+            ? new NatsClientWrapper(new NatsClient(NatsStatics.NatsOpts))
+            : new NatsClientWrapper(new NatsClient(NatsStatics.NatsUrl)));
         ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXNatsClient<>));
         ofXRegister.ServiceCollection.AddSingleton(typeof(INatsServerRpc<,>), typeof(NatsServerRpc<,>));
         ofXRegister.ServiceCollection.AddHostedService<NatsServerWorker>();
+        ofXRegister.ServiceCollection.AddScoped(typeof(INatsRequester<>), typeof(NatsRequester<>));
     }
-
-    private static void ClientsRegister(IServiceCollection serviceCollection) =>
-        serviceCollection.AddScoped(typeof(INatsRequester<>), typeof(NatsRequester<>));
 }

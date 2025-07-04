@@ -35,6 +35,12 @@ internal class KafkaClient : IKafkaClient, IDisposable
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
 
+        if (KafkaStatics.KafkaSslOptions != null)
+        {
+            KafkaStatics.SettingUpKafkaSsl(producerConfig);
+            KafkaStatics.SettingUpKafkaSsl(consumerConfig);
+        }
+
         _producer = new ProducerBuilder<string, string>(producerConfig)
             .SetKeySerializer(Serializers.Utf8)
             .SetValueSerializer(Serializers.Utf8)
@@ -82,10 +88,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
             // Produce the request
             var message = new KafkaMessageWrapped<MessageDeserializable>
             {
-                Message = new MessageDeserializable
-                {
-                    SelectorIds = requestContext.Query.SelectorIds, Expression = requestContext.Query.Expression,
-                },
+                Message = new MessageDeserializable(requestContext.Query.SelectorIds, requestContext.Query.Expression),
                 RelyTo = _relyTo
             };
             await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>

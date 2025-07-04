@@ -14,8 +14,8 @@ internal class OfXGrpcRequestClient<TAttribute>(GetOfXResponseFunc ofXResponseFu
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {
         var func = ofXResponseFunc.Invoke(typeof(TAttribute));
-        return await func.Invoke(new MessageDeserializable
-                { SelectorIds = requestContext.Query.SelectorIds, Expression = requestContext.Query.Expression },
+        return await func.Invoke(
+            new MessageDeserializable(requestContext.Query.SelectorIds, requestContext.Query.Expression),
             new Context(requestContext.Headers, requestContext.CancellationToken));
     }
 }

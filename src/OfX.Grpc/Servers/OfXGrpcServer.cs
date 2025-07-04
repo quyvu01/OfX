@@ -16,7 +16,8 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private readonly Lazy<ConcurrentDictionary<string, Type>> _attributeAssemblyTypeMapReceivedPipelines = new(() => []);
+    private readonly Lazy<ConcurrentDictionary<string, Type>>
+        _attributeAssemblyTypeMapReceivedPipelines = new(() => []);
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
@@ -44,10 +45,7 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
-            var message = new MessageDeserializable
-            {
-                SelectorIds = request.SelectorIds.ToList(), Expression = request.Expression
-            };
+            var message = new MessageDeserializable([..request.SelectorIds], request.Expression);
             var response = await receivedPipelinesBase.ExecuteAsync(message, headers, context.CancellationToken);
 
             var res = new OfXItemsGrpcResponse();

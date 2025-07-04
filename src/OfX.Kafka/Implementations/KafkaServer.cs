@@ -40,6 +40,12 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
         var producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
 
+        if (KafkaStatics.KafkaSslOptions != null)
+        {
+            KafkaStatics.SettingUpKafkaSsl(producerConfig);
+            KafkaStatics.SettingUpKafkaSsl(consumerConfig);
+        }
+
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
             .SetKeyDeserializer(Deserializers.Utf8)
             .SetValueDeserializer(Deserializers.Utf8)

@@ -32,7 +32,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         var connectionFactory = new ConnectionFactory
         {
             HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort,
+            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption,
             UserName = userName, Password = password
         };
 
