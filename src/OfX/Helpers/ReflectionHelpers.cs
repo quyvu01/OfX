@@ -135,7 +135,7 @@ internal static class ReflectionHelpers
                         .Select(a => new RuntimePropertyCalling(a.Model, a.Func)),
                     d.Select(a => a.Expression), d.Key.Order));
 
-    internal static void MapResponseData(IEnumerable<MappableDataProperty> allPropertyDatas,
+    internal static void MapResponseData(IEnumerable<MappableDataProperty> mappableProperties,
         IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
     {
         var dataWithExpression = dataFetched
@@ -143,7 +143,7 @@ internal static class ReflectionHelpers
                 .Select(x => (x.Id, x.OfXValues))
                 .Select(k => (a.OfXAttributeType, Data: k)))
             .SelectMany(x => x);
-        allPropertyDatas.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
+        mappableProperties.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
                 .Invoke(ap.Model)?.ToString()),
             dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>
             {

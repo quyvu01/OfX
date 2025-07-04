@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -19,41 +20,42 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
     public async Task MapDataAsync(object value, IContext context = null)
     {
-        if (_currentObjectSpawnTimes >= OfXStatics.MaxObjectSpawnTimes)
-            throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
-        var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
-        var ofXTypesData = ReflectionHelpers
-            .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
-        var ofXTypesDataGrouped = ofXTypesData
-            .GroupBy(a => a.Order)
-            .OrderBy(a => a.Key);
-        foreach (var mappableTypes in ofXTypesDataGrouped)
+        while (true)
         {
-            var orderedPropertyDatas = allPropertyDatas
-                .Where(x => x.Order == mappableTypes.Key);
+            if (_currentObjectSpawnTimes >= OfXStatics.MaxObjectSpawnTimes)
+                throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
 
-            var tasks = mappableTypes.Select(async x =>
+            var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
+            var ofXTypesData = ReflectionHelpers.GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
+            var ofXTypesDataGrouped = ofXTypesData.GroupBy(a => a.Order)
+                .OrderBy(a => a.Key);
+
+            foreach (var mappableTypes in ofXTypesDataGrouped)
             {
-                var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
-                var emptyResponse = (x.OfXAttributeType, Response: emptyCollection);
-                var propertyCalledStorages = x.PropertyCalledLaters.ToList();
-                if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
+                var orderedProperties = allPropertyDatas
+                    .Where(x => x.Order == mappableTypes.Key);
+                var tasks = mappableTypes.Select(async x =>
+                {
+                    var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
+                    var emptyResponse = (x.OfXAttributeType, Response: emptyCollection);
+                    var propertyCalledStorages = x.PropertyCalledLaters.ToList();
+                    if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
+                    var selectorIds = propertyCalledStorages
+                        .Select(c => c.Func.Invoke(c.Model)?.ToString())
+                        .Where(c => c is not null)
+                        .Distinct()
+                        .ToList();
 
-                var selectorIds = propertyCalledStorages
-                    .Select(c => c.Func.Invoke(c.Model)?.ToString())
-                    .Where(c => c is not null).Distinct().ToList();
+                    if (selectorIds is not { Count: > 0 }) return emptyResponse;
+                    var result = await FetchDataAsync(x.OfXAttributeType,
+                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]));
+                    return (x.OfXAttributeType, Response: result);
+                });
+                var fetchedResult = await Task.WhenAll(tasks);
+                ReflectionHelpers.MapResponseData(orderedProperties, fetchedResult);
+            }
 
-                if (selectorIds is not { Count: > 0 }) return emptyResponse;
-                var result = await FetchDataAsync(x.OfXAttributeType,
-                    new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]));
-                return (x.OfXAttributeType, Response: result);
-            });
-            var orderedTasks = await Task.WhenAll(tasks);
-            ReflectionHelpers.MapResponseData(orderedPropertyDatas, orderedTasks);
-        }
-
-        var nextMappableData = allPropertyDatas
-            .Aggregate(new List<object>(), (acc, next) =>
+            var nextMappableData = allPropertyDatas.Aggregate(new List<object>(), (acc, next) =>
             {
                 if (GeneralHelpers.IsPrimitiveType(next.PropertyInfo.PropertyType)) return acc;
                 var propertyValue = next.PropertyInfo.GetValue(next.Model);
@@ -61,10 +63,9 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                 acc.Add(propertyValue);
                 return acc;
             });
-        if (nextMappableData is { Count: > 0 })
-        {
+            if (nextMappableData is not { Count: > 0 }) break;
             _currentObjectSpawnTimes += 1;
-            await MapDataAsync(nextMappableData, context);
+            value = nextMappableData;
         }
     }
 
@@ -76,11 +77,9 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
     {
         var sendPipelineType = AttributeMapSendPipelineOrchestrators
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
-        var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
-        if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
-            return new ItemsResponse<OfXDataResponse>([]);
-        var result = await pipelinesWrapped.ExecuteAsync(
-            new MessageDeserializable(query.SelectorIds,
+        var sendPipelineWrapped = (ISendPipelinesWrapped)serviceProvider.GetService(sendPipelineType)!;
+        var result = await sendPipelineWrapped
+            .ExecuteAsync(new MessageDeserializable(query.SelectorIds,
                 JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);
         return result;
     }

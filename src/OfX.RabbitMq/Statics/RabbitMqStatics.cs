@@ -1,3 +1,5 @@
+using RabbitMQ.Client;
+
 namespace OfX.RabbitMq.Statics;
 
 internal static class RabbitMqStatics
@@ -7,4 +9,5 @@ internal static class RabbitMqStatics
     internal static int RabbitMqPort { get; set; }
     internal static string RabbitMqUserName { get; set; }
     internal static string RabbitMqPassword { get; set; }
+    internal static SslOption SslOption { get; set; }
 }

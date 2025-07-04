@@ -37,7 +37,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         var connectionFactory = new ConnectionFactory
         {
             HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort,
+            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption,
             UserName = userName, Password = password
         };
 
@@ -49,7 +49,8 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         _consumer.ReceivedAsync += (_, ea) =>
         {
             var correlationId = ea.BasicProperties.CorrelationId;
-            if (string.IsNullOrEmpty(correlationId) || !_eventArgsMapper.TryRemove(correlationId, out var tcs)) return Task.CompletedTask;
+            if (string.IsNullOrEmpty(correlationId) || !_eventArgsMapper.TryRemove(correlationId, out var tcs))
+                return Task.CompletedTask;
             tcs.TrySetResult(ea);
             return Task.CompletedTask;
         };
