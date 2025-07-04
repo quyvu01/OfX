@@ -10,5 +10,4 @@ namespace OfX.Abstractions;
 /// <param name="Expression"></param>
 /// <typeparam name="TAttribute"></typeparam>
 public sealed record RequestOf<TAttribute>(List<string> SelectorIds, string Expression)
-    : GetDataMappableQuery(SelectorIds, Expression), IDataMappableOf<TAttribute>
-    where TAttribute : OfXAttribute;
+    : GetDataMappableQuery(SelectorIds, Expression) where TAttribute : OfXAttribute;

@@ -44,17 +44,8 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                     .Where(c => c is not null).Distinct().ToList();
 
                 if (selectorIds is not { Count: > 0 }) return emptyResponse;
-                var sendPipelineType = AttributeMapSendPipelineOrchestrators
-                    .GetOrAdd(x.OfXAttributeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
-                var sendPipelineWrapped = serviceProvider.GetService(sendPipelineType);
-                if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped) return emptyResponse;
-                // To use merge expression without creating `Expressions` we have to merge the `Expression` into MessageDeserializable.Expression by serialize an array string of Expression
-                var result = await pipelinesWrapped.ExecuteAsync(
-                    new MessageDeserializable
-                    {
-                        SelectorIds = selectorIds,
-                        Expression = JsonSerializer.Serialize(x.Expressions.Distinct().OrderBy(a => a))
-                    }, context);
+                var result = await FetchDataAsync(x.OfXAttributeType,
+                    new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]));
                 return (x.OfXAttributeType, Response: result);
             });
             var orderedTasks = await Task.WhenAll(tasks);
@@ -89,11 +80,8 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
         if (sendPipelineWrapped is not ISendPipelinesWrapped pipelinesWrapped)
             return new ItemsResponse<OfXDataResponse>([]);
         var result = await pipelinesWrapped.ExecuteAsync(
-            new MessageDeserializable
-            {
-                SelectorIds = query.SelectorIds,
-                Expression = JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))
-            }, context);
+            new MessageDeserializable(query.SelectorIds,
+                JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);
         return result;
     }
 }

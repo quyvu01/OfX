@@ -82,10 +82,7 @@ internal class KafkaClient : IKafkaClient, IDisposable
             // Produce the request
             var message = new KafkaMessageWrapped<MessageDeserializable>
             {
-                Message = new MessageDeserializable
-                {
-                    SelectorIds = requestContext.Query.SelectorIds, Expression = requestContext.Query.Expression,
-                },
+                Message = new MessageDeserializable(requestContext.Query.SelectorIds, requestContext.Query.Expression),
                 RelyTo = _relyTo
             };
             await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>
