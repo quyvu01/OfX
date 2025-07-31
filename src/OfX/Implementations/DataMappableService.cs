@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -16,18 +15,28 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 {
     private int _currentObjectSpawnTimes;
 
-    private static readonly ConcurrentDictionary<Type, Type> AttributeMapSendPipelineOrchestrators = new();
+    private static readonly ConcurrentDictionary<Type, Type> SendOrchestratorTypes = new();
 
     public async Task MapDataAsync(object value, IContext context = null)
     {
         while (true)
         {
             if (_currentObjectSpawnTimes >= OfXStatics.MaxObjectSpawnTimes)
-                throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
+            {
+                if (OfXStatics.ThrowIfExceptions)
+                    throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
+                return;
+            }
 
-            var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToList();
-            var ofXTypesData = ReflectionHelpers.GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
-            var ofXTypesDataGrouped = ofXTypesData.GroupBy(a => a.Order)
+            var allPropertyDatas = ReflectionHelpers
+                .GetMappableProperties(value)
+                .ToList();
+
+            var ofXTypesData = ReflectionHelpers
+                .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
+
+            var ofXTypesDataGrouped = ofXTypesData
+                .GroupBy(a => a.Order)
                 .OrderBy(a => a.Key);
 
             foreach (var mappableTypes in ofXTypesDataGrouped)
@@ -48,21 +57,22 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]));
+                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), context);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);
                 ReflectionHelpers.MapResponseData(orderedProperties, fetchedResult);
             }
 
-            var nextMappableData = allPropertyDatas.Aggregate(new List<object>(), (acc, next) =>
-            {
-                if (GeneralHelpers.IsPrimitiveType(next.PropertyInfo.PropertyType)) return acc;
-                var propertyValue = next.PropertyInfo.GetValue(next.Model);
-                if (propertyValue is null) return acc;
-                acc.Add(propertyValue);
-                return acc;
-            });
+            var nextMappableData = allPropertyDatas
+                .Where(a => !GeneralHelpers.IsPrimitiveType(a.PropertyInfo.PropertyType))
+                .Aggregate(new List<object>(), (acc, next) =>
+                {
+                    var propertyValue = next.PropertyInfo.GetValue(next.Model);
+                    if (propertyValue is null) return acc;
+                    acc.Add(propertyValue);
+                    return acc;
+                });
             if (nextMappableData is not { Count: > 0 }) break;
             _currentObjectSpawnTimes += 1;
             value = nextMappableData;
@@ -75,7 +85,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
     public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
         IContext context = null)
     {
-        var sendPipelineType = AttributeMapSendPipelineOrchestrators
+        var sendPipelineType = SendOrchestratorTypes
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (ISendPipelinesWrapped)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped

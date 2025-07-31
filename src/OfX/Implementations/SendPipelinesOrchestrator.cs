@@ -16,8 +16,8 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-        var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
-        var requestContext = new RequestContextImpl<TAttribute>(requestOf, context?.Headers ?? [], cts.Token);
+        var request = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+        var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
         return await behaviors.Reverse()
             .Aggregate(() => handler.RequestAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
