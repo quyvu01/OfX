@@ -63,8 +63,6 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
-        // Access the ID property on the model
-
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions

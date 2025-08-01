@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using DynamicExpresso;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,22 @@ public sealed class TestController : ControllerBase
             })
         ];
         await dataMappableService.MapDataAsync(models);
+        return Ok(models);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> TestGetUsingDynamicExpresso([FromServices] Service1Context context)
+    {
+        var list = new List<string> { "1", "2", "3" };
+        
+        var interpreter = new Interpreter();
+        
+        interpreter.SetVariable("list", list);
+        
+        var lambda = interpreter.ParseAsExpression<Func<MemberAdditionalData, bool>>(
+            "list.Contains(x.Id)", "x");
+
+        var models = await context.MemberAdditionalDatas.Where(lambda).ToListAsync();
         return Ok(models);
     }
 

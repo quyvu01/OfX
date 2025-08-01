@@ -5,7 +5,7 @@ using OfX.Statics;
 
 namespace OfX.InternalPipelines;
 
-public sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
+internal sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,

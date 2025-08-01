@@ -17,6 +17,9 @@ public static class OfXException
     public sealed class TypeIsNotSendPipelineBehavior(Type type) :
         Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior!");
 
+    public sealed class TypeIsNotCustomExpressionPipelineBehavior(Type type) :
+        Exception($"The input type: {type.Name} is not matched with CustomExpressionBehavior!");
+
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");
 
