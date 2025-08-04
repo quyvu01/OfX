@@ -6,5 +6,5 @@ namespace OfX.Abstractions;
 public interface ICustomExpressionBehavior<TAttribute> where TAttribute : OfXAttribute
 {
     string CustomExpression();
-    Task<ItemsResponse<OfXCustomDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext);
+    Task<Dictionary<string, object>> HandleAsync(RequestContext<TAttribute> requestContext);
 }

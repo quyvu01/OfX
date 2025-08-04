@@ -8,11 +8,9 @@ public sealed class TestCustomUseData : ICustomExpressionBehavior<UserOfAttribut
 {
     public string CustomExpression() => "CustomExpression";
 
-    public async Task<ItemsResponse<OfXCustomDataResponse>> HandleAsync(RequestContext<UserOfAttribute> requestContext)
+    public async Task<Dictionary<string, object>> HandleAsync(RequestContext<UserOfAttribute> requestContext)
     {
         await Task.Delay(TimeSpan.FromSeconds(0.5));
-        return new ItemsResponse<OfXCustomDataResponse>([
-            ..requestContext.Query.SelectorIds.Select(a => new OfXCustomDataResponse { Id = a, Value = $"Hello: {a}" })
-        ]);
+        return requestContext.Query.SelectorIds.ToDictionary(kv => kv, object (kv) => $"Hello: {kv}");
     }
 }

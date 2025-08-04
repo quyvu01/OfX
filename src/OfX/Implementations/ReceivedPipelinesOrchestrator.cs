@@ -32,9 +32,9 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         var resultTask = behaviors.Reverse()
             .Aggregate(() => handler.GetDataAsync(newRequestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(newRequestContext, acc)).Invoke();
-        
+
         if (newExpressions.Count == expressions.Count) return await resultTask;
-        
+
         // Handle getting data for custom expressions
         var customResults = customExpressionHandlers
             .Select(a => (Expression: a.CustomExpression(), ResultTask: a.HandleAsync(
@@ -45,10 +45,10 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         var result = await resultTask;
 
         var customResultsMerged =
-            customResults.Select(a => a.ResultTask.Result.Items.Select(k => (k.Id, k.Value, a.Expression)))
+            customResults.Select(a => a.ResultTask.Result.Select(k => (k.Key, k.Value, a.Expression)))
                 .SelectMany(a => a)
-                .GroupBy(x => x.Id);
-        
+                .GroupBy(x => x.Key);
+
         // Merge custom results with original results
         result.Items.ForEach(it =>
         {
