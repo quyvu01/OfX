@@ -9,8 +9,7 @@ public class Parameter
 {
     public Parameter(string name, object value)
     {
-        if (value == null)
-            throw new ArgumentNullException("value");
+        ArgumentNullException.ThrowIfNull(value);
 
         Name = name;
         Type = value.GetType();
@@ -52,13 +51,7 @@ public class Parameter
 /// <summary>
 /// Parameter with its position in the expression.
 /// </summary>
-internal class ParameterWithPosition : Parameter
+internal class ParameterWithPosition(int pos, string name, Type type) : Parameter(name, type)
 {
-    public ParameterWithPosition(int pos, string name, Type type)
-        : base(name, type)
-    {
-        Position = pos;
-    }
-
-    public int Position { get; }
+    public int Position { get; } = pos;
 }

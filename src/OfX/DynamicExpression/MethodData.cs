@@ -5,22 +5,19 @@ namespace OfX.DynamicExpression;
 
 internal class MethodData
 {
-	public MethodBase MethodBase;
-	public IList<ParameterInfo> Parameters;
-	public IList<Expression> PromotedParameters;
-	public bool HasParamsArray;
+    public MethodBase MethodBase;
+    public IList<ParameterInfo> Parameters;
+    public IList<Expression> PromotedParameters;
+    public bool HasParamsArray;
 
-	public static MethodData Gen(MethodBase method)
-	{
-		return new MethodData
-		{
-			MethodBase = method,
-			Parameters = method.GetParameters()
-		};
-	}
+    public static MethodData Gen(MethodBase method) => new()
+    {
+        MethodBase = method,
+        Parameters = method.GetParameters()
+    };
 
-	public override string ToString()
-	{
-		return MethodBase.ToString();
-	}
+    public override string ToString()
+    {
+        return MethodBase.ToString();
+    }
 }

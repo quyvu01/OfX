@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.DynamicExpression;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.EntityFrameworkCore.Queryable;
 using OfX.EntityFrameworkCore.Statics;
@@ -27,7 +27,6 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     where TAttribute : OfXAttribute
 {
     private static MemberExpression _idMemberExpression;
-    private static MethodInfo _selectorsConstantMethod;
 
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
@@ -52,12 +51,10 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
-        _selectorsConstantMethod ??= typeof(List<>).MakeGenericType(_idMemberExpression.Type)
-            .GetMethod(nameof(IList.Contains));
-        ArgumentNullException.ThrowIfNull(_selectorsConstantMethod);
-        var selectorsConstant = IdConverter.ConstantExpression(query.SelectorIds, _idMemberExpression.Type);
-        var containsCall = Expression.Call(selectorsConstant, _selectorsConstantMethod, _idMemberExpression);
-        return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
+        var idsConverted = IdConverter.ConvertIds(query.SelectorIds, _idMemberExpression.Type);
+        var interpreter = new Interpreter();
+        interpreter.SetVariable("ids", idsConverted);
+        return interpreter.ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})", "x");
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
