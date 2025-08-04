@@ -33,13 +33,6 @@ public class Lambda
     /// Gets the parameters actually used in the expression parsed.
     /// </summary>
     /// <value>The used parameters.</value>
-    [Obsolete("Use UsedParameters or DeclaredParameters")]
-    public IEnumerable<Parameter> Parameters => _parserArguments.UsedParameters;
-
-    /// <summary>
-    /// Gets the parameters actually used in the expression parsed.
-    /// </summary>
-    /// <value>The used parameters.</value>
     public IEnumerable<Parameter> UsedParameters => _parserArguments.UsedParameters;
 
     /// <summary>
@@ -125,24 +118,13 @@ public class Lambda
         return lambdaExpression.Compile();
     }
 
-    [Obsolete("Use Compile<TDelegate>()")]
-    public TDelegate Compile<TDelegate>(IEnumerable<Parameter> parameters)
-    {
-        var lambdaExpression =
-            Expression.Lambda<TDelegate>(Expression, parameters.Select(p => p.Expression).ToArray());
-        return lambdaExpression.Compile();
-    }
-
     /// <summary>
     /// Generate a lambda expression.
     /// </summary>
     /// <returns>The lambda expression.</returns>
     /// <typeparam name="TDelegate">The delegate to generate. Delegate parameters must match the one defined when creating the expression, see UsedParameters.</typeparam>
-    public Expression<TDelegate> LambdaExpression<TDelegate>()
-    {
-        return Expression.Lambda<TDelegate>(Expression,
-            DeclaredParameters.Select(p => p.Expression).ToArray());
-    }
+    public Expression<TDelegate> LambdaExpression<TDelegate>() => Expression.Lambda<TDelegate>(Expression,
+        DeclaredParameters.Select(p => p.Expression).ToArray());
 
     internal LambdaExpression LambdaExpression(Type delegateType)
     {
@@ -150,8 +132,7 @@ public class Lambda
         var types = delegateType.GetGenericArguments();
 
         // return type
-        if (delegateType.GetGenericTypeDefinition() ==
-            ReflectionExtensions.GetFuncType(parameterExpressions.Length))
+        if (delegateType.GetGenericTypeDefinition() == ReflectionExtensions.GetFuncType(parameterExpressions.Length))
             types[^1] = Expression.Type;
 
         var genericType = delegateType.GetGenericTypeDefinition();

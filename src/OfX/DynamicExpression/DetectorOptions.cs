@@ -5,7 +5,5 @@ namespace OfX.DynamicExpression;
 /// </summary>
 public enum DetectorOptions
 {
-	None = 0,
-	[System.Obsolete("IncludeChildren is deprecated and will be removed in a future version.")]
-	IncludeChildren = 1
+	None = 0
 }

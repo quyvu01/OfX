@@ -19,18 +19,15 @@ internal class SimpleMethodSignature : MethodBase
         public override bool HasDefaultValue => false;
     }
 
-    public override MethodAttributes Attributes { get; } = MethodAttributes.Public;
-    public override MemberTypes MemberType { get; } = MemberTypes.Method;
+    public override MethodAttributes Attributes => MethodAttributes.Public;
+    public override MemberTypes MemberType => MemberTypes.Method;
 
     private readonly ParameterInfo[] _parameterInfos;
 
     public SimpleMethodSignature(params Type[] parameterTypes)
     {
         _parameterInfos = new ParameterInfo[parameterTypes.Length];
-        for (var i = 0; i < parameterTypes.Length; i++)
-        {
-            _parameterInfos[i] = new SimpleParameterInfo(parameterTypes[i]);
-        }
+        for (var i = 0; i < parameterTypes.Length; i++) _parameterInfos[i] = new SimpleParameterInfo(parameterTypes[i]);
     }
 
     public override ParameterInfo[] GetParameters() => _parameterInfos;

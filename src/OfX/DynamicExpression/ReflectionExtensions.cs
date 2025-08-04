@@ -56,11 +56,7 @@ internal static class ReflectionExtensions
     private static MethodInfo GetStringConcatMethod()
     {
         var methodInfo = typeof(string).GetMethod("Concat", [typeof(string), typeof(string)]);
-        if (methodInfo == null)
-        {
-            throw new Exception("String concat method not found");
-        }
-
+        if (methodInfo == null) throw new Exception("String concat method not found");
         return methodInfo;
     }
 

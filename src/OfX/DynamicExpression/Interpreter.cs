@@ -18,8 +18,7 @@ public class Interpreter
     /// <summary>
     /// Creates a new Interpreter using InterpreterOptions.Default.
     /// </summary>
-    public Interpreter()
-        : this(InterpreterOptions.Default)
+    public Interpreter() : this(InterpreterOptions.Default)
     {
     }
 
@@ -36,9 +35,7 @@ public class Interpreter
         _settings = new ParserSettings(caseInsensitive, lateBindObject);
 
         if ((options & InterpreterOptions.SystemKeywords) == InterpreterOptions.SystemKeywords)
-        {
             SetIdentifiers(LanguageConstants.Literals);
-        }
 
         if ((options & InterpreterOptions.PrimitiveTypes) == InterpreterOptions.PrimitiveTypes)
         {
@@ -47,14 +44,10 @@ public class Interpreter
         }
 
         if ((options & InterpreterOptions.CommonTypes) == InterpreterOptions.CommonTypes)
-        {
             Reference(LanguageConstants.CommonTypes);
-        }
 
         if ((options & InterpreterOptions.LambdaExpressions) == InterpreterOptions.LambdaExpressions)
-        {
             _settings.LambdaExpressions = true;
-        }
 
         _visitors.Add(new DisableReflectionVisitor());
     }
@@ -62,10 +55,7 @@ public class Interpreter
     /// <summary>
     /// Create a new interpreter with the settings copied from another interpreter
     /// </summary>
-    internal Interpreter(ParserSettings settings)
-    {
-        _settings = settings;
-    }
+    internal Interpreter(ParserSettings settings) => _settings = settings;
 
     #endregion
 
@@ -76,15 +66,9 @@ public class Interpreter
     /// <summary>
     /// Gets a list of registeres types. Add types by using the Reference method.
     /// </summary>
-    public IEnumerable<ReferenceType> ReferencedTypes
-    {
-        get
-        {
-            return _settings.KnownTypes
-                .Select(p => p.Value)
-                .ToList();
-        }
-    }
+    public IEnumerable<ReferenceType> ReferencedTypes => _settings.KnownTypes
+        .Select(p => p.Value)
+        .ToList();
 
     /// <summary>
     /// Gets a list of known identifiers. Add identifiers using SetVariable, SetFunction or SetExpression methods.
@@ -233,9 +217,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter SetIdentifiers(IEnumerable<Identifier> identifiers)
     {
-        foreach (var i in identifiers)
-            SetIdentifier(i);
-
+        foreach (var i in identifiers) SetIdentifier(i);
         return this;
     }
 
@@ -247,9 +229,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter SetIdentifier(Identifier identifier)
     {
-        if (identifier == null)
-            throw new ArgumentNullException(nameof(identifier));
-
+        ArgumentNullException.ThrowIfNull(identifier);
         if (LanguageConstants.ReservedKeywords.Contains(identifier.Name))
             throw new InvalidOperationException($"{identifier.Name} is a reserved word");
 
@@ -263,30 +243,21 @@ public class Interpreter
     /// </summary>
     /// <param name="name"></param>>
     /// <returns></returns>
-    public Interpreter UnsetFunction(string name)
-    {
-        return UnsetIdentifier(name);
-    }
+    public Interpreter UnsetFunction(string name) => UnsetIdentifier(name);
 
     /// <summary>
     /// Remove <paramref name="name"/> from the list of known identifiers.
     /// </summary>
     /// <param name="name"></param>>
     /// <returns></returns>
-    public Interpreter UnsetVariable(string name)
-    {
-        return UnsetIdentifier(name);
-    }
+    public Interpreter UnsetVariable(string name) => UnsetIdentifier(name);
 
     /// <summary>
     /// Remove <paramref name="name"/> from the list of known identifiers.
     /// </summary>
     /// <param name="name"></param>>
     /// <returns></returns>
-    public Interpreter UnsetExpression(string name)
-    {
-        return UnsetIdentifier(name);
-    }
+    public Interpreter UnsetExpression(string name) => UnsetIdentifier(name);
 
     /// <summary>
     /// Remove <paramref name="name"/> from the list of known identifiers.
@@ -295,8 +266,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter UnsetIdentifier(string name)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
 
         _settings.Identifiers.Remove(name);
         return this;
@@ -314,9 +284,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter Reference(Type type)
     {
-        if (type == null)
-            throw new ArgumentNullException(nameof(type));
-
+        ArgumentNullException.ThrowIfNull(type);
         return Reference(type, type.Name);
     }
 
@@ -328,12 +296,8 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter Reference(IEnumerable<ReferenceType> types)
     {
-        if (types == null)
-            throw new ArgumentNullException(nameof(types));
-
-        foreach (var t in types)
-            Reference(t);
-
+        ArgumentNullException.ThrowIfNull(types);
+        foreach (var t in types) Reference(t);
         return this;
     }
 
@@ -344,10 +308,7 @@ public class Interpreter
     /// <param name="type"></param>
     /// <param name="typeName">Public name that must be used in the expression.</param>
     /// <returns></returns>
-    public Interpreter Reference(Type type, string typeName)
-    {
-        return Reference(new ReferenceType(typeName, type));
-    }
+    public Interpreter Reference(Type type, string typeName) => Reference(new ReferenceType(typeName, type));
 
     /// <summary>
     /// Allow the specified type to be used inside an expression by using a custom alias.
@@ -357,9 +318,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter Reference(ReferenceType type)
     {
-        if (type == null)
-            throw new ArgumentNullException(nameof(type));
-
+        ArgumentNullException.ThrowIfNull(type);
         _settings.KnownTypes[type.Name] = type;
         _settings.ExtensionMethods.UnionWith(type.ExtensionMethods);
 
@@ -377,10 +336,8 @@ public class Interpreter
     /// <param name="parameters"></param>
     /// <returns></returns>
     /// <exception cref="ParseException"></exception>
-    public Lambda Parse(string expressionText, params Parameter[] parameters)
-    {
-        return Parse(expressionText, typeof(void), parameters);
-    }
+    public Lambda Parse(string expressionText, params Parameter[] parameters) =>
+        Parse(expressionText, typeof(void), parameters);
 
     /// <summary>
     /// Parse a text expression and returns a Lambda class that can be used to invoke it.
@@ -394,10 +351,6 @@ public class Interpreter
     /// <exception cref="ParseException"></exception>
     public Lambda Parse(string expressionText, Type expressionType, params Parameter[] parameters) =>
         ParseAsLambda(expressionText, expressionType, parameters);
-
-    [Obsolete("Use ParseAsDelegate<TDelegate>(string, params string[])")]
-    public TDelegate Parse<TDelegate>(string expressionText, params string[] parametersNames) =>
-        ParseAsDelegate<TDelegate>(expressionText, parametersNames);
 
     /// <summary>
     /// Parse a text expression and convert it into a delegate.
@@ -472,10 +425,8 @@ public class Interpreter
     /// <param name="expressionText"></param>
     /// <param name="parameters"></param>
     /// <returns></returns>
-    public T Eval<T>(string expressionText, params Parameter[] parameters)
-    {
-        return (T)Eval(expressionText, typeof(T), parameters);
-    }
+    public T Eval<T>(string expressionText, params Parameter[] parameters) =>
+        (T)Eval(expressionText, typeof(T), parameters);
 
     /// <summary>
     /// Parse and invoke the specified expression.
@@ -519,31 +470,11 @@ public class Interpreter
 
         var expression = Parser.Parse(arguments);
 
-        foreach (var visitor in Visitors)
-            expression = visitor.Visit(expression);
+        foreach (var visitor in Visitors) expression = visitor.Visit(expression);
 
         var lambda = new Lambda(expression, arguments);
-
-#if TEST_DetectIdentifiers
-			AssertDetectIdentifiers(lambda);
-#endif
-
         return lambda;
     }
-
-#if TEST_DetectIdentifiers
-		private void AssertDetectIdentifiers(Lambda lambda)
-		{
-			var info = DetectIdentifiers(lambda.ExpressionText);
-
-			if (info.Identifiers.Count() != lambda.Identifiers.Count())
-				throw new Exception("Detected identifiers doesn't match actual identifiers");
-			if (info.Types.Count() != lambda.Types.Count())
-				throw new Exception("Detected types doesn't match actual types");
-			if (info.UnknownIdentifiers.Count() != lambda.UsedParameters.Count())
-				throw new Exception("Detected unknown identifiers doesn't match actual parameters");
-		}
-#endif
 
     #endregion
 }
