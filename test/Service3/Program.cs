@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
+using OfX.Nats.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Models;
@@ -14,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipeline<>)));
     })

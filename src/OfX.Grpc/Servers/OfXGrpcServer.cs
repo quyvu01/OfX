@@ -16,14 +16,13 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private readonly Lazy<ConcurrentDictionary<string, Type>>
-        _attributeAssemblyTypeMapReceivedPipelines = new(() => []);
+    private readonly Lazy<ConcurrentDictionary<string, Type>> _receivedPipelineTypes = new(() => []);
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
         {
-            var receivedPipelineType = _attributeAssemblyTypeMapReceivedPipelines.Value
+            var receivedPipelineType = _receivedPipelineTypes.Value
                 .GetOrAdd(request.AttributeAssemblyType, attributeAssemblyType =>
                 {
                     var attributeType = Type.GetType(attributeAssemblyType);
@@ -38,15 +37,13 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
                     return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType);
                 });
 
-            var pipeline = serviceProvider
-                .GetRequiredService(receivedPipelineType);
-
-            if (pipeline is not IReceivedPipelinesBase receivedPipelinesBase) throw new UnreachableException();
+            var pipeline = (IReceivedPipelinesBase)serviceProvider
+                .GetRequiredService(receivedPipelineType)!;
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
             var message = new MessageDeserializable([..request.SelectorIds], request.Expression);
-            var response = await receivedPipelinesBase.ExecuteAsync(message, headers, context.CancellationToken);
+            var response = await pipeline.ExecuteAsync(message, headers, context.CancellationToken);
 
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a =>

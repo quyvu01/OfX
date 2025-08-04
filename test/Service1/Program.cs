@@ -6,6 +6,7 @@ using OfX.Extensions;
 using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
 using OfX.MongoDb.Extensions;
+using OfX.Nats.Extensions;
 using Serilog;
 using Service1;
 using Service1.Contexts;
@@ -49,11 +50,11 @@ builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
         // cfg.ThrowIfException();
-        cfg.AddGrpcClients(c => c.AddGrpcHosts("http://localhost:5001", "http://localhost:5013"));
+        // cfg.AddGrpcClients(c => c.AddGrpcHosts("http://localhost:5001", "http://localhost:5013"));
         cfg.SetMaxObjectSpawnTimes(16);
-        cfg.SetRequestTimeOut(TimeSpan.FromSeconds(10));
+        cfg.SetRequestTimeOut(TimeSpan.FromSeconds(100));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

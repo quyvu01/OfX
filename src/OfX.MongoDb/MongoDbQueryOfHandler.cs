@@ -8,7 +8,7 @@ using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Helpers;
+using OfX.DynamicExpression;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Queryable;
 using OfX.MongoDb.Statics;
@@ -29,6 +29,8 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
+    private static MemberExpression _idMemberExpression;
+
     private readonly IMongoCollectionInternal<TModel> _collectionInternal =
         serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
 
@@ -37,22 +39,12 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
-        var idType = idProperty.Type;
-        if (GeneralHelpers.IsPrimitiveType(idType))
-        {
-            var primitiveIdFilter = Builders<TModel>.Filter.In(idPropertyName, context.Query.SelectorIds);
-            var resultForPrimitiveId = await _collectionInternal.Collection.Find(primitiveIdFilter)
-                .ToListAsync(context.CancellationToken);
-            var itemsForPrimitiveId = resultForPrimitiveId.Select(BuildResponse(context.Query).Compile());
-            return new ItemsResponse<OfXDataResponse>([..itemsForPrimitiveId]);
-        }
-
-        // Create the expression filter
-        var containsMethod = typeof(List<>).MakeGenericType(idType).GetMethod(nameof(IList.Contains));
-        var selectorsConstant = IdConverter.ConstantExpression(context.Query.SelectorIds, idType);
-        var containsCall = Expression.Call(selectorsConstant, containsMethod!, idProperty);
-        var filter = Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameterExpression);
+        _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
+        var idsConverted = IdConverter.ConvertIds(context.Query.SelectorIds, _idMemberExpression.Type);
+        var interpreter = new Interpreter();
+        interpreter.SetVariable("ids", idsConverted);
+        var filter = interpreter
+            .ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})", "x");
 
         var result = await _collectionInternal.Collection.Find(filter)
             .ToListAsync(context.CancellationToken);
@@ -63,8 +55,6 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
-        // Access the ID property on the model
-
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions
