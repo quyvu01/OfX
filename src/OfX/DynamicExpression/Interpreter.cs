@@ -64,7 +64,7 @@ public class Interpreter
     public bool CaseInsensitive => _settings.CaseInsensitive;
 
     /// <summary>
-    /// Gets a list of registeres types. Add types by using the Reference method.
+    /// Gets a list of registers types. Add types by using the Reference method.
     /// </summary>
     public IEnumerable<ReferenceType> ReferencedTypes => _settings.KnownTypes
         .Select(p => p.Value)

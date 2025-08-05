@@ -65,7 +65,7 @@ internal class MethodGroupExpression : Expression
         }
     }
 
-    private readonly List<Overload> _overloads = new();
+    private readonly List<Overload> _overloads = [];
 
     internal IReadOnlyCollection<Overload> Overloads => _overloads.AsReadOnly();
 

@@ -15,7 +15,7 @@ internal class InterpreterExpression : Expression
         var settings = parserArguments.Settings.Clone();
         _interpreter = new Interpreter(settings);
         _expressionText = expressionText;
-        _parameters = parameters;
+        _parameters = [..parameters];
 
         // Take the parent expression's parameters and set them as an identifier that
         // can be accessed by any lower call

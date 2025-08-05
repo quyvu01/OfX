@@ -9,9 +9,9 @@ internal class ParserArguments
 {
 	private readonly Dictionary<string, Parameter> _declaredParameters;
 
-	private readonly HashSet<Parameter> _usedParameters = new();
-	private readonly HashSet<ReferenceType> _usedTypes = new();
-	private readonly HashSet<Identifier> _usedIdentifiers = new();
+	private readonly HashSet<Parameter> _usedParameters = [];
+	private readonly HashSet<ReferenceType> _usedTypes = [];
+	private readonly HashSet<Identifier> _usedIdentifiers = [];
 
 	public ParserArguments(
 		string expressionText,
