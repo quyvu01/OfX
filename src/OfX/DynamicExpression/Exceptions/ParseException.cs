@@ -1,5 +1,3 @@
-using System.Runtime.Serialization;
-
 namespace OfX.DynamicExpression.Exceptions;
 
 public class ParseException : DynamicExpressionException

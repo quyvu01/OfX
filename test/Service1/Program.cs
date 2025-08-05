@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
