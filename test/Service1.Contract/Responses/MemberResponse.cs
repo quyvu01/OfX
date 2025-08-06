@@ -5,6 +5,15 @@ namespace Service1.Contract.Responses;
 public class MemberResponse
 {
     public string Id { get; set; }
+
+    public string ExternalId { get; set; }
+
+    [ExternalDataOf(nameof(ExternalId), Expression = "Test")]
+    public string ExternalDataTest { get; set; }
+
+    [ExternalDataOf(nameof(ExternalId), Expression = "OtherTest")]
+    public string ExternalDataOtherTest { get; set; }
+
     public string MemberAddressId { get; set; }
 
     [MemberAddressOf(nameof(MemberAddressId))]
@@ -15,10 +24,12 @@ public class MemberResponse
 
     [MemberAdditionalOf(nameof(MemberAdditionalId))]
     public string MemberAdditionalName { get; set; }
+
     public string MemberSocialId { get; set; }
 
     [MemberSocialOf(nameof(MemberSocialId))]
     public string MemberSocialName { get; set; }
+
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 

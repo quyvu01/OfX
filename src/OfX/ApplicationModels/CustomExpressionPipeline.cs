@@ -25,7 +25,7 @@ public sealed class CustomExpressionPipeline(IServiceCollection serviceCollectio
             {
                 var serviceDescriptor =
                     new ServiceDescriptor(CustomExpressionPipelineInterface, pipelineType, serviceLifetime);
-                serviceCollection.TryAdd(serviceDescriptor);
+                serviceCollection.Add(serviceDescriptor);
                 return this;
             }
         }
@@ -33,7 +33,7 @@ public sealed class CustomExpressionPipeline(IServiceCollection serviceCollectio
         signatureInterfaceTypes.ForEach(serviceType =>
         {
             var serviceDescriptor = new ServiceDescriptor(serviceType, pipelineType, serviceLifetime);
-            serviceCollection.TryAdd(serviceDescriptor);
+            serviceCollection.Add(serviceDescriptor);
         });
         return this;
     }

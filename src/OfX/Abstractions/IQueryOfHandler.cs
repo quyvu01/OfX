@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OfX.Attributes;
 using OfX.Responses;
 
@@ -18,19 +16,22 @@ public interface IQueryOfHandler<TModel, TAttribute> where TModel : class
 
 public class DefaultQueryOfHandler;
 
-internal sealed class DefaultQueryOfHandler<TModel, TAttribute>(
-    IServiceProvider serviceProvider,
-    string idPropertyName,
-    string defaultPropertyName)
-    : DefaultQueryOfHandler,
-        IQueryOfHandler<TModel, TAttribute> where TModel : class where TAttribute : OfXAttribute
+// Do not remove the parameter because it is dynamically invoked by Lambda
+internal sealed class DefaultQueryOfHandler<TModel, TAttribute>(IServiceProvider _, string __, string ___)
+    : DefaultQueryOfHandler, IQueryOfHandler<TModel, TAttribute> where TModel : class where TAttribute : OfXAttribute
 {
-    public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
-    {
-        var logger = serviceProvider.GetService<ILogger<DefaultQueryOfHandler<TModel, TAttribute>>>();
-        logger?.LogInformation(
-            "[Executing GetDataAsync] by default query handler for model: {@Model}, attribute: {@Attribute}, {@DefaultIdName}, {@DefaultPropertyName}",
-            typeof(TModel).Name, typeof(TAttribute).Name, idPropertyName, defaultPropertyName);
-        return Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
-    }
+    public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
+        Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
+}
+
+internal sealed class DefaultReceiverOfHandler<TModel, TAttribute>
+    : IQueryOfHandler<TModel, TAttribute> where TModel : class where TAttribute : OfXAttribute
+{
+    public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
+        Task.FromResult(new ItemsResponse<OfXDataResponse>([
+            ..context.Query.SelectorIds.Select(a => new OfXDataResponse
+            {
+                Id = a, OfXValues = []
+            })
+        ]));
 }
