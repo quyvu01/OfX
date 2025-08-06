@@ -69,21 +69,12 @@ public class Lambda
         var parameters = new List<Parameter>();
         var declaredParameters = DeclaredParameters.ToArray();
 
-        if (args != null)
-        {
-            if (declaredParameters.Length != args.Length)
-                throw new InvalidOperationException("Arguments count mismatch");
+        if (args == null) return Invoke(parameters);
+        if (declaredParameters.Length != args.Length)
+            throw new InvalidOperationException("Arguments count mismatch");
 
-            for (var i = 0; i < args.Length; i++)
-            {
-                var parameter = new Parameter(
-                    declaredParameters[i].Name,
-                    declaredParameters[i].Type,
-                    args[i]);
-
-                parameters.Add(parameter);
-            }
-        }
+        parameters.AddRange(args.Select((t, i) =>
+            new Parameter(declaredParameters[i].Name, declaredParameters[i].Type, t)));
 
         return Invoke(parameters);
     }
@@ -103,10 +94,7 @@ public class Lambda
         }
     }
 
-    public override string ToString()
-    {
-        return ExpressionText;
-    }
+    public override string ToString() => ExpressionText;
 
     /// <summary>
     /// Generate the given delegate by compiling the lambda expression.

@@ -26,10 +26,7 @@ namespace OfX.DynamicExpression
             return binder.Bind(args, parameters, returnLabel);
         }
 
-        public CallSiteBinder ToWritableBinder()
-        {
-            return new LateSetMemberCallSiteBinder(propertyOrFieldName);
-        }
+        public CallSiteBinder ToWritableBinder() => new LateSetMemberCallSiteBinder(propertyOrFieldName);
     }
 
     internal class LateSetMemberCallSiteBinder(string propertyOrFieldName) : CallSiteBinder
@@ -94,11 +91,7 @@ namespace OfX.DynamicExpression
             // the first argument is the delegate to invoke: instruct the compiler that we already know its type
             argumentInfo[0] = CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null);
 
-            var binderM = Binder.Invoke(
-                CSharpBinderFlags.None,
-                null,
-                argumentInfo
-            );
+            var binderM = Binder.Invoke(CSharpBinderFlags.None, null, argumentInfo);
             return binderM.Bind(args, parameters, returnLabel);
         }
     }
@@ -120,10 +113,7 @@ namespace OfX.DynamicExpression
             return binder.Bind(args, parameters, returnLabel);
         }
 
-        public CallSiteBinder ToWritableBinder()
-        {
-            return new LateSetIndexCallSiteBinder();
-        }
+        public CallSiteBinder ToWritableBinder() => new LateSetIndexCallSiteBinder();
     }
 
     internal class LateSetIndexCallSiteBinder : CallSiteBinder

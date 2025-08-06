@@ -22,6 +22,7 @@ internal static class TypeUtils
     /// <summary>
     /// If <paramref name="type"/> is a nullable value type, returns the underlying type.
     /// If <paramref name="type"/> is a reference type, or a non-nullable value type, the method will return <paramref name="type"/>.
+    /// </summary>
     private static Type GetNonNullableType(Type type) =>
         TryGetNonNullableType(type, out var underlyingType) ? underlyingType : type;
 
@@ -238,11 +239,7 @@ internal static class TypeUtils
     /// <returns></returns>
     public static Type RemoveArrayType(Type t)
     {
-        if (t == null || t.IsArray)
-        {
-            return null;
-        }
-
+        if (t == null || t.IsArray) return null;
         return t;
     }
 
@@ -266,7 +263,7 @@ internal static class TypeUtils
             //  => check if the generic arguments are compatible (e.g. Nullable<int> and Nullable<DateTime>: int is not compatible with DateTime)
             var givenTypeGenericsArgs = givenType.GenericTypeArguments;
             var constructedGenericsArgs = constructedGenericType.GenericTypeArguments;
-            if (givenTypeGenericsArgs.Zip(constructedGenericsArgs, (g, c) => TypeUtils.IsCompatibleWith(g, c))
+            if (givenTypeGenericsArgs.Zip(constructedGenericsArgs, IsCompatibleWith)
                 .Any(compatible => !compatible))
                 return null;
 

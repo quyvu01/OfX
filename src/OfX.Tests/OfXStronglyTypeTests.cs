@@ -35,6 +35,16 @@ public sealed class OfXStronglyTypeTests : ServicesBuilding
         var canConvert = userIdStronglyTypeService.CanConvert(id);
         Assert.True(canConvert);
     }
+    
+    [Theory]
+    [InlineData("3306d98a-4a74-4965-89d5-8a64eb49635f")]
+    public void Id_Converter_Service_Guid_Should_Parseable(string id)
+    {
+        var idConverterService = ServiceProvider.GetService<IIdConverter<UserId>>();
+        Assert.NotNull(idConverterService);
+        var guidIds = idConverterService.ConvertIds([id]);
+        Assert.True(guidIds is List<UserId> ids && ids.FirstOrDefault()?.Value == Guid.Parse(id));
+    }
 
     [Theory]
     [InlineData("123123")]
@@ -45,13 +55,22 @@ public sealed class OfXStronglyTypeTests : ServicesBuilding
         var canConvert = longIdStronglyTypeService.CanConvert(id);
         Assert.True(canConvert);
     }
+
+    [Theory]
+    [InlineData("123123")]
+    public void Id_Converter_Service_Long_Should_Parseable(string id)
+    {
+        var idConverterService = ServiceProvider.GetService<IIdConverter<LongTestId>>();
+        Assert.NotNull(idConverterService);
+        var longIds = idConverterService.ConvertIds([id]);
+        Assert.True(longIds is List<LongTestId> ids && ids[0].Value == long.Parse(id));
+    }
 }
 
 internal sealed class IdTestRegister :
     IStronglyTypeConverter<LongTestId>,
     IStronglyTypeConverter<UserId>,
     IStronglyTypeConverter<ProvinceId>
-
 {
     public LongTestId Convert(string input) => new(long.Parse(input));
 
@@ -65,7 +84,4 @@ internal sealed class IdTestRegister :
     bool IStronglyTypeConverter<ProvinceId>.CanConvert(string input) => Guid.TryParse(input, out _);
 }
 
-internal sealed record LongTestId(long Value) : StronglyTypedId<long>(Value)
-{
-    public override string ToString() => base.ToString();
-}
+internal sealed record LongTestId(long Value) : StronglyTypedId<long>(Value);

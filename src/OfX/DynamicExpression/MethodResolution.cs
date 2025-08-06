@@ -79,17 +79,11 @@ internal static class MethodResolution
                 }
 
                 var parameterDeclaration = method.Parameters[declaredWorkingParameters];
-                if (parameterDeclaration.IsOut)
-                {
-                    return false;
-                }
+                if (parameterDeclaration.IsOut) return false;
 
                 parameterType = parameterDeclaration.ParameterType;
 
-                if (ReflectionExtensions.HasParamsArrayType(parameterDeclaration))
-                {
-                    paramsArrayTypeFound = parameterType;
-                }
+                if (ReflectionExtensions.HasParamsArrayType(parameterDeclaration)) paramsArrayTypeFound = parameterType;
 
                 declaredWorkingParameters++;
             }
@@ -100,8 +94,7 @@ internal static class MethodResolution
                 if (parameterType.IsGenericParameter)
                 {
                     // an interpreter expression can only be matched to a parameter of type Func
-                    if (currentArgument is InterpreterExpression)
-                        return false;
+                    if (currentArgument is InterpreterExpression) return false;
 
                     promotedArgs.Add(currentArgument);
                     continue;
@@ -120,7 +113,7 @@ internal static class MethodResolution
                 var paramsArrayElementType = paramsArrayTypeFound.GetElementType()!;
                 if (paramsArrayElementType.IsGenericParameter)
                 {
-                    paramsArrayPromotedArgument = paramsArrayPromotedArgument ?? new List<Expression>();
+                    paramsArrayPromotedArgument ??= [];
                     paramsArrayPromotedArgument.Add(currentArgument);
                     continue;
                 }
@@ -128,7 +121,7 @@ internal static class MethodResolution
                 var promoted = ExpressionUtils.PromoteExpression(currentArgument, paramsArrayElementType);
                 if (promoted != null)
                 {
-                    paramsArrayPromotedArgument = paramsArrayPromotedArgument ?? new List<Expression>();
+                    paramsArrayPromotedArgument ??= [];
                     paramsArrayPromotedArgument.Add(promoted);
                     continue;
                 }
@@ -220,7 +213,7 @@ internal static class MethodResolution
     {
         var better = false;
 
-        // check conversion from argument list to parameter list
+        // check conversion from argument list to a parameter list
         for (int i = 0, m = 0, o = 0; i < args.Length; i++)
         {
             var arg = args[i];
@@ -236,17 +229,14 @@ internal static class MethodResolution
                 otherMethodParamType = otherMethod.PromotedParameters[i].Type;
 
             var c = TypeUtils.CompareConversions(arg.Type, methodParamType, otherMethodParamType);
-            if (c < 0)
-                return false;
-            if (c > 0)
-                better = true;
+            if (c < 0) return false;
+            if (c > 0) better = true;
 
             if (!ReflectionExtensions.HasParamsArrayType(methodParam)) m++;
             if (!ReflectionExtensions.HasParamsArrayType(otherMethodParam)) o++;
         }
 
-        if (better)
-            return true;
+        if (better) return true;
 
         if (method.MethodBase != null &&
             otherMethod.MethodBase != null &&
@@ -254,8 +244,7 @@ internal static class MethodResolution
             otherMethod.MethodBase.IsGenericMethod)
             return true;
 
-        if (!method.HasParamsArray && otherMethod.HasParamsArray)
-            return true;
+        if (!method.HasParamsArray && otherMethod.HasParamsArray) return true;
 
         // if a method has a params parameter, it can have less parameters than the number of arguments
         if (method.HasParamsArray && otherMethod.HasParamsArray &&
@@ -275,7 +264,7 @@ internal static class MethodResolution
             }
         }
 
-        return better;
+        return false;
     }
 
     private static MethodInfo MakeGenericMethod(MethodData method)
@@ -322,11 +311,7 @@ internal static class MethodResolution
             else if (requestedType.IsArray && actualType.IsArray)
             {
                 var innerGenericTypes = ExtractActualGenericArguments(
-                    new[] { requestedType.GetElementType() },
-                    new[]
-                    {
-                        actualType.GetElementType()
-                    });
+                    [requestedType.GetElementType()], [actualType.GetElementType()]);
 
                 foreach (var innerGenericType in innerGenericTypes)
                     extractedGenericTypes[innerGenericType.Key] = innerGenericType.Value;
@@ -334,9 +319,7 @@ internal static class MethodResolution
             else if (requestedType.ContainsGenericParameters)
             {
                 if (actualType.IsGenericParameter)
-                {
                     extractedGenericTypes[actualType.Name] = requestedType;
-                }
                 else
                 {
                     var requestedInnerGenericArgs = requestedType.GetGenericArguments();

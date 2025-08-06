@@ -23,7 +23,6 @@ public class Parameter
         Name = parameterExpression.Name;
         Type = parameterExpression.Type;
         Value = null;
-
         Expression = parameterExpression;
     }
 
@@ -36,15 +35,11 @@ public class Parameter
         Expression = System.Linq.Expressions.Expression.Parameter(type, name);
     }
 
-    public static Parameter Create<T>(string name, T value)
-    {
-        return new Parameter(name, typeof(T), value);
-    }
+    public static Parameter Create<T>(string name, T value) => new(name, typeof(T), value);
 
     public string Name { get; private set; }
     public Type Type { get; private set; }
     public object Value { get; private set; }
-
     public ParameterExpression Expression { get; private set; }
 }
 

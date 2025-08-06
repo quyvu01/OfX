@@ -16,10 +16,7 @@ namespace OfX.DynamicExpression;
 
 internal class Parser
 {
-    public static Expression Parse(ParserArguments arguments)
-    {
-        return new Parser(arguments).Parse();
-    }
+    public static Expression Parse(ParserArguments arguments) => new Parser(arguments).Parse();
 
     private const NumberStyles ParseLiteralNumberStyle = NumberStyles.AllowLeadingSign;
     private const NumberStyles ParseLiteralUnsignedNumberStyle = NumberStyles.AllowLeadingSign;
@@ -75,10 +72,7 @@ internal class Parser
         var errorPos = _token.pos;
         var expression = ParseExpressionSegment();
 
-        if (returnType != typeof(void))
-        {
-            return GenerateConversion(expression, returnType, errorPos);
-        }
+        if (returnType != typeof(void)) return GenerateConversion(expression, returnType, errorPos);
 
         return expression;
     }
@@ -287,7 +281,7 @@ internal class Parser
     private Expression ParseConditionalAnd()
     {
         var left = ParseLogicalOr();
-        while (_token.id == TokenId.DoubleAmphersand)
+        while (_token.id == TokenId.DoubleAmpersand)
         {
             NextToken();
             var right = ParseLogicalOr();
@@ -332,7 +326,7 @@ internal class Parser
     private Expression ParseLogicalAnd()
     {
         var left = ParseComparison();
-        while (_token.id == TokenId.Amphersand)
+        while (_token.id == TokenId.Ampersand)
         {
             NextToken();
             var right = ParseComparison();
@@ -347,57 +341,13 @@ internal class Parser
     private Expression ParseComparison()
     {
         var left = ParseTypeTesting();
-        while (_token.id is TokenId.DoubleEqual or TokenId.ExclamationEqual or TokenId.GreaterThan or TokenId.GreaterThanEqual or TokenId.LessThan or TokenId.LessThanEqual)
+        while (_token.id is TokenId.DoubleEqual or TokenId.ExclamationEqual or TokenId.GreaterThan
+               or TokenId.GreaterThanEqual or TokenId.LessThan or TokenId.LessThanEqual)
         {
             var op = _token;
             NextToken();
             var right = ParseShift();
             var isEquality = op.id is TokenId.DoubleEqual or TokenId.ExclamationEqual;
-
-            //if (isEquality && !left.Type.IsValueType && !right.Type.IsValueType)
-            //{
-            //	if (left.Type != right.Type)
-            //	{
-            //		if (left.Type.IsAssignableFrom(right.Type))
-            //		{
-            //			right = Expression.Convert(right, left.Type);
-            //		}
-            //		else if (right.Type.IsAssignableFrom(left.Type))
-            //		{
-            //			left = Expression.Convert(left, right.Type);
-            //		}
-            //		else
-            //		{
-            //			throw ParseException.Create(op.pos, ErrorMessages.IncompatibleOperands,
-            //				op.text, TypeUtils.GetTypeName(left.Type), TypeUtils.GetTypeName(right.Type));
-            //		}
-            //	}
-            //}
-            //else if (IsEnumType(left.Type) || IsEnumType(right.Type))
-            //{
-            //	if (left.Type != right.Type)
-            //	{
-            //		Expression e;
-            //		if ((e = PromoteExpression(right, left.Type, true)) != null)
-            //		{
-            //			right = e;
-            //		}
-            //		else if ((e = PromoteExpression(left, right.Type, true)) != null)
-            //		{
-            //			left = e;
-            //		}
-            //		else
-            //		{
-            //			throw ParseException.Create(op.pos, ErrorMessages.IncompatibleOperands,
-            //				op.text, TypeUtils.GetTypeName(left.Type), TypeUtils.GetTypeName(right.Type));
-            //		}
-            //	}
-            //}
-            //else
-            //{
-            //	CheckAndPromoteOperands(isEquality ? ParseSignatures.EqualitySignatures : ParseSignatures.RelationalSignatures,
-            //			op.text, ref left, ref right, op.pos);
-            //}
 
             CheckAndPromoteOperands(
                 isEquality ? ParseSignatures.EqualitySignatures : ParseSignatures.RelationalSignatures,
@@ -501,7 +451,8 @@ internal class Parser
             return true;
         }
         // << could be a token, but is not for symmetry
-        else if (_token.id == TokenId.LessThan && _parseChar == '<')
+
+        if (_token.id == TokenId.LessThan && _parseChar == '<')
         {
             NextToken(); // consume next <
             shiftType = ExpressionType.LeftShift;
@@ -635,14 +586,12 @@ internal class Parser
 
     private Expression GenerateUnaryDynamic(ExpressionType unaryType, Expression expr)
     {
-        var binder = Microsoft.CSharp.RuntimeBinder.Binder.UnaryOperation(
-            CSharpBinderFlags.None,
-            unaryType,
-            typeof(Parser),
-            [
-                CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-            ]
-        );
+        var binder = Microsoft.CSharp.RuntimeBinder.Binder
+            .UnaryOperation(CSharpBinderFlags.None, unaryType, typeof(Parser),
+                [
+                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+                ]
+            );
 
         return Expression.Dynamic(binder, typeof(object), expr);
     }
@@ -728,10 +677,7 @@ internal class Parser
                     throw ParseException.Create(tokenPos, "No applicable method '{0}' exists in type '{1}'",
                         TypeUtils.GetTypeName(expr.Type));
             }
-            else
-            {
-                break;
-            }
+            else break;
         }
 
         return expr;
@@ -790,16 +736,6 @@ internal class Parser
         var s = _token.text.Substring(1, _token.text.Length - 2);
 
         s = EvalEscapeStringLiteral(s);
-
-        //int start = 0;
-        //while (true)
-        //{
-        //    int i = s.IndexOf(quote, start);
-        //    if (i < 0)
-        //        break;
-        //    s = s.Remove(i, 1);
-        //    start = i + 1;
-        //}
 
         NextToken();
         return CreateLiteral(s);
@@ -877,7 +813,7 @@ internal class Parser
                 break;
         }
 
-        text = text.Substring(0, numberEnd + 1);
+        text = text[..(numberEnd + 1)];
 
         // No suffix found, verify if DefaultNumberType.Long is specified
         if (_defaultNumberType == DefaultNumberType.Long) isLong = true;
@@ -887,13 +823,13 @@ internal class Parser
             ulong value;
             if (text.StartsWith("0x") || text.StartsWith("0X"))
             {
-                var hex = text.Substring(2);
+                var hex = text[2..];
                 if (!ulong.TryParse(hex, ParseLiteralHexNumberStyle, ParseCulture, out value))
                     throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
             }
             else if (text.StartsWith("0b") || text.StartsWith("0B"))
             {
-                var binary = text.Substring(2);
+                var binary = text[2..];
                 if (string.IsNullOrEmpty(binary))
                     throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
 
@@ -939,23 +875,23 @@ internal class Parser
         ValidateToken(TokenId.RealLiteral);
         var text = _token.text;
         object value = null;
-        var last = text[text.Length - 1];
+        var last = text[^1];
 
         if (last is 'F' or 'f')
         {
-            if (float.TryParse(text.Substring(0, text.Length - 1), ParseLiteralDecimalNumberStyle, ParseCulture,
+            if (float.TryParse(text[..^1], ParseLiteralDecimalNumberStyle, ParseCulture,
                     out var f))
                 value = f;
         }
         else if (last is 'M' or 'm')
         {
-            if (decimal.TryParse(text.Substring(0, text.Length - 1), ParseLiteralDecimalNumberStyle, ParseCulture,
+            if (decimal.TryParse(text[..^1], ParseLiteralDecimalNumberStyle, ParseCulture,
                     out var dc))
                 value = dc;
         }
         else if (last is 'D' or 'd')
         {
-            if (double.TryParse(text.Substring(0, text.Length - 1), ParseLiteralDoubleNumberStyle, ParseCulture,
+            if (double.TryParse(text[..^1], ParseLiteralDoubleNumberStyle, ParseCulture,
                     out var d))
                 value = d;
         }
@@ -990,7 +926,6 @@ internal class Parser
     private static Expression CreateLiteral(object value)
     {
         var expr = Expression.Constant(value);
-
         return expr;
     }
 
@@ -1066,32 +1001,8 @@ internal class Parser
         {
             // ignore
         }
-
-        // Working context implementation
-        //if (it != null)
-        //    return ParseMemberAccess(null, it);
-
         throw new UnknownIdentifierException(token.text, token.pos);
     }
-
-    // Working context implementation
-    //Expression ParseIt()
-    //{
-    //    if (it == null)
-    //        throw ParseError(ErrorMessages.NoItInScope);
-    //    NextToken();
-    //    return it;
-    //}
-
-    //Expression ParseIif()
-    //{
-    //    int errorPos = token.pos;
-    //    NextToken();
-    //    Expression[] args = ParseArgumentList();
-    //    if (args.Length != 3)
-    //        throw ParseError(errorPos, ErrorMessages.IifRequiresThreeArgs);
-    //    return GenerateConditional(args[0], args[1], args[2], errorPos);
-    //}
 
     private Expression ParseTypeof()
     {
@@ -1188,7 +1099,7 @@ internal class Parser
             args = ParseArgumentList();
         else
         {
-            // no aguments: expect an object initializer
+            // no arguments: expect an object initializer
             ValidateToken(TokenId.OpenCurlyBracket, "'{{' expected");
         }
 
@@ -1237,7 +1148,7 @@ internal class Parser
             if (_token.id == TokenId.CloseCurlyBracket) break;
             if (_token.id != TokenId.Identifier)
             {
-                ParseCollectionInitalizer(newType, originalPos, bindingList, actions, instance, allowCollectionInit);
+                ParseCollectionInitializer(newType, originalPos, bindingList, actions, instance, allowCollectionInit);
             }
             else
             {
@@ -1269,8 +1180,6 @@ internal class Parser
         if (allowCollectionInit)
         {
             NextToken();
-            //new T(){Prop = 1}
-            //new T(){{variable = 2}}
             if (_token.id == TokenId.Equal && member != null)
             {
                 if (actions.Count > 0)
@@ -1283,7 +1192,7 @@ internal class Parser
             {
                 SetTextPos(pos);
                 NextToken();
-                ParseCollectionInitalizer(newType, pos, bindingList, actions, instance, true);
+                ParseCollectionInitializer(newType, pos, bindingList, actions, instance, true);
                 return;
             }
 
@@ -1306,21 +1215,16 @@ internal class Parser
         bindingList.Add(Expression.Bind(member, value));
     }
 
-    private void ParseCollectionInitalizer(Type newType, int originalPos, List<MemberBinding> bindingList,
+    private void ParseCollectionInitializer(Type newType, int originalPos, List<MemberBinding> bindingList,
         List<Expression> actions, ParameterExpression instance, bool allowCollectionInit)
     {
         if (!allowCollectionInit)
-        {
             throw ParseException.Create(_token.pos,
                 "Cannot initialize type '{0}' with a collection initializer because it does not implement '{1}'",
-                newType,
-                typeof(IEnumerable));
-        }
+                newType, typeof(IEnumerable));
 
         if (bindingList.Count > 0)
-        {
             throw ParseException.Create(originalPos, "Invalid initializer member declarator");
-        }
 
         if (_token.id == TokenId.OpenCurlyBracket)
         {
@@ -1595,11 +1499,6 @@ internal class Parser
 
     private Expression ParseTypeKeyword(Type type)
     {
-        //if (token.id == TokenId.OpenParen)
-        //{
-        //    return ParseTypeConstructor(type, errorPos);
-        //}
-
         if (_token.id == TokenId.CloseParen)
         {
             return Expression.Constant(type);
@@ -1610,46 +1509,10 @@ internal class Parser
         return ParseMemberAccess(type, null);
     }
 
-    //private Expression ParseTypeConstructor(Type type, int errorPos)
-    //{
-    //    Expression[] args = ParseArgumentList();
-    //    MethodBase method;
-    //    switch (FindBestMethod(type.GetConstructors(), args, out method))
-    //    {
-    //        case 0:
-    //            if (args.Length == 1)
-    //                return GenerateConversion(args[0], type, errorPos);
-    //            throw ParseError(errorPos, ErrorMessages.NoMatchingConstructor, TypeUtils.GetTypeName(type));
-    //        case 1:
-    //            return Expression.New((ConstructorInfo)method, args);
-    //        default:
-    //            throw ParseError(errorPos, ErrorMessages.AmbiguousConstructorInvocation, TypeUtils.GetTypeName(type));
-    //    }
-    //}
-
     private Expression GenerateConversion(Expression expr, Type type, int errorPos)
     {
         var exprType = expr.Type;
-        if (exprType == type)
-        {
-            return expr;
-        }
-
-        //if (exprType.IsValueType && type.IsValueType)
-        //{
-        //	if ((IsNullableType(exprType) || IsNullableType(type)) &&
-        //			GetNonNullableType(exprType) == GetNonNullableType(type))
-        //		return Expression.Convert(expr, type);
-        //	if ((IsNumericType(exprType) || IsEnumType(exprType)) &&
-        //			(IsNumericType(type)) || IsEnumType(type))
-        //		return Expression.ConvertChecked(expr, type);
-        //}
-
-        //if (exprType.IsAssignableFrom(type) || type.IsAssignableFrom(exprType) ||
-        //				exprType.IsInterface || type.IsInterface)
-        //{
-        //	return Expression.Convert(expr, type);
-        //}
+        if (exprType == type) return expr;
 
         // generic type was not fully resolved; try to find a type in the inheritance hierarchy
         // that matches the generic type definition
@@ -1671,10 +1534,7 @@ internal class Parser
 
         try
         {
-            if (expr is InterpreterExpression ie)
-            {
-                return ie.EvalAs(type);
-            }
+            if (expr is InterpreterExpression ie) return ie.EvalAs(type);
 
             return Expression.ConvertChecked(expr, type);
         }
@@ -1685,10 +1545,7 @@ internal class Parser
         }
     }
 
-    private Expression ParseMemberAccess(Expression instance)
-    {
-        return ParseMemberAccess(null, instance);
-    }
+    private Expression ParseMemberAccess(Expression instance) => ParseMemberAccess(null, instance);
 
     private Expression ParseMemberAccess(Type type, Expression instance)
     {
@@ -1720,11 +1577,9 @@ internal class Parser
             TypeUtils.GetTypeName(type));
     }
 
-    private Expression ParseMethodInvocation(Type type, Expression instance, int errorPos, string methodName)
-    {
-        return ParseMethodInvocation(type, instance, errorPos, methodName, TokenId.OpenParen,
+    private Expression ParseMethodInvocation(Type type, Expression instance, int errorPos, string methodName) =>
+        ParseMethodInvocation(type, instance, errorPos, methodName, TokenId.OpenParen,
             "'.' or '(' expected", TokenId.CloseParen, "')' or ',' expected");
-    }
 
     private Expression ParseMethodInvocation(Type type, Expression instance, int errorPos, string methodName,
         TokenId open, string openExpected, TokenId close, string closeExpected)
@@ -1761,7 +1616,6 @@ internal class Parser
         if (extensionMethods.Count == 1)
         {
             var method = extensionMethods[0];
-
             return Expression.Call((MethodInfo)method.MethodBase, method.PromotedParameters);
         }
 
@@ -1785,59 +1639,9 @@ internal class Parser
 
         return null;
     }
-
-    //static Type FindGenericType(Type generic, Type type)
-    //{
-    //	while (type != null && type != typeof(object))
-    //	{
-    //		if (type.IsGenericType && type.GetGenericTypeDefinition() == generic) return type;
-    //		if (generic.IsInterface)
-    //		{
-    //			foreach (Type intfType in type.GetInterfaces())
-    //			{
-    //				Type found = FindGenericType(generic, intfType);
-    //				if (found != null) return found;
-    //			}
-    //		}
-    //		type = type.BaseType;
-    //	}
-    //	return null;
-    //}
-
-    //Expression ParseAggregate(Expression instance, Type elementType, string methodName, int errorPos)
-    //{
-    //    ParameterExpression outerIt = it;
-    //    ParameterExpression innerIt = Expression.Parameter(elementType, "");
-    //    it = innerIt;
-    //    Expression[] args = ParseArgumentList();
-    //    it = outerIt;
-    //    MethodBase signature;
-    //    if (FindMethod(typeof(IEnumerableSignatures), methodName, false, args, out signature) != 1)
-    //        throw ParseError(errorPos, ErrorMessages.NoApplicableAggregate, methodName);
-    //    Type[] typeArgs;
-    //    if (signature.Name == "Min" || signature.Name == "Max")
-    //    {
-    //        typeArgs = new Type[] { elementType, args[0].Type };
-    //    }
-    //    else
-    //    {
-    //        typeArgs = new Type[] { elementType };
-    //    }
-    //    if (args.Length == 0)
-    //    {
-    //        args = new Expression[] { instance };
-    //    }
-    //    else
-    //    {
-    //        args = new Expression[] { instance, Expression.Lambda(args[0], innerIt) };
-    //    }
-    //    return Expression.Call(typeof(Enumerable), signature.Name, typeArgs, args);
-    //}
-
-    private static Expression ParseDynamicProperty(Expression instance, string propertyOrFieldName)
-    {
-        return Expression.Dynamic(new LateGetMemberCallSiteBinder(propertyOrFieldName), typeof(object), instance);
-    }
+    
+    private static Expression ParseDynamicProperty(Expression instance, string propertyOrFieldName) 
+        => Expression.Dynamic(new LateGetMemberCallSiteBinder(propertyOrFieldName), typeof(object), instance);
 
     private static Expression ParseDynamicMethodInvocation(Type type, Expression instance, string methodName,
         Expression[] args)
@@ -1864,8 +1668,7 @@ internal class Parser
     }
 
     private Expression[] ParseArgumentList(TokenId openToken, string missingOpenTokenMsg,
-        TokenId closeToken, string missingCloseTokenMsg,
-        bool allowTrailingComma = false)
+        TokenId closeToken, string missingCloseTokenMsg, bool allowTrailingComma = false)
     {
         ValidateToken(openToken, missingOpenTokenMsg);
         NextToken();
@@ -1884,11 +1687,8 @@ internal class Parser
         return argList.ToArray();
     }
 
-    private Expression[] ParseArgumentList()
-    {
-        return ParseArgumentList(TokenId.OpenParen, "'.' or '(' expected",
-            TokenId.CloseParen, "')' or ',' expected");
-    }
+    private Expression[] ParseArgumentList() => ParseArgumentList(TokenId.OpenParen, "'.' or '(' expected",
+        TokenId.CloseParen, "')' or ',' expected");
 
     private Expression ParseElementAccess(Expression expr)
     {
@@ -1936,11 +1736,6 @@ internal class Parser
                (instance.NodeType == ExpressionType.Dynamic ||
                 (_arguments.Settings.LateBindObject && instance.Type == typeof(object)));
     }
-
-    //static bool IsEnumType(Type type)
-    //{
-    //	return GetNonNullableType(type).IsEnum;
-    //}
 
     private void CheckAndPromoteOperand(MethodBase[] unarySignatures, ref Expression expr)
     {
@@ -2322,11 +2117,11 @@ internal class Parser
                 if (_parseChar == '&')
                 {
                     NextChar();
-                    t = TokenId.DoubleAmphersand;
+                    t = TokenId.DoubleAmpersand;
                 }
                 else
                 {
-                    t = TokenId.Amphersand;
+                    t = TokenId.Ampersand;
                 }
 
                 break;
@@ -2539,7 +2334,8 @@ internal class Parser
                 if (char.IsDigit(_parseChar))
                 {
                     //RealLiteral if DefaultNumberType settings is set to real type
-                    if (_defaultNumberType is DefaultNumberType.Single or DefaultNumberType.Double or DefaultNumberType.Decimal)
+                    if (_defaultNumberType is DefaultNumberType.Single or DefaultNumberType.Double
+                        or DefaultNumberType.Decimal)
                     {
                         t = TokenId.RealLiteral;
                     }
@@ -2665,7 +2461,7 @@ internal class Parser
         ValidateToken(TokenId.Identifier, "Identifier expected");
         var id = _token.text;
         if (id.Length > 1 && id[0] == '@')
-            id = id.Substring(1);
+            id = id[1..];
         return id;
     }
 

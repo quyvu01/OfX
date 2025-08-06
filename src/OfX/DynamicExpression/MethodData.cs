@@ -16,8 +16,5 @@ internal class MethodData
         Parameters = method.GetParameters()
     };
 
-    public override string ToString()
-    {
-        return MethodBase.ToString();
-    }
+    public override string ToString() => MethodBase.ToString();
 }

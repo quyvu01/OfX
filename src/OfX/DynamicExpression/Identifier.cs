@@ -5,8 +5,8 @@ namespace OfX.DynamicExpression;
 
 public class Identifier
 {
-    public Expression Expression { get; private set; }
-    public string Name { get; private set; }
+    public Expression Expression { get; }
+    public string Name { get; }
 
     public Identifier(string name, Expression expression)
     {
@@ -28,7 +28,7 @@ internal class FunctionIdentifier : Identifier
 }
 
 /// <summary>
-/// Custom expression that simulates a method group (ie. a group of methods with the same name).
+/// Custom expression that simulates a method group (i.e., a group of methods with the same name).
 /// It's used when custom functions are added to the interpreter via <see cref="Interpreter.SetFunction(string, Delegate)"/>.
 /// </summary>
 internal class MethodGroupExpression : Expression
@@ -36,36 +36,16 @@ internal class MethodGroupExpression : Expression
     public class Overload(Delegate @delegate)
     {
         public Delegate Delegate { get; } = @delegate;
-
         private MethodBase _method;
-
-        public MethodBase Method
-        {
-            get
-            {
-                if (_method == null)
-                    _method = Delegate.Method;
-
-                return _method;
-            }
-        }
-
-        // we'll most likely never need this: it was needed before https://github.com/dotnet/roslyn/pull/53402
         private MethodBase _invokeMethod;
 
-        public MethodBase InvokeMethod
-        {
-            get
-            {
-                if (_invokeMethod == null)
-                    _invokeMethod = MemberFinder.FindInvokeMethod(Delegate.GetType());
+        public MethodBase Method => _method ??= Delegate.Method;
 
-                return _invokeMethod;
-            }
-        }
+        // we'll most likely never need this: it was necessary before https://github.com/dotnet/roslyn/pull/53402
+        public MethodBase InvokeMethod => _invokeMethod ??= MemberFinder.FindInvokeMethod(Delegate.GetType());
     }
 
-    private readonly List<Overload> _overloads = new();
+    private readonly List<Overload> _overloads = [];
 
     internal IReadOnlyCollection<Overload> Overloads => _overloads.AsReadOnly();
 
@@ -83,8 +63,7 @@ internal class MethodGroupExpression : Expression
 
     private static bool HasSameSignature(MethodInfo method, MethodInfo other)
     {
-        if (method.ReturnType != other.ReturnType)
-            return false;
+        if (method.ReturnType != other.ReturnType) return false;
 
         var param = method.GetParameters();
         var oParam = other.GetParameters();
@@ -110,13 +89,11 @@ internal class MethodGroupExpression : Expression
         {
             if (usedInvokeMethod)
             {
-                if (methodData.MethodBase == overload.InvokeMethod)
-                    return overload.Delegate;
+                if (methodData.MethodBase == overload.InvokeMethod) return overload.Delegate;
             }
             else
             {
-                if (methodData.MethodBase == overload.Method)
-                    return overload.Delegate;
+                if (methodData.MethodBase == overload.Method) return overload.Delegate;
             }
         }
 

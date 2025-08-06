@@ -48,10 +48,7 @@ internal class ParserSettings
     /// Creates a deep copy of the current settings, so that the identifiers/types/methods can be changed
     /// without impacting the existing settings.
     /// </summary>
-    public ParserSettings Clone()
-    {
-        return new ParserSettings(this);
-    }
+    public ParserSettings Clone() => new(this);
 
     public IDictionary<string, ReferenceType> KnownTypes => _knownTypes;
 

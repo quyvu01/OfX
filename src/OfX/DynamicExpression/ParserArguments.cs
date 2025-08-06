@@ -7,102 +7,100 @@ namespace OfX.DynamicExpression;
 
 internal class ParserArguments
 {
-	private readonly Dictionary<string, Parameter> _declaredParameters;
+    private readonly Dictionary<string, Parameter> _declaredParameters;
 
-	private readonly HashSet<Parameter> _usedParameters = new();
-	private readonly HashSet<ReferenceType> _usedTypes = new();
-	private readonly HashSet<Identifier> _usedIdentifiers = new();
+    private readonly HashSet<Parameter> _usedParameters = [];
+    private readonly HashSet<ReferenceType> _usedTypes = [];
+    private readonly HashSet<Identifier> _usedIdentifiers = [];
 
-	public ParserArguments(
-		string expressionText,
-		ParserSettings settings,
-		Type expressionReturnType,
-		IEnumerable<Parameter> declaredParameters
-	)
-	{
-		ExpressionText = expressionText;
-		ExpressionReturnType = expressionReturnType;
+    public ParserArguments(string expressionText, ParserSettings settings, Type expressionReturnType,
+        IEnumerable<Parameter> declaredParameters
+    )
+    {
+        ExpressionText = expressionText;
+        ExpressionReturnType = expressionReturnType;
 
-		Settings = settings;
-		_declaredParameters = new Dictionary<string, Parameter>(settings.KeyComparer);
-		foreach (var pe in declaredParameters)
-		{
-			try
-			{
-				_declaredParameters.Add(pe.Name, pe);
-			}
-			catch (ArgumentException)
-			{
-				throw new DuplicateParameterException(pe.Name);
-			}
-		}
-	}
+        Settings = settings;
+        _declaredParameters = new Dictionary<string, Parameter>(settings.KeyComparer);
+        foreach (var pe in declaredParameters)
+        {
+            try
+            {
+                _declaredParameters.Add(pe.Name, pe);
+            }
+            catch (ArgumentException)
+            {
+                throw new DuplicateParameterException(pe.Name);
+            }
+        }
+    }
 
-	public ParserSettings Settings { get; private set; }
-	public string ExpressionText { get; private set; }
-	public Type ExpressionReturnType { get; private set; }
-	public IEnumerable<Parameter> DeclaredParameters => _declaredParameters.Values;
+    public ParserSettings Settings { get; }
+    public string ExpressionText { get; private set; }
+    public Type ExpressionReturnType { get; private set; }
+    public IEnumerable<Parameter> DeclaredParameters => _declaredParameters.Values;
 
-	public IEnumerable<Parameter> UsedParameters => _usedParameters;
+    public IEnumerable<Parameter> UsedParameters => _usedParameters;
 
-	public IEnumerable<ReferenceType> UsedTypes => _usedTypes;
+    public IEnumerable<ReferenceType> UsedTypes => _usedTypes;
 
-	public IEnumerable<Identifier> UsedIdentifiers => _usedIdentifiers;
+    public IEnumerable<Identifier> UsedIdentifiers => _usedIdentifiers;
 
-	public bool TryGetKnownType(string name, out Type type)
-	{
-		if (Settings.KnownTypes.TryGetValue(name, out var reference))
-		{
-			_usedTypes.Add(reference);
-			type = reference.Type;
-			return true;
-		}
+    public bool TryGetKnownType(string name, out Type type)
+    {
+        if (Settings.KnownTypes.TryGetValue(name, out var reference))
+        {
+            _usedTypes.Add(reference);
+            type = reference.Type;
+            return true;
+        }
 
-		type = null;
-		return false;
-	}
+        type = null;
+        return false;
+    }
 
-	/// <summary>
-	/// Returns true if the known types contain a generic type definition with the given name + any arity (e.g. name`1).
-	/// </summary>
-	internal bool HasKnownGenericTypeDefinition(string name)
-	{
-		var regex = new Regex("^" + name + "`\\d+$");
-		return Settings.KnownTypes.Values.Any(refType => regex.IsMatch(refType.Name) && refType.Type.IsGenericTypeDefinition);
-	}
+    /// <summary>
+    /// Returns true if the known types contain a generic type definition with the given name + any arity (e.g., name`1).
+    /// </summary>
+    internal bool HasKnownGenericTypeDefinition(string name)
+    {
+        var regex = new Regex("^" + name + "`\\d+$");
+        return Settings.KnownTypes.Values.Any(refType =>
+            regex.IsMatch(refType.Name) && refType.Type.IsGenericTypeDefinition);
+    }
 
-	public bool TryGetIdentifier(string name, out Expression expression)
-	{
-		if (Settings.Identifiers.TryGetValue(name, out var identifier))
-		{
-			_usedIdentifiers.Add(identifier);
-			expression = identifier.Expression;
-			return true;
-		}
+    public bool TryGetIdentifier(string name, out Expression expression)
+    {
+        if (Settings.Identifiers.TryGetValue(name, out var identifier))
+        {
+            _usedIdentifiers.Add(identifier);
+            expression = identifier.Expression;
+            return true;
+        }
 
-		expression = null;
-		return false;
-	}
+        expression = null;
+        return false;
+    }
 
-	/// <summary>
-	/// Get the parameter and mark is as used.
-	/// </summary>
-	public bool TryGetParameters(string name, out ParameterExpression expression)
-	{
-		if (_declaredParameters.TryGetValue(name, out var parameter))
-		{
-			_usedParameters.Add(parameter);
-			expression = parameter.Expression;
-			return true;
-		}
+    /// <summary>
+    /// Get the parameter and mark is as used.
+    /// </summary>
+    public bool TryGetParameters(string name, out ParameterExpression expression)
+    {
+        if (_declaredParameters.TryGetValue(name, out var parameter))
+        {
+            _usedParameters.Add(parameter);
+            expression = parameter.Expression;
+            return true;
+        }
 
-		expression = null;
-		return false;
-	}
+        expression = null;
+        return false;
+    }
 
-	public IEnumerable<MethodInfo> GetExtensionMethods(string methodName)
-	{
-		var comparer = Settings.KeyComparer;
-		return Settings.ExtensionMethods.Where(p => comparer.Equals(p.Name, methodName));
-	}
+    public IEnumerable<MethodInfo> GetExtensionMethods(string methodName)
+    {
+        var comparer = Settings.KeyComparer;
+        return Settings.ExtensionMethods.Where(p => comparer.Equals(p.Name, methodName));
+    }
 }

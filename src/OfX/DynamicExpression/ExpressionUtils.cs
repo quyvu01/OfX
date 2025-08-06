@@ -11,18 +11,14 @@ internal static class ExpressionUtils
 
         if (expr is ConstantExpression ce && ce == ParserConstants.NullLiteralExpression)
         {
-            if (type.ContainsGenericParameters)
-                return null;
-            if (!type.IsValueType || TypeUtils.IsNullableType(type))
-                return Expression.Constant(null, type);
+            if (type.ContainsGenericParameters) return null;
+            if (!type.IsValueType || TypeUtils.IsNullableType(type)) return Expression.Constant(null, type);
         }
 
         if (expr is InterpreterExpression ie)
         {
             if (!ie.IsCompatibleWithDelegate(type)) return null;
-
             if (!type.ContainsGenericParameters) return ie.EvalAs(type);
-
             return expr;
         }
 

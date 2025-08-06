@@ -22,7 +22,7 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     IServiceProvider serviceProvider,
     string idPropertyName,
     string defaultPropertyName)
-    : QueryOfHandler<TModel>(serviceProvider), IQueryOfHandler<TModel, TAttribute>
+    : QueryOfHandler<TModel>, IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute
 {
@@ -51,10 +51,13 @@ public class EfQueryOfHandler<TModel, TAttribute>(
     private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
-        var idsConverted = IdConverter.ConvertIds(query.SelectorIds, _idMemberExpression.Type);
+        var idConverterService = (serviceProvider
+            .GetService(typeof(IIdConverter<>).MakeGenericType(_idMemberExpression.Type)) as IIdConverter)!;
+        var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
         var interpreter = new Interpreter();
         interpreter.SetVariable("ids", idsConverted);
-        return interpreter.ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})", "x");
+        return interpreter.ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})",
+            "x");
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)

@@ -68,20 +68,17 @@ internal class Detector(ParserSettings settings)
             var idGroup = match.Groups["id"];
             var identifier = idGroup.Value;
 
-            if (IsReservedKeyword(identifier))
-                continue;
+            if (IsReservedKeyword(identifier)) continue;
 
             if (option == DetectorOptions.None && idGroup.Index > 0)
             {
                 var previousChar = expression[idGroup.Index - 1];
 
                 // don't consider member accesses as identifiers (e.g. "x.Length" will only return x but not Length)
-                if (previousChar == '.')
-                    continue;
+                if (previousChar == '.') continue;
 
                 // don't consider number literals as identifiers
-                if (char.IsDigit(previousChar))
-                    continue;
+                if (char.IsDigit(previousChar)) continue;
             }
 
             if (settings.Identifiers.TryGetValue(identifier, out var knownIdentifier))
@@ -99,18 +96,15 @@ internal class Detector(ParserSettings settings)
 
     private static string PrepareExpression(string expression)
     {
-        expression = expression ?? string.Empty;
-
+        expression ??= string.Empty;
         expression = RemoveStringLiterals(expression);
-
         expression = RemoveCharLiterals(expression);
-
         return expression;
     }
 
-    private static string RemoveStringLiterals(string expression) => StringDetectionRegex.Replace(expression, "");
+    private static string RemoveStringLiterals(string expression) => StringDetectionRegex.Replace(expression, string.Empty);
 
-    private static string RemoveCharLiterals(string expression) => CharDetectionRegex.Replace(expression, "");
+    private static string RemoveCharLiterals(string expression) => CharDetectionRegex.Replace(expression, string.Empty);
 
     private bool IsReservedKeyword(string identifier) =>
         ParserConstants.ReservedKeywords.Contains(identifier, settings.KeyComparer);
