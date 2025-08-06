@@ -61,7 +61,7 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient<IDataMappableService>(sp => new DataMappableService(sp));
 
-        serviceCollection.AddSingleton<IIdConverter, IdConverterService>();
+        serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 
         serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
 

@@ -10,8 +10,7 @@ internal static class ReflectionExtensions
     public static DelegateInfo GetDelegateInfo(Type delegateType, params string[] parametersNames)
     {
         var method = delegateType.GetMethod("Invoke");
-        if (method == null)
-            throw new ArgumentException("The specified type is not a delegate");
+        if (method == null) throw new ArgumentException("The specified type is not a delegate");
 
         var delegateParameters = method.GetParameters();
         var parameters = new Parameter[delegateParameters.Length];
@@ -63,29 +62,19 @@ internal static class ReflectionExtensions
     private static MethodInfo GetObjectToStringMethod()
     {
         var toStringMethod = typeof(object).GetMethod("ToString", Type.EmptyTypes);
-        if (toStringMethod == null)
-        {
-            throw new Exception("ToString method not found");
-        }
-
+        if (toStringMethod == null) throw new Exception("ToString method not found");
         return toStringMethod;
     }
 
+    // +1 for the return type
     public static Type GetFuncType(int parameterCount)
-    {
-        // +1 for the return type
-        return typeof(Func<>).Assembly.GetType($"System.Func`{parameterCount + 1}");
-    }
+        => typeof(Func<>).Assembly.GetType($"System.Func`{parameterCount + 1}");
 
     public static Type GetActionType(int parameterCount)
-    {
-        return typeof(Action<>).Assembly.GetType($"System.Action`{parameterCount}");
-    }
+        => typeof(Action<>).Assembly.GetType($"System.Action`{parameterCount}");
 
     public static bool HasParamsArrayType(ParameterInfo parameterInfo)
-    {
-        return parameterInfo.IsDefined(typeof(ParamArrayAttribute), false);
-    }
+        => parameterInfo.IsDefined(typeof(ParamArrayAttribute), false);
 
     public static Type GetParameterType(ParameterInfo parameterInfo)
     {

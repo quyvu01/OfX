@@ -22,7 +22,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
     IServiceProvider serviceProvider,
     string idPropertyName,
     string defaultPropertyName)
-    : QueryOfHandler<TModel>(serviceProvider), IQueryOfHandler<TModel, TAttribute>
+    : QueryOfHandler<TModel>, IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute
 {
@@ -39,18 +39,23 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
-        var idsConverted = IdConverter.ConvertIds(context.Query.SelectorIds, _idMemberExpression.Type);
-        var interpreter = new Interpreter();
-        interpreter.SetVariable("ids", idsConverted);
-        var filter = interpreter
-            .ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})", "x");
-
+        var filter = BuildFilter(context.Query);
         var result = await _collectionInternal.Collection.Find(filter)
             .ToListAsync(context.CancellationToken);
-
         var items = result.Select(BuildResponse(context.Query).Compile());
         return new ItemsResponse<OfXDataResponse>([..items]);
+    }
+
+    private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
+    {
+        _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
+        var idConverterService = (serviceProvider
+            .GetService(typeof(IIdConverter<>).MakeGenericType(_idMemberExpression.Type)) as IIdConverter)!;
+        var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
+        var interpreter = new Interpreter();
+        interpreter.SetVariable("ids", idsConverted);
+        return interpreter.ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})",
+            "x");
     }
 
     private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)

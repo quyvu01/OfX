@@ -79,17 +79,11 @@ internal static class MethodResolution
                 }
 
                 var parameterDeclaration = method.Parameters[declaredWorkingParameters];
-                if (parameterDeclaration.IsOut)
-                {
-                    return false;
-                }
+                if (parameterDeclaration.IsOut) return false;
 
                 parameterType = parameterDeclaration.ParameterType;
 
-                if (ReflectionExtensions.HasParamsArrayType(parameterDeclaration))
-                {
-                    paramsArrayTypeFound = parameterType;
-                }
+                if (ReflectionExtensions.HasParamsArrayType(parameterDeclaration)) paramsArrayTypeFound = parameterType;
 
                 declaredWorkingParameters++;
             }
@@ -100,8 +94,7 @@ internal static class MethodResolution
                 if (parameterType.IsGenericParameter)
                 {
                     // an interpreter expression can only be matched to a parameter of type Func
-                    if (currentArgument is InterpreterExpression)
-                        return false;
+                    if (currentArgument is InterpreterExpression) return false;
 
                     promotedArgs.Add(currentArgument);
                     continue;
@@ -120,7 +113,7 @@ internal static class MethodResolution
                 var paramsArrayElementType = paramsArrayTypeFound.GetElementType()!;
                 if (paramsArrayElementType.IsGenericParameter)
                 {
-                    paramsArrayPromotedArgument = paramsArrayPromotedArgument ?? [];
+                    paramsArrayPromotedArgument ??= [];
                     paramsArrayPromotedArgument.Add(currentArgument);
                     continue;
                 }
@@ -128,7 +121,7 @@ internal static class MethodResolution
                 var promoted = ExpressionUtils.PromoteExpression(currentArgument, paramsArrayElementType);
                 if (promoted != null)
                 {
-                    paramsArrayPromotedArgument = paramsArrayPromotedArgument ?? [];
+                    paramsArrayPromotedArgument ??= [];
                     paramsArrayPromotedArgument.Add(promoted);
                     continue;
                 }
@@ -220,7 +213,7 @@ internal static class MethodResolution
     {
         var better = false;
 
-        // check conversion from argument list to parameter list
+        // check conversion from argument list to a parameter list
         for (int i = 0, m = 0, o = 0; i < args.Length; i++)
         {
             var arg = args[i];

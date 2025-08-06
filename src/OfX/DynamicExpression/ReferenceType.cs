@@ -23,7 +23,7 @@ public class ReferenceType
         if (type.IsGenericType && !type.IsGenericTypeDefinition)
         {
             var genericType = type.GetGenericTypeDefinition();
-            var genericTypeName = genericType.Name.Substring(0, genericType.Name.IndexOf('`'));
+            var genericTypeName = genericType.Name[..genericType.Name.IndexOf('`')];
             genericTypeName += $"<{new string(',', genericType.GetGenericArguments().Length - 1)}>";
             throw new ArgumentException(
                 $"Generic type must be referenced via its generic definition: {genericTypeName}");
