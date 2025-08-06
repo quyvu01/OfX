@@ -140,7 +140,22 @@ Example:
 cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 ```
 
-Here, `AddHandlersFromNamespaceContaining` is a type within the assembly where your handler logic resides.
+#### AddDefaultReceiversFromNamespaceContaining
+
+```csharp
+cfg.AddDefaultReceiversFromNamespaceContaining<ReceiversAssembly>();
+
+```
+
+Add assemblies that contain types are implemented from interface `IDefaultReceivedHandler<>`.
+
+Parameters:
+`Type`: A marker type within the assembly that includes the default receiver handler for OfXAttribute implementations.
+Example:
+
+```csharp
+cfg.AddDefaultReceiversFromNamespaceContaining<ReceiversAssembly>();
+```
 
 #### AddReceivedPipelines
 
@@ -149,7 +164,7 @@ cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericReceivedPipeline<>).OfType<
 ```
 
 When you want to create pipelines to handle the received request for `OfXAttribute`. You should use it on the server,
-where you fetching and response to client!
+where you are fetching and response to the client!
 
 Parameters:
 `Action<ReceivedPipeline>`: add the pipelines.
