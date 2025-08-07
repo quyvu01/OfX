@@ -58,7 +58,22 @@ public sealed class TestController : ControllerBase
                 Id = a.ToString(),
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
                 MemberAddressId = a.ToString(),
-                MemberSocialId = a.ToString()
+                MemberSocialId = a.ToString(),
+                // ExternalId = a.ToString()
+            })
+        ];
+        await dataMappableService.MapDataAsync(members);
+        return Ok(members);
+    }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetSimpleMembers([FromServices] IDataMappableService dataMappableService)
+    {
+        List<SimpleMemberResponse> members =
+        [
+            .. Enumerable.Range(1, 3).Select(a => new SimpleMemberResponse
+            {
+                UserId = a.ToString()
             })
         ];
         await dataMappableService.MapDataAsync(members);

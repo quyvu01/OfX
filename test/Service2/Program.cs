@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
-using OfX.Nats.Extensions;
 using Service2;
 using Service2.Contexts;
 using Service2.Models;
+using Service2.Pipelines;
 using Shared;
 using Shared.RunSqlMigration;
 
@@ -17,6 +17,7 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         // cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+        // cfg.AddCustomExpressionPipelines(c => c.OfType<TestCustomUseData>());
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
