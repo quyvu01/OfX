@@ -14,7 +14,8 @@ public class Query
                 Id = a.ToString(),
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
                 MemberSocialId = a.ToString(),
-                MemberAddressId = a.ToString()
+                MemberAddressId = a.ToString(),
+                ExternalId = a.ToString()
             })
         ];
     }

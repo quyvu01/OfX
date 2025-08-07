@@ -5,6 +5,7 @@ using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.InternalPipelines;
+using OfX.Internals;
 using OfX.Registries;
 using OfX.Services;
 using OfX.Statics;
@@ -21,8 +22,8 @@ public static class OfXExtensions
         if (OfXStatics.AttributesRegister is not { Count: > 0 })
             throw new OfXException.OfXAttributesMustBeSet();
 
-        var targetInterface = typeof(IMappableRequestHandler<>);
-        if (OfXStatics.HandlersRegister is { } handlersRegister)
+        var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
+        if (OfXStatics.HandlersRegisterAssembly is { } handlersRegister)
         {
             // We don't need to care about this so much, exactly.
             // Because if there are not any handlers. It should be return an empty collection!
@@ -30,11 +31,11 @@ public static class OfXExtensions
                 .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
                             x is { IsInterface: false, IsAbstract: false, IsClass: true })
                 .ForEach(handlerType => handlerType.GetInterfaces()
-                    .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == targetInterface)
+                    .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == mappableRequestHandlerType)
                     .ForEach(interfaceType =>
                     {
                         var attributeArgument = interfaceType.GetGenericArguments()[0];
-                        var serviceType = targetInterface.MakeGenericType(attributeArgument);
+                        var serviceType = mappableRequestHandlerType.MakeGenericType(attributeArgument);
                         var existedService = serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
                         if (existedService is null)
                         {
@@ -47,19 +48,29 @@ public static class OfXExtensions
                     }));
         }
 
-        var defaultImplementedInterface = typeof(DefaultMappableRequestHandler<>);
+        var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
         OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
             // So the interface with the default method is the best choice!
-            var parentType = targetInterface.MakeGenericType(attributeType);
-            var defaultImplementedService = defaultImplementedInterface.MakeGenericType(attributeType);
+            var serviceType = mappableRequestHandlerType.MakeGenericType(attributeType);
+            var defaultImplementedType = defaultMappableRequestHandlerType.MakeGenericType(attributeType);
             // Using TryAddScoped is pretty cool. We don't need to check if the service is registered or not!
             // So we have to replace the default service if it existed -> Good!
-            serviceCollection.TryAddScoped(parentType, defaultImplementedService);
+            serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
+        });
+        
+        var defaultQueryHandlerInterface = typeof(IQueryOfHandler<,>);
+        OfXStatics.DefaultReceiverTypes.Value.ForEach(attributeType =>
+        {
+            var hiddenModelOf = typeof(HiddenModelOf<>).MakeGenericType(attributeType);
+            var serviceType = defaultQueryHandlerInterface
+                .MakeGenericType(hiddenModelOf, attributeType);
+            var implementedType = OfXStatics.DefaultReceiverOfHandlerType.MakeGenericType(hiddenModelOf, attributeType);
+            serviceCollection.TryAddScoped(serviceType, implementedType);
         });
 
-        serviceCollection.AddTransient<IDataMappableService>(sp => new DataMappableService(sp));
+        serviceCollection.AddTransient<IDataMappableService, DataMappableService>();
 
         serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 

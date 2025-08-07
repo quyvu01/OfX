@@ -9,3 +9,9 @@ public sealed class OfXConfigForAttribute<TAttribute>(string idProperty, string 
     public string IdProperty { get; } = idProperty;
     public string DefaultProperty { get; } = defaultProperty;
 }
+
+internal sealed class HiddenOfXConfigForAttribute : IOfXConfigAttribute
+{
+    public string IdProperty => null;
+    public string DefaultProperty => null;
+}

@@ -7,7 +7,6 @@ using OfX.Nats.Extensions;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Models;
-using Service3Api.Pipelines;
 using Shared;
 using Shared.RunSqlMigration;
 
@@ -15,12 +14,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        cfg.AddReceivedPipelines(c => c.OfType(typeof(TestReceivedPipeline<>)));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 builder.Services.AddGrpc();
+
+#region Setting Database and Seeding data
+
 Dictionary<string, List<string>> countryMapProvinces = new()
 {
     { "abc", ["01962f9a-f7f8-7f61-941c-6a086fe96cd2", "01962f9a-f7f8-7b4c-9b4d-eae8ea6e5fc7"] },
@@ -55,6 +56,9 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
         await context.SaveChangesAsync(cancellationToken);
     });
 }, 128);
+
+#endregion
+
 
 var app = builder.Build();
 

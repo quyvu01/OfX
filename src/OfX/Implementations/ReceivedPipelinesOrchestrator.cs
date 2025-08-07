@@ -21,9 +21,11 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         // Deserialize expressions from Expression, we handle the custom expressions and original expression as well
         var expressions = JsonSerializer.Deserialize<List<string>>(requestContext.Query.Expression);
         var customExpressions = customExpressionHandlers
-            .Select(a => a.CustomExpression());
+            .Select(a => a.CustomExpression())
+            .ToList();
         var newExpressions = expressions.Except(customExpressions).ToList();
         var newExpression = JsonSerializer.Serialize(newExpressions);
+        var customExpressionsToExecute = customExpressions.Intersect(expressions);
 
         var newRequestContext = new RequestContextImpl<TAttribute>(
             requestContext.Query with { Expression = newExpression }, requestContext.Headers,
@@ -37,6 +39,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
 
         // Handle getting data for custom expressions
         var customResults = customExpressionHandlers
+            .Where(a => customExpressionsToExecute.Contains(a.CustomExpression()))
             .Select(a => (Expression: a.CustomExpression(), ResultTask: a.HandleAsync(
                 new RequestContextImpl<TAttribute>(requestContext.Query with { Expression = a.CustomExpression() },
                     requestContext.Headers, requestContext.CancellationToken)))).ToList();

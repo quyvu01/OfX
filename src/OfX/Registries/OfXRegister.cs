@@ -10,7 +10,10 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public IServiceCollection ServiceCollection { get; } = serviceCollection;
 
     public void AddHandlersFromNamespaceContaining<TAssemblyMarker>() =>
-        OfXStatics.HandlersRegister = typeof(TAssemblyMarker).Assembly;
+        OfXStatics.HandlersRegisterAssembly = typeof(TAssemblyMarker).Assembly;
+    
+    public void AddDefaultReceiversFromNamespaceContaining<TAssemblyMarker>() =>
+        OfXStatics.DefaultReceiversRegisterAssembly = typeof(TAssemblyMarker).Assembly;
 
     public void AddAttributesContainNamespaces(params Assembly[] attributeAssemblies) =>
         OfXStatics.AttributesRegister = [..attributeAssemblies];
