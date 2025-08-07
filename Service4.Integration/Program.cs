@@ -1,10 +1,15 @@
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
+using Serilog;
 using Service4.Integration;
 using Service4.Integration.Pipelines;
 using Shared;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .CreateLogger();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

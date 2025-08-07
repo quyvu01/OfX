@@ -59,7 +59,7 @@ public sealed class TestController : ControllerBase
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
                 MemberAddressId = a.ToString(),
                 MemberSocialId = a.ToString(),
-                // ExternalId = a.ToString()
+                ExternalId = a.ToString()
             })
         ];
         await dataMappableService.MapDataAsync(members);
