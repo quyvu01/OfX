@@ -18,7 +18,7 @@ namespace OfX.EntityFrameworkCore.Extensions;
 public static class EntityFrameworkExtensions
 {
     private static readonly Lazy<ConcurrentDictionary<Type, int>> ModelTypeLookUp = new(() => []);
-    private static readonly Type EfQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
+    private static readonly Type EfQueryOfHandlerType = typeof(EfQueryHandler<,>);
     private static readonly ConcurrentDictionary<Type, bool> ModelTypeCache = new();
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
         Func<IServiceProvider, string, string, object>> EfQueryOfHandlerCache = new();

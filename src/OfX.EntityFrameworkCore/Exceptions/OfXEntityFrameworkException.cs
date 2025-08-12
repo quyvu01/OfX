@@ -8,5 +8,5 @@ public static class OfXEntityFrameworkException
         : Exception($"There are no any db context contains model: {modelType.Name}");
     
     public class DbContextsMustNotBeEmpty()
-        : Exception($"There are no any db contexts on AddOfXEFCore() method");
+        : Exception("There are no any db contexts on AddOfXEFCore() method");
 }

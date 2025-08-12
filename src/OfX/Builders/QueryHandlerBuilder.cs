@@ -2,68 +2,73 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.DynamicExpression;
-using OfX.MongoDb.Abstractions;
-using OfX.MongoDb.Queryable;
-using OfX.MongoDb.Statics;
+using OfX.Helpers;
 using OfX.Responses;
 using OfX.Serializable;
 using OfX.Statics;
 
-namespace OfX.MongoDb;
+namespace OfX.Builders;
 
-public class MongoDbQueryOfHandler<TModel, TAttribute>(
+public class QueryHandlerBuilder<TModel, TAttribute>(
     IServiceProvider serviceProvider,
     string idPropertyName,
     string defaultPropertyName)
-    : QueryOfHandler<TModel>, IQueryOfHandler<TModel, TAttribute>
-    where TModel : class
-    where TAttribute : OfXAttribute
+    where TModel : class where TAttribute : OfXAttribute
 {
+    /// <summary>
+    /// Currently, we allow expression as collection bellow:
+    /// [OrderDirection OrderedProperty] as know as FullCollection
+    /// [Offset Limit OrderDirection OrderedProperty] as know as CollectionWithOffsetLimit
+    /// [0|-1 OrderDirection OrderedProperty] as know as CollectionWithFirstOrLast
+    /// </summary>
+    #region Collection Declarations
+
+    private const int FullCollection = 2;
+    private const int CollectionWithFirstOrLast = 3;
+    private const int CollectionWithOffsetLimit = 4;
+
+    #endregion
+
+    private const string ModelName = "x";
+    private const string IdsNaming = "ids";
+    private static MemberExpression _idMemberExpression;
+
+    private static readonly ParameterExpression ModelParameterExpression =
+        Expression.Parameter(typeof(TModel), ModelName);
+
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
-    private static MemberExpression _idMemberExpression;
-
-    private readonly IMongoCollectionInternal<TModel> _collectionInternal =
-        serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
-
-    private readonly ILogger<MongoDbQueryOfHandler<TModel, TAttribute>> _logger = serviceProvider
-        .GetService<ILogger<MongoDbQueryOfHandler<TModel, TAttribute>>>();
-
-    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
-    {
-        var filter = BuildFilter(context.Query);
-        var result = await _collectionInternal.Collection.Find(filter)
-            .ToListAsync(context.CancellationToken);
-        var items = result.Select(BuildResponse(context.Query).Compile());
-        return new ItemsResponse<OfXDataResponse>([..items]);
-    }
-
-    private Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
+    protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
         var idConverterService = (serviceProvider
             .GetService(typeof(IIdConverter<>).MakeGenericType(_idMemberExpression.Type)) as IIdConverter)!;
         var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
         var interpreter = new Interpreter();
-        interpreter.SetVariable("ids", idsConverted);
-        return interpreter.ParseAsExpression<Func<TModel, bool>>($"ids.{nameof(IList.Contains)}(x.{idPropertyName})",
-            "x");
+        interpreter.SetVariable(IdsNaming, idsConverted);
+        return interpreter.ParseAsExpression<Func<TModel, bool>>(
+            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{idPropertyName})", ModelName);
     }
 
-    private Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
+    /// <summary>
+    /// Currently, I accept this is the best solution at the time.
+    /// I need to investigate to use DynamicExpression to this one.
+    /// Also, the response should be the Expression of Func[TModel, TModel].
+    /// This should be updated later one.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
 
         var ofXValueExpression = expressions
-            .AsParallel()
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
             {
                 try
@@ -87,7 +92,9 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                                 .Split(' ');
 
                             if (collectionItems is not
-                                { Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit })
+                                {
+                                    Length: FullCollection or CollectionWithFirstOrLast or CollectionWithOffsetLimit
+                                })
                                 throw new ArgumentException(
                                     $"""
                                      Collection data [{collectionPropertyName}] must be defined as 
@@ -101,7 +108,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                             {
                                 var orderedDirection = collectionItems[0];
                                 var orderedPropertyName = collectionItems[1];
-                                var expressionQueryableData = QueryableHelpers.GetManyExpression(currentExpression,
+                                var expressionQueryableData = ExpressionHelpers.GetManyExpression(currentExpression,
                                     collectionPropertyName,
                                     orderedDirection, orderedPropertyName);
                                 currentExpression = expressionQueryableData.Expression;
@@ -117,7 +124,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                                 if (!int.TryParse(indexAsString, out var index) || (index != 0 && index != -1))
                                     throw new ArgumentException(
                                         $"First parameter [{indexAsString}] must be 0(First item) or -1(Last item)");
-                                var expressionQueryableData = QueryableHelpers.GetOneExpression(currentExpression,
+                                var expressionQueryableData = ExpressionHelpers.GetOneExpression(currentExpression,
                                     collectionPropertyName,
                                     orderedDirection, orderedPropertyName, index);
                                 currentExpression = expressionQueryableData.Expression;
@@ -137,7 +144,7 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                                 if (!int.TryParse(limitAsString, out var limit) || limit < 0)
                                     throw new ArgumentException(
                                         $"Limit parameter [{limit}] must not be a negative or zero number!");
-                                var expressionQueryableData = QueryableHelpers.GetManyExpression(currentExpression,
+                                var expressionQueryableData = ExpressionHelpers.GetManyExpression(currentExpression,
                                     collectionPropertyName, orderedDirection, orderedPropertyName, offset, limit);
 
                                 currentExpression = expressionQueryableData.Expression;
@@ -170,23 +177,25 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
                     var serializeObjectMethod = typeof(SerializeObjects)
                         .GetMethod(nameof(SerializeObjects.SerializeObject), [typeof(object)]);
 
-                    var serializeCall = Expression.Call(serializeObjectMethod!, currentExpression);
+                    var serializeCall = Expression.Call(serializeObjectMethod!,
+                        Expression.Convert(currentExpression, typeof(object)));
 
                     var bindings = new List<MemberBinding>();
-                    if (expr is { })
-                        bindings.Add(Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
+                    if (expr is not null)
+                        bindings.Add(
+                            Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
                     bindings.Add(Expression.Bind(OfXStatics.ValueValueTypeProp!, serializeCall));
 
                     // Create a new OfXDataResponse object
                     var newExpression = Expression.MemberInit(Expression.New(OfXStatics.OfXValueType), bindings);
 
                     // Return the lambda expression
-                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression, ModelParameterExpression);
+                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression,
+                        ModelParameterExpression);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    _logger?.LogError("Error while creating the expression for part: {@Part}, error: {@Error}",
-                        expression, e.Message);
+                    if (OfXStatics.ThrowIfExceptions) throw;
                     return null;
                 }
             }));
@@ -195,12 +204,13 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             ofXValueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idAsStringExpression = OfXMongoDbStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
-        {
-            var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
-            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
-            return Expression.Call(idProperty, toStringMethod!);
-        });
+        var idAsStringExpression = QueryHandlerBuilderStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel),
+            _ =>
+            {
+                var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
+                var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+                return Expression.Call(idProperty, toStringMethod!);
+            });
 
         var bindings = new List<MemberBinding>
         {
@@ -211,4 +221,10 @@ public class MongoDbQueryOfHandler<TModel, TAttribute>(
 
         return Expression.Lambda<Func<TModel, OfXDataResponse>>(responseExpression, ModelParameterExpression);
     }
+}
+
+internal static class QueryHandlerBuilderStatics
+{
+    internal static readonly Lazy<ConcurrentDictionary<Type, MethodCallExpression>> IdMethodCallExpressions =
+        new(() => []);
 }

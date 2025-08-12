@@ -15,7 +15,7 @@ public static class MongoDbExtensions
     private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
         Func<IServiceProvider, string, string, object>> MongoDbQueryOfHandlerCache = new();
 
-    private static readonly Type MongoDbQueryOfHandlerType = typeof(MongoDbQueryOfHandler<,>);
+    private static readonly Type MongoDbQueryOfHandlerType = typeof(MongoDbQueryHandler<,>);
 
     public static OfXRegisterWrapped AddMongoDb(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXMongoDbRegistrar> registrarAction)
