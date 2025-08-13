@@ -2,7 +2,7 @@ using OfX.Abstractions;
 using Serilog;
 using Shared.Attributes;
 
-namespace Service4.Integration.Pipelines;
+namespace Service3Api.Pipelines;
 
 public sealed class OtherTestReceivedPipeline : ICustomExpressionBehavior<ExternalDataOfAttribute>
 {

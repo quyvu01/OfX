@@ -1,6 +1,6 @@
 using OfX.Abstractions;
 using Shared.Attributes;
 
-namespace Service4.Integration.Handlers;
+namespace Service3Api.Handlers;
 
 public sealed class ExternalHandler : IDefaultReceivedHandler<ExternalDataOfAttribute>;

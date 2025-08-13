@@ -8,11 +8,8 @@ public class MemberResponse
 
     public string ExternalId { get; set; }
 
-    // [ExternalDataOf(nameof(ExternalId), Expression = "Test")]
-    // public string ExternalDataTest { get; set; }
-    //
-    // [ExternalDataOf(nameof(ExternalId), Expression = "OtherTest")]
-    // public string ExternalDataOtherTest { get; set; }
+    [ExternalDataOf(nameof(ExternalId), Expression = "OtherTest")]
+    public string ExternalDataTest { get; set; }
 
     public string MemberAddressId { get; set; }
 

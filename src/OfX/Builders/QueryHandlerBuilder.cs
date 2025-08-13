@@ -5,6 +5,7 @@ using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Delegates;
 using OfX.DynamicExpression;
 using OfX.Helpers;
 using OfX.Responses;
@@ -15,9 +16,9 @@ namespace OfX.Builders;
 
 public class QueryHandlerBuilder<TModel, TAttribute>(
     IServiceProvider serviceProvider,
-    string idPropertyName,
-    string defaultPropertyName)
-    where TModel : class where TAttribute : OfXAttribute
+    GetOfXConfiguration getOfXConfiguration)
+    where TModel : class
+    where TAttribute : OfXAttribute
 {
     /// <summary>
     /// Currently, we allow expression as collection bellow:
@@ -25,9 +26,11 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
     /// [Offset Limit OrderDirection OrderedProperty] as know as CollectionWithOffsetLimit
     /// [0|-1 OrderDirection OrderedProperty] as know as CollectionWithFirstOrLast
     /// </summary>
+
     #region Collection Declarations
 
     private const int FullCollection = 2;
+
     private const int CollectionWithFirstOrLast = 3;
     private const int CollectionWithOffsetLimit = 4;
 
@@ -36,6 +39,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
     private const string ModelName = "x";
     private const string IdsNaming = "ids";
     private static MemberExpression _idMemberExpression;
+    private readonly IOfXConfigAttribute _configAttribute = getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
 
     private static readonly ParameterExpression ModelParameterExpression =
         Expression.Parameter(typeof(TModel), ModelName);
@@ -43,27 +47,31 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
     private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
         ExpressionMapValueStorage = new(() => []);
 
+    /// <summary>
+    /// We are using DynamicExpression to convert string to Expression
+    /// </summary>
+    /// <param name="query">is an instance of RequestOf[TAttribute], contains SelectorIds and Expression parsed from string to string[]</param>
+    /// <returns></returns>
     protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
-        _idMemberExpression ??= Expression.Property(ModelParameterExpression, idPropertyName);
+        _idMemberExpression ??= Expression.Property(ModelParameterExpression, _configAttribute.IdProperty);
         var idConverterService = (serviceProvider
             .GetService(typeof(IIdConverter<>).MakeGenericType(_idMemberExpression.Type)) as IIdConverter)!;
         var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
         var interpreter = new Interpreter();
         interpreter.SetVariable(IdsNaming, idsConverted);
         return interpreter.ParseAsExpression<Func<TModel, bool>>(
-            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{idPropertyName})", ModelName);
+            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{_configAttribute.IdProperty})", ModelName);
     }
 
     /// <summary>
     /// Currently, I accept this is the best solution at the time.
     /// I need to investigate to use DynamicExpression to this one.
-    /// Also, the response should be the Expression of Func[TModel, TModel].
+    /// Also, the response should be the Expression[Func[TModel, TModel]].
     /// This should be updated later one.
     /// </summary>
-    /// <param name="request"></param>
+    /// <param name="request">is an instance of RequestOf[TAttribute], contains SelectorIds and Expression parsed from string to string[]</param>
     /// <returns></returns>
-    /// <exception cref="ArgumentException"></exception>
     protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
@@ -73,7 +81,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
             {
                 try
                 {
-                    var expOrDefault = expression.Expression ?? defaultPropertyName;
+                    var expOrDefault = expression.Expression ?? _configAttribute.DefaultProperty;
                     var expressionParts = expOrDefault.Split('.');
                     Expression currentExpression = ModelParameterExpression;
                     var currentType = typeof(TModel);
@@ -207,7 +215,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
         var idAsStringExpression = QueryHandlerBuilderStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel),
             _ =>
             {
-                var idProperty = Expression.Property(ModelParameterExpression, idPropertyName);
+                var idProperty = Expression.Property(ModelParameterExpression, _configAttribute.IdProperty);
                 var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
                 return Expression.Call(idProperty, toStringMethod!);
             });

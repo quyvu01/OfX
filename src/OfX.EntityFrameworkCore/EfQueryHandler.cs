@@ -3,17 +3,16 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Builders;
+using OfX.Delegates;
 using OfX.EntityFrameworkCore.Delegates;
 using OfX.Responses;
 
 namespace OfX.EntityFrameworkCore;
 
-public class EfQueryHandler<TModel, TAttribute>(
+internal class EfQueryHandler<TModel, TAttribute>(
     IServiceProvider serviceProvider,
-    string idPropertyName,
-    string defaultPropertyName)
-    : QueryHandlerBuilder<TModel, TAttribute>(serviceProvider, idPropertyName, defaultPropertyName),
-        IQueryOfHandler<TModel, TAttribute>
+    GetOfXConfiguration getOfXConfiguration)
+    : QueryHandlerBuilder<TModel, TAttribute>(serviceProvider, getOfXConfiguration), IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute
 {
