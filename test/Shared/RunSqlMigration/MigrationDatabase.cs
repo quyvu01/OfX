@@ -16,7 +16,7 @@ public static class MigrationDatabase
             if (!pendingMigrations.Any()) return;
             await dbContext.Database.MigrateAsync();
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // ignored
         }

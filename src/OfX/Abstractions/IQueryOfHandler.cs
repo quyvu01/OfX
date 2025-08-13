@@ -17,7 +17,7 @@ public interface IQueryOfHandler<TModel, TAttribute> where TModel : class
 public class DefaultQueryOfHandler;
 
 // Do not remove the parameter because it is dynamically invoked by Lambda
-internal sealed class DefaultQueryOfHandler<TModel, TAttribute>(IServiceProvider _, string __, string ___)
+internal sealed class DefaultQueryOfHandler<TModel, TAttribute>
     : DefaultQueryOfHandler, IQueryOfHandler<TModel, TAttribute> where TModel : class where TAttribute : OfXAttribute
 {
     public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>

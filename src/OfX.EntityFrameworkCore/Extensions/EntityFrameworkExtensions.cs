@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Attributes;
 using OfX.EntityFrameworkCore.Abstractions;
 using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Delegates;
@@ -17,13 +17,6 @@ namespace OfX.EntityFrameworkCore.Extensions;
 
 public static class EntityFrameworkExtensions
 {
-    private static readonly Lazy<ConcurrentDictionary<Type, int>> ModelTypeLookUp = new(() => []);
-    private static readonly Type EfQueryOfHandlerType = typeof(EfQueryOfHandler<,>);
-    private static readonly ConcurrentDictionary<Type, bool> ModelTypeCache = new();
-    private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> EfQueryOfHandlerCache = new();
-
-
     public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXEfCoreRegistrar> registrarAction)
     {
@@ -32,6 +25,12 @@ public static class EntityFrameworkExtensions
         var dbContextTypes = EntityFrameworkCoreStatics.DbContextTypes;
         if (dbContextTypes.Count == 0)
             throw new OfXEntityFrameworkException.DbContextsMustNotBeEmpty();
+
+        if (OfXStatics.ModelConfigurationAssembly is null)
+            throw new OfXException.ModelConfigurationMustBeSet();
+
+        var modelTypeLookUp = new ConcurrentDictionary<Type, int>();
+
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
         dbContextTypes.ForEach(dbContextType => serviceCollection.AddScoped<IOfXEfDbContext>(sp =>
         {
@@ -43,56 +42,36 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped<GetEfDbContext>(sp => modelType =>
         {
-            if (ModelTypeLookUp.Value.TryGetValue(modelType, out var contextIndex))
+            if (modelTypeLookUp.TryGetValue(modelType, out var contextIndex))
                 return sp.GetServices<IOfXEfDbContext>().ElementAt(contextIndex);
             var contexts = sp.GetServices<IOfXEfDbContext>().ToList();
             var matchingServiceType = contexts.FirstOrDefault(a => a.HasCollection(modelType));
             if (matchingServiceType is null)
                 throw new OfXEntityFrameworkException.ThereAreNoDbContextHasModel(modelType);
-            ModelTypeLookUp.Value.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
+            modelTypeLookUp.TryAdd(modelType, contexts.IndexOf(matchingServiceType));
             return matchingServiceType;
         });
-        if (OfXStatics.ModelConfigurationAssembly is null)
-            throw new OfXException.ModelConfigurationMustBeSet();
-        OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
-        {
-            var modelType = m.ModelType;
-            var attributeType = m.OfXAttributeType;
-            var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
 
-            serviceCollection.AddScoped(serviceInterfaceType, sp =>
+        serviceCollection.AddScoped(typeof(EfQueryHandler<,>));
+
+        OfXStatics.OfXConfigureStorage.Value
+            .Where(a => a.OfXConfigAttribute is not CustomOfXConfigForAttribute)
+            .ForEach(m =>
             {
-                var ofXDbContexts = sp.GetServices<IOfXEfDbContext>();
-                var modelCached = ModelTypeCache
-                    .GetOrAdd(modelType, mt => ofXDbContexts.Any(x => x.HasCollection(mt)));
-
-                var (defaultPropertyId, defaultPropertyName) =
-                    (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
-
-                var efQueryOfHandlerFactory = EfQueryOfHandlerCache
-                    .GetOrAdd((modelType, attributeType), types =>
-                    {
-                        var efQueryHandlerType = modelCached
-                            ? EfQueryOfHandlerType.MakeGenericType(types.ModelType, types.AttributeType)
-                            : OfXStatics.DefaultQueryOfHandlerType.MakeGenericType(types.ModelType,
-                                types.AttributeType);
-
-                        var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
-                        var idParam = Expression.Parameter(typeof(string));
-                        var defaultPropertyNameParam = Expression.Parameter(typeof(string));
-
-                        var constructor = efQueryHandlerType
-                            .GetConstructor([typeof(IServiceProvider), typeof(string), typeof(string)])!;
-
-                        var newExpression = Expression.New(constructor, serviceProviderParam, idParam,
-                            defaultPropertyNameParam);
-                        return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
-                            serviceProviderParam, idParam, defaultPropertyNameParam).Compile();
-                    });
-
-                return efQueryOfHandlerFactory.Invoke(sp, defaultPropertyId, defaultPropertyName);
+                var modelType = m.ModelType;
+                var attributeType = m.OfXAttributeType;
+                var serviceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
+                var implementedType = typeof(EfQueryHandler<,>).MakeGenericType(modelType, attributeType);
+                var defaultHandlerType = OfXStatics.DefaultQueryOfHandlerType.MakeGenericType(modelType, attributeType);
+                bool? dbContextHasModel = null;
+                
+                serviceCollection.AddScoped(serviceType, sp =>
+                {
+                    var ofXDbContexts = sp.GetServices<IOfXEfDbContext>();
+                    var modelCached = dbContextHasModel ??= ofXDbContexts.Any(x => x.HasCollection(modelType));
+                    return sp.GetService(modelCached ? implementedType : defaultHandlerType);
+                });
             });
-        });
 
         return ofXServiceInjector;
     }

@@ -1,6 +1,5 @@
-using System.Collections.Concurrent;
-using System.Linq.Expressions;
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.MongoDb.ApplicationModels;
@@ -12,10 +11,7 @@ namespace OfX.MongoDb.Extensions;
 
 public static class MongoDbExtensions
 {
-    private static readonly ConcurrentDictionary<(Type ModelType, Type AttributeType),
-        Func<IServiceProvider, string, string, object>> MongoDbQueryOfHandlerCache = new();
-
-    private static readonly Type MongoDbQueryOfHandlerType = typeof(MongoDbQueryOfHandler<,>);
+    private static readonly Type MongoDbQueryOfHandlerType = typeof(MongoDbQueryHandler<,>);
 
     public static OfXRegisterWrapped AddMongoDb(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXMongoDbRegistrar> registrarAction)
@@ -25,37 +21,17 @@ public static class MongoDbExtensions
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
         if (OfXStatics.ModelConfigurationAssembly is null)
             throw new OfXException.ModelConfigurationMustBeSet();
-        OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
-        {
-            if (!OfXMongoDbStatics.ModelTypes.Contains(m.ModelType)) return;
-            var modelType = m.ModelType;
-            var attributeType = m.OfXAttributeType;
-            var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
-            serviceCollection.AddScoped(serviceInterfaceType, sp =>
+        OfXStatics.OfXConfigureStorage.Value
+            .Where(a => a.OfXConfigAttribute is not CustomOfXConfigForAttribute)
+            .ForEach(m =>
             {
-                var (defaultPropertyId, defaultPropertyName) =
-                    (m.OfXConfigAttribute.IdProperty, m.OfXConfigAttribute.DefaultProperty);
-                var efQueryOfHandlerFactory = MongoDbQueryOfHandlerCache
-                    .GetOrAdd((modelType, attributeType), types =>
-                    {
-                        var handlerType = MongoDbQueryOfHandlerType
-                            .MakeGenericType(types.ModelType, types.AttributeType);
-                        var serviceProviderParam = Expression.Parameter(typeof(IServiceProvider));
-                        var idParam = Expression.Parameter(typeof(string));
-                        var defaultPropertyNameParam = Expression.Parameter(typeof(string));
-
-                        var constructor = handlerType
-                            .GetConstructor([typeof(IServiceProvider), typeof(string), typeof(string)])!;
-
-                        var newExpression = Expression.New(constructor, serviceProviderParam, idParam,
-                            defaultPropertyNameParam);
-                        return Expression.Lambda<Func<IServiceProvider, string, string, object>>(newExpression,
-                            serviceProviderParam, idParam, defaultPropertyNameParam).Compile();
-                    });
-
-                return efQueryOfHandlerFactory.Invoke(sp, defaultPropertyId, defaultPropertyName);
+                if (!OfXMongoDbStatics.ModelTypes.Contains(m.ModelType)) return;
+                var modelType = m.ModelType;
+                var attributeType = m.OfXAttributeType;
+                var serviceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
+                var implementedType = MongoDbQueryOfHandlerType.MakeGenericType(modelType, attributeType);
+                serviceCollection.AddScoped(serviceType,implementedType);
             });
-        });
         return ofXServiceInjector;
     }
 }

@@ -8,11 +8,8 @@ public class MemberResponse
 
     public string ExternalId { get; set; }
 
-    [ExternalDataOf(nameof(ExternalId), Expression = "Test")]
-    public string ExternalDataTest { get; set; }
-
     [ExternalDataOf(nameof(ExternalId), Expression = "OtherTest")]
-    public string ExternalDataOtherTest { get; set; }
+    public string ExternalDataTest { get; set; }
 
     public string MemberAddressId { get; set; }
 
@@ -52,4 +49,7 @@ public class MemberResponse
 
     [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
     public List<ProvinceResponse> Provinces { get; set; }
+    
+    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]")]
+    public ProvinceResponse Province { get; set; }
 }

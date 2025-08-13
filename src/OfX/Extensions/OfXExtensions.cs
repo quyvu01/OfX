@@ -1,7 +1,11 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Attributes;
 using OfX.Cached;
+using OfX.Delegates;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.InternalPipelines;
@@ -21,6 +25,9 @@ public static class OfXExtensions
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 })
             throw new OfXException.OfXAttributesMustBeSet();
+
+        var modelMapOfXConfigs =
+            new ConcurrentDictionary<(Type ModelType, Type OfXAttributeType), IOfXConfigAttribute>();
 
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
         if (OfXStatics.HandlersRegisterAssembly is { } handlersRegister)
@@ -59,7 +66,7 @@ public static class OfXExtensions
             // So we have to replace the default service if it existed -> Good!
             serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
         });
-        
+
         var defaultQueryHandlerInterface = typeof(IQueryOfHandler<,>);
         OfXStatics.DefaultReceiverTypes.Value.ForEach(attributeType =>
         {
@@ -70,6 +77,11 @@ public static class OfXExtensions
             serviceCollection.TryAddScoped(serviceType, implementedType);
         });
 
+        OfXStatics.OfXConfigureStorage.Value
+            .Where(a => a.OfXConfigAttribute is not CustomOfXConfigForAttribute)
+            .ForEach(m =>
+                modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
+
         serviceCollection.AddTransient<IDataMappableService, DataMappableService>();
 
         serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
@@ -77,6 +89,15 @@ public static class OfXExtensions
         serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
 
         serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
+        
+        serviceCollection.AddScoped(typeof(DefaultQueryOfHandler<,>));
+
+        serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
+        {
+            if (!modelMapOfXConfigs.TryGetValue((mt, at), out var config))
+                throw new UnreachableException();
+            return new OfXConfig(config.IdProperty, config.DefaultProperty);
+        });
 
         newOfRegister.AddSendPipelines(c => c
             .OfType(typeof(SendPipelineRoutingBehavior<>))

@@ -36,11 +36,11 @@ public sealed class TestController : ControllerBase
     public async Task<IActionResult> TestGetUsingDynamicExpresso([FromServices] Service1Context context)
     {
         var list = new List<string> { "1", "2", "3" };
-        
+
         var interpreter = new Interpreter();
-        
+
         interpreter.SetVariable("list", list);
-        
+
         var lambda = interpreter.ParseAsExpression<Func<MemberAdditionalData, bool>>(
             "list.Contains(x.Id)", "x");
 
@@ -65,7 +65,7 @@ public sealed class TestController : ControllerBase
         await dataMappableService.MapDataAsync(members);
         return Ok(members);
     }
-    
+
     [HttpGet]
     public async Task<IActionResult> GetSimpleMembers([FromServices] IDataMappableService dataMappableService)
     {

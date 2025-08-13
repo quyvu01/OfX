@@ -1,12 +1,12 @@
 using System.Linq.Expressions;
 
-namespace OfX.MongoDb.Queryable;
+namespace OfX.Helpers;
 
-internal static class QueryableHelpers
+public static class ExpressionHelpers
 {
     private const string Asc = "asc";
     private const string Desc = "desc";
-    private static readonly List<string> OrderDirections = [Asc, Desc];
+    private static readonly string[] OrderDirections = [Asc, Desc];
 
     /// <summary>
     /// Builds an expression to navigate and select an item in a collection with ordering and indexing.
@@ -17,9 +17,8 @@ internal static class QueryableHelpers
     /// <param name="orderBy">The property to order by within the collection.</param>
     /// <param name="index">The index of the desired item (0 for first, -1 for last).</param>
     /// <returns>An expression to retrieve the desired item.</returns>
-    internal static ExpressionQueryableData GetOneExpression(Expression currentExpr, string navigator,
-        string orderDirection,
-        string orderBy, int index)
+    public static ExpressionQueryableData GetOneExpression(Expression currentExpr, string navigator,
+        string orderDirection, string orderBy, int index)
     {
         if (!OrderDirections.Contains(orderDirection.ToLower()))
             throw new ArgumentException(
@@ -55,11 +54,10 @@ internal static class QueryableHelpers
         return new ExpressionQueryableData(itemType, elementCall);
     }
 
-    internal static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
-        string orderDirection,
-        string orderBy, int? skip = null, int? take = null)
+    public static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
+        string orderDirection, string orderBy, int? skip = null, int? take = null)
     {
-        if (!OrderDirections.Contains(orderDirection))
+        if (!OrderDirections.Contains(orderDirection.ToLower()))
             throw new ArgumentException(
                 $"Second parameter [{orderDirection}] must be an ordered direction `ASC|DESC`");
 
@@ -103,10 +101,8 @@ internal static class QueryableHelpers
     private static Expression BuildPropertyAccessExpression(Expression parameter, string propertyName)
     {
         var properties = propertyName.Split('.');
-        var current = parameter;
-        foreach (var property in properties) current = Expression.Property(current, property);
-        return current;
+        return properties.Aggregate(parameter, Expression.Property);
     }
 
-    internal sealed record ExpressionQueryableData(Type TargetType, Expression Expression);
+    public sealed record ExpressionQueryableData(Type TargetType, Expression Expression);
 }

@@ -81,19 +81,19 @@ public static class OfXStatics
             ];
 
             List<(Type ModelType, Type OfXAttributeType, IOfXConfigAttribute OfXConfigAttribute)>
-                hiddenConfigBasedOnHandlers =
+                customConfigBasedOnHandlers =
                 [
                     ..DefaultReceiverTypes.Value
                         .Where(a => !configFromModels.Select(x => x.OfXAttributeType).Contains(a))
                         .Select(x =>
                         {
                             var model = typeof(HiddenModelOf<>).MakeGenericType(x);
-                            var attributeData = new HiddenOfXConfigForAttribute();
+                            var attributeData = new CustomOfXConfigForAttribute();
                             return (ModelType: model, OfXAttributeType: x, OfXConfigAttribute: attributeData);
                         })
                 ];
 
-            return [..configFromModels, ..hiddenConfigBasedOnHandlers];
+            return [..configFromModels, ..customConfigBasedOnHandlers];
         });
 
     public static readonly Lazy<IReadOnlyCollection<Type>> OfXAttributeTypes = new(() =>
