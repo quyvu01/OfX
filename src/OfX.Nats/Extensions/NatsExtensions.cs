@@ -14,7 +14,7 @@ namespace OfX.Nats.Extensions;
 
 public static class NatsExtensions
 {
-    public static void AddNats(this OfXRegister ofXRegister, Action<NatsClientSetting> options = null)
+    public static void AddNats(this OfXRegister ofXRegister, Action<NatsClientSetting> options)
     {
         var newClientsRegister = new NatsClientSetting();
         options?.Invoke(newClientsRegister);

@@ -44,19 +44,21 @@ For Client:
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddNats(config => config.Url("nats://localhost:4222")); // Or just cfg.AddNats();
+    cfg.AddNats(config => config.Url("nats://localhost:4222"));
 });
 
-// Or with NatsOp
+// Or with NatsOpts
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddNats(config => config.NatsOpts(new NatsOpts{...})); // Or just cfg.AddNats();
-});
+    cfg.AddNats(config => config.NatsOpts(new NatsOpts{...}));
 
+// Note that the config.NatsOpts is higher priority than config.Url. It means if we have both NatsOpts and Url, the NatsOpts will be affected instead of Url.
 ...
 
 var app = builder.Build();
+
+...
 
 app.Run();
 
