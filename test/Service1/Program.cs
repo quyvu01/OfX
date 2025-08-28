@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+using NATS.Client.Core;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
@@ -39,7 +40,6 @@ builder.Services.AddOfX(cfg =>
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddGrpcClients(c =>
             c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
-        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

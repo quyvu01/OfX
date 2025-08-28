@@ -863,7 +863,7 @@ internal class Parser
 
             NextToken();
 
-            if (!isLong && value >= int.MinValue && value <= int.MaxValue)
+            if (!isLong && value is >= int.MinValue and <= int.MaxValue)
                 return CreateLiteral((int)value);
 
             return CreateLiteral(value);
@@ -897,7 +897,7 @@ internal class Parser
         }
         else
         {
-            // No suffix find, use DefaultNumberType settigns if specified (Double default)
+            // No suffix find, use DefaultNumberType settings if specified (Double default)
             if (_defaultNumberType == DefaultNumberType.Decimal)
             {
                 if (decimal.TryParse(text, ParseLiteralDecimalNumberStyle, ParseCulture, out var dc))
@@ -940,7 +940,7 @@ internal class Parser
         {
             NextToken();
 
-            // we're in a cast expression, the next expression can only be a unary expression
+            // we're in a cast expression, the next expression can only be an unary expression
             var nextExpression = ParseUnary();
 
             // cast: (constType)nextExpression
@@ -1001,6 +1001,7 @@ internal class Parser
         {
             // ignore
         }
+
         throw new UnknownIdentifierException(token.text, token.pos);
     }
 
@@ -1253,8 +1254,7 @@ internal class Parser
             }
 
             actions.Add(ParseMethodInvocation(newType, instance, _token.pos, "Add", TokenId.OpenCurlyBracket,
-                "'{{' expected", TokenId.CloseCurlyBracket,
-                "'}}' expected"));
+                "'{{' expected", TokenId.CloseCurlyBracket, "'}}' expected"));
         }
         else
         {
@@ -1272,14 +1272,10 @@ internal class Parser
     }
 
     private Expression ParseLambdaInvocation(LambdaExpression lambda, int errorPos)
-    {
-        return ParseInvocation(lambda, errorPos, "Argument list incompatible with lambda expression");
-    }
+        => ParseInvocation(lambda, errorPos, "Argument list incompatible with lambda expression");
 
     private Expression ParseDelegateInvocation(Expression delegateExp, int errorPos)
-    {
-        return ParseInvocation(delegateExp, errorPos, "Argument list incompatible with delegate expression");
-    }
+        => ParseInvocation(delegateExp, errorPos, "Argument list incompatible with delegate expression");
 
     private Expression ParseInvocation(Expression expr, int errorPos, string error)
     {
@@ -1307,7 +1303,7 @@ internal class Parser
         var applicableMethods = MethodResolution.FindBestMethod(candidates.Select(ov => ov.Method), args);
 
         // no method found: retry with the delegate's method
-        // (the parameters might be different, e.g. params array, default value, etc)
+        // (the parameters might be different, e.g., params array, default value, etc.)
         if (applicableMethods.Count == 0)
         {
             usedInvokeMethod = true;
@@ -1340,8 +1336,7 @@ internal class Parser
     {
         var name = _token.text;
         var errorPos = _token.pos;
-        if (!TryParseKnownType(name, out var type))
-            throw new UnknownIdentifierException(name, errorPos);
+        if (!TryParseKnownType(name, out var type)) throw new UnknownIdentifierException(name, errorPos);
 
         return type;
     }
@@ -1351,12 +1346,10 @@ internal class Parser
         // if the type is unknown, we need to restart parsing
         var originalPos = _token.pos;
 
-        // the name might reference a generic type, with an aliased name (e.g. List<T> = MyList instead of List`1)
+        // the name might reference a generic type, with an aliased name (e.g., List<T> = MyList instead of List`1)
         // it can also reference a generic type for which we don't know the arity yet (and therefore the name doesn't contain the `n suffix)
         if (_arguments.TryGetKnownType(name, out type) || _arguments.HasKnownGenericTypeDefinition(name))
-        {
             type = ParseKnownGenericType(name, type);
-        }
 
         type = ParseTypeModifiers(type);
 
@@ -1374,25 +1367,23 @@ internal class Parser
     private Type ParseKnownGenericType(string name, Type type)
     {
         NextToken();
-        if (_token.id == TokenId.LessThan)
-        {
-            var typeArguments = ParseTypeArgumentList();
-            var rank = typeArguments.Count;
+        if (_token.id != TokenId.LessThan) return type;
+        var typeArguments = ParseTypeArgumentList();
+        var rank = typeArguments.Count;
 
-            // if no type was registered with the simple name, try the full generic name
-            if (type == null && !_arguments.TryGetKnownType(name + $"`{rank}", out type))
-                return null;
+        // if no type was registered with the simple name, try the full generic name
+        if (type == null && !_arguments.TryGetKnownType(name + $"`{rank}", out type))
+            return null;
 
-            if (rank != type.GetGenericArguments().Length)
-                throw new ArgumentException(
-                    "The number of generic arguments provided doesn't equal the arity of the generic type definition");
+        if (rank != type.GetGenericArguments().Length)
+            throw new ArgumentException(
+                "The number of generic arguments provided doesn't equal the arity of the generic type definition");
 
-            // there are actual type arguments: instantiate the proper generic type
-            if (typeArguments.All(t => t != null))
-                type = type.MakeGenericType(typeArguments.ToArray());
+        // there are actual type arguments: instantiate the proper generic type
+        if (typeArguments.All(t => t != null))
+            type = type.MakeGenericType(typeArguments.ToArray());
 
-            NextToken();
-        }
+        NextToken();
 
         return type;
     }
@@ -1405,18 +1396,19 @@ internal class Parser
             return null;
 
         var errorPos = _token.pos;
-        if (_token.id == TokenId.Question)
+        switch (_token.id)
         {
-            if (!type.IsValueType || TypeUtils.IsNullableType(type))
+            case TokenId.Question when !type.IsValueType || TypeUtils.IsNullableType(type):
                 throw ParseException.Create(errorPos, "Type '{0}' has no nullable form", TypeUtils.GetTypeName(type));
-            type = typeof(Nullable<>).MakeGenericType(type);
+            case TokenId.Question:
+                type = typeof(Nullable<>).MakeGenericType(type);
 
-            NextToken();
-            type = ParseTypeModifiers(type);
-        }
-        else if (_token.id == TokenId.OpenBracket)
-        {
-            type = ParseArrayRankSpecifier(type);
+                NextToken();
+                type = ParseTypeModifiers(type);
+                break;
+            case TokenId.OpenBracket:
+                type = ParseArrayRankSpecifier(type);
+                break;
         }
 
         return type;
@@ -1499,10 +1491,7 @@ internal class Parser
 
     private Expression ParseTypeKeyword(Type type)
     {
-        if (_token.id == TokenId.CloseParen)
-        {
-            return Expression.Constant(type);
-        }
+        if (_token.id == TokenId.CloseParen) return Expression.Constant(type);
 
         ValidateToken(TokenId.Dot, "'.' or '(' expected");
         NextToken();
@@ -1564,11 +1553,9 @@ internal class Parser
     {
         var member = _memberFinder.FindPropertyOrField(type, propertyOrFieldName, instance == null);
         if (member != null)
-        {
-            return member is PropertyInfo
-                ? Expression.Property(instance, (PropertyInfo)member)
+            return member is PropertyInfo info
+                ? Expression.Property(instance, info)
                 : Expression.Field(instance, (FieldInfo)member);
-        }
 
         if (TypeUtils.IsDynamicType(type) || IsDynamicExpression(instance))
             return ParseDynamicProperty(instance, propertyOrFieldName);
@@ -1639,8 +1626,8 @@ internal class Parser
 
         return null;
     }
-    
-    private static Expression ParseDynamicProperty(Expression instance, string propertyOrFieldName) 
+
+    private static Expression ParseDynamicProperty(Expression instance, string propertyOrFieldName)
         => Expression.Dynamic(new LateGetMemberCallSiteBinder(propertyOrFieldName), typeof(object), instance);
 
     private static Expression ParseDynamicMethodInvocation(Type type, Expression instance, string methodName,
@@ -1731,22 +1718,19 @@ internal class Parser
     }
 
     private bool IsDynamicExpression(Expression instance)
-    {
-        return instance != null &&
-               (instance.NodeType == ExpressionType.Dynamic ||
-                (_arguments.Settings.LateBindObject && instance.Type == typeof(object)));
-    }
+        => instance != null &&
+           (instance.NodeType == ExpressionType.Dynamic ||
+            (_arguments.Settings.LateBindObject && instance.Type == typeof(object)));
 
     private void CheckAndPromoteOperand(MethodBase[] unarySignatures, ref Expression expr)
     {
         var args = PrepareOperandArguments(unarySignatures, [expr]);
-
         expr = args[0];
     }
 
     private void CheckAndPromoteOperands(MethodBase[] binarySignatures, ref Expression left, ref Expression right)
     {
-        // if one of the operands is the nullable version of the other, promote the non-nullablte to the nullable version
+        // if one of the operands is the nullable version of the other, promote the non-nullable to the nullable version
         if (TypeUtils.TryGetNonNullableType(left.Type, out var nonNullableLeftType) &&
             nonNullableLeftType == right.Type)
             right = GenerateNullableTypeConversion(right);
@@ -1763,8 +1747,7 @@ internal class Parser
     private IList<Expression> PrepareOperandArguments(MethodBase[] signatures, Expression[] args)
     {
         var applicableMethods = MethodResolution.FindBestMethod(signatures, args);
-        if (applicableMethods.Count == 1)
-            return applicableMethods[0].PromotedParameters;
+        if (applicableMethods.Count == 1) return applicableMethods[0].PromotedParameters;
 
         return args;
     }
@@ -1779,13 +1762,9 @@ internal class Parser
             case ExpressionType.MemberAccess:
                 var member = ((MemberExpression)expression).Member;
                 var prop = member as PropertyInfo;
-                if (prop != null)
-                    return prop.CanWrite;
-                else
-                {
-                    var field = (FieldInfo)member;
-                    return !(field.IsInitOnly || field.IsLiteral);
-                }
+                if (prop != null) return prop.CanWrite;
+                var field = (FieldInfo)member;
+                return !(field.IsInitOnly || field.IsLiteral);
             case ExpressionType.Parameter:
                 return true;
         }
@@ -1796,12 +1775,10 @@ internal class Parser
     private static bool IsDynamicWritable(Expression expression, out Func<Expression, Expression> toWritableExpression)
     {
         toWritableExpression = null;
-        if (expression.NodeType != ExpressionType.Dynamic)
-            return false;
+        if (expression.NodeType != ExpressionType.Dynamic) return false;
 
         var dynamicExpression = (System.Linq.Expressions.DynamicExpression)expression;
-        if (!(dynamicExpression.Binder is IConvertibleToWritableBinder convertibleBinder))
-            return false;
+        if (dynamicExpression.Binder is not IConvertibleToWritableBinder convertibleBinder) return false;
 
         toWritableExpression = value => Expression.Dynamic(convertibleBinder.ToWritableBinder(), typeof(object),
             dynamicExpression.Arguments.Concat([value]));
@@ -1809,66 +1786,30 @@ internal class Parser
     }
 
     private Expression GenerateEqual(Expression left, Expression right)
-    {
-        return GenerateBinary(ExpressionType.Equal, left, right);
-    }
+        => GenerateBinary(ExpressionType.Equal, left, right);
 
     private Expression GenerateNotEqual(Expression left, Expression right)
-    {
-        return GenerateBinary(ExpressionType.NotEqual, left, right);
-    }
+        => GenerateBinary(ExpressionType.NotEqual, left, right);
 
     private Expression GenerateGreaterThan(Expression left, Expression right)
-    {
-        if (left.Type == typeof(string))
-        {
-            return Expression.GreaterThan(
-                GenerateStaticMethodCall("Compare", left, right),
-                Expression.Constant(0)
-            );
-        }
-
-        return GenerateBinary(ExpressionType.GreaterThan, left, right);
-    }
+        => left.Type == typeof(string)
+            ? Expression.GreaterThan(GenerateStaticMethodCall("Compare", left, right), Expression.Constant(0))
+            : GenerateBinary(ExpressionType.GreaterThan, left, right);
 
     private Expression GenerateGreaterThanEqual(Expression left, Expression right)
-    {
-        if (left.Type == typeof(string))
-        {
-            return Expression.GreaterThanOrEqual(
-                GenerateStaticMethodCall("Compare", left, right),
-                Expression.Constant(0)
-            );
-        }
-
-        return GenerateBinary(ExpressionType.GreaterThanOrEqual, left, right);
-    }
+        => left.Type == typeof(string)
+            ? Expression.GreaterThanOrEqual(GenerateStaticMethodCall("Compare", left, right), Expression.Constant(0))
+            : GenerateBinary(ExpressionType.GreaterThanOrEqual, left, right);
 
     private Expression GenerateLessThan(Expression left, Expression right)
-    {
-        if (left.Type == typeof(string))
-        {
-            return Expression.LessThan(
-                GenerateStaticMethodCall("Compare", left, right),
-                Expression.Constant(0)
-            );
-        }
+        => left.Type == typeof(string)
+            ? Expression.LessThan(GenerateStaticMethodCall("Compare", left, right), Expression.Constant(0))
+            : GenerateBinary(ExpressionType.LessThan, left, right);
 
-        return GenerateBinary(ExpressionType.LessThan, left, right);
-    }
-
-    private Expression GenerateLessThanEqual(Expression left, Expression right)
-    {
-        if (left.Type == typeof(string))
-        {
-            return Expression.LessThanOrEqual(
-                GenerateStaticMethodCall("Compare", left, right),
-                Expression.Constant(0)
-            );
-        }
-
-        return GenerateBinary(ExpressionType.LessThanOrEqual, left, right);
-    }
+    private Expression GenerateLessThanEqual(Expression left, Expression right) 
+        => left.Type == typeof(string) 
+            ? Expression.LessThanOrEqual(GenerateStaticMethodCall("Compare", left, right), Expression.Constant(0)) 
+            : GenerateBinary(ExpressionType.LessThanOrEqual, left, right);
 
     private Expression GenerateBinary(ExpressionType binaryType, Expression left, Expression right)
     {
@@ -1978,8 +1919,7 @@ internal class Parser
 
     private MethodData FindBinaryOperator(string operatorName, Expression left, Expression right)
     {
-        if (operatorName == null)
-            return null;
+        if (operatorName == null) return null;
 
         var errorPos = _token.pos;
         var leftType = left.Type;
@@ -2031,10 +1971,7 @@ internal class Parser
         var leftObj = GenerateStringConcatOperand(left);
         var rightObj = GenerateStringConcatOperand(right);
 
-        return Expression.Call(
-            null,
-            ReflectionExtensions.StringConcatMethod,
-            [leftObj, rightObj]);
+        return Expression.Call(null, ReflectionExtensions.StringConcatMethod, [leftObj, rightObj]);
     }
 
     private static Expression ToStringOrNull(Expression expression)
@@ -2044,22 +1981,14 @@ internal class Parser
         var expressionTypeNullConstant = Expression.Constant(null, nullableExpression.Type);
         var stringNullConstant = Expression.Constant(null, typeof(string));
 
-        Expression condition = Expression.Equal(
-            nullableExpression,
-            expressionTypeNullConstant);
+        Expression condition = Expression.Equal(nullableExpression, expressionTypeNullConstant);
 
-        return Expression.Condition(
-            condition,
-            stringNullConstant,
+        return Expression.Condition(condition, stringNullConstant,
             Expression.Call(expression, ReflectionExtensions.ObjectToStringMethod));
     }
 
-    private static Expression GenerateStringConcatOperand(Expression expression)
-    {
-        return expression.Type != typeof(string)
-            ? ToStringOrNull(expression)
-            : expression;
-    }
+    private static Expression GenerateStringConcatOperand(Expression expression) 
+        => expression.Type != typeof(string) ? ToStringOrNull(expression) : expression;
 
     private static Expression GenerateStaticMethodCall(string methodName, Expression left, Expression right)
     {
@@ -2075,16 +2004,12 @@ internal class Parser
 
     private void NextChar()
     {
-        if (_parsePosition < _expressionTextLength)
-            _parsePosition++;
+        if (_parsePosition < _expressionTextLength) _parsePosition++;
 
         _parseChar = _parsePosition < _expressionTextLength ? _expressionText[_parsePosition] : '\0';
     }
 
-    private void PreviousChar()
-    {
-        SetTextPos(_parsePosition - 1);
-    }
+    private void PreviousChar() => SetTextPos(_parsePosition - 1);
 
     private void NextToken()
     {
@@ -2334,16 +2259,10 @@ internal class Parser
                 if (char.IsDigit(_parseChar))
                 {
                     //RealLiteral if DefaultNumberType settings is set to real type
-                    if (_defaultNumberType is DefaultNumberType.Single or DefaultNumberType.Double
-                        or DefaultNumberType.Decimal)
-                    {
-                        t = TokenId.RealLiteral;
-                    }
-                    else
-                    {
+                    t = _defaultNumberType is DefaultNumberType.Single or DefaultNumberType.Double
+                        or DefaultNumberType.Decimal ? TokenId.RealLiteral :
                         //IntegerLiteral by default
-                        t = TokenId.IntegerLiteral;
-                    }
+                        TokenId.IntegerLiteral;
 
                     // binary and hexadecimal integer literals
                     var canBeRealLiteral = true;
@@ -2356,8 +2275,8 @@ internal class Parser
                             do
                             {
                                 NextChar();
-                            } while (char.IsDigit(_parseChar) || (_parseChar >= 'a' && _parseChar <= 'f') ||
-                                     (_parseChar >= 'A' && _parseChar <= 'F'));
+                            } while (char.IsDigit(_parseChar) || _parseChar is >= 'a' and <= 'f' ||
+                                     _parseChar is >= 'A' and <= 'F');
 
                             PreviousChar();
                         }
@@ -2460,8 +2379,7 @@ internal class Parser
     {
         ValidateToken(TokenId.Identifier, "Identifier expected");
         var id = _token.text;
-        if (id.Length > 1 && id[0] == '@')
-            id = id[1..];
+        if (id.Length > 1 && id[0] == '@') id = id[1..];
         return id;
     }
 
@@ -2485,20 +2403,13 @@ internal class Parser
             throw ParseException.Create(_token.pos, "Syntax error");
     }
 
-    private static Exception WrapWithParseException(int pos, string format, Exception ex, params object[] args)
-    {
-        return new ParseException(string.Format(format, args), pos, ex);
-    }
+    private static Exception WrapWithParseException(int pos, string format, Exception ex, params object[] args) 
+        => new ParseException(string.Format(format, args), pos, ex);
 
     private static Expression GenerateNullableTypeConversion(Expression expr)
     {
         var exprType = expr.Type;
-
-        if (!exprType.IsValueType || TypeUtils.IsNullableType(exprType))
-        {
-            return expr;
-        }
-
+        if (!exprType.IsValueType || TypeUtils.IsNullableType(exprType)) return expr;
         var conversionType = TypeUtils.MakeNullable(exprType);
         return Expression.Convert(expr, conversionType);
     }

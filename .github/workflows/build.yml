@@ -2,7 +2,7 @@
 
 name: Build OfX and Publish
 env:
-  OFX_VERSION: 7.1.0
+  OFX_VERSION: 7.1.1
 
 on:
   push:

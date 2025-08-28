@@ -17,7 +17,7 @@ public static class NatsExtensions
     public static void AddNats(this OfXRegister ofXRegister, Action<NatsClientSetting> options)
     {
         var newClientsRegister = new NatsClientSetting();
-        options.Invoke(newClientsRegister);
+        options?.Invoke(newClientsRegister);
         ofXRegister.ServiceCollection.AddSingleton(_ => NatsStatics.NatsOpts != null
             ? new NatsClientWrapper(new NatsClient(NatsStatics.NatsOpts))
             : new NatsClientWrapper(new NatsClient(NatsStatics.NatsUrl)));

@@ -15,8 +15,7 @@ public class ReferenceType
 
     public ReferenceType(string name, Type type)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
 
         ArgumentNullException.ThrowIfNull(type);
 

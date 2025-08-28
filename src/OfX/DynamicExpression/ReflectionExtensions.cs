@@ -34,16 +34,13 @@ internal static class ReflectionExtensions
 
     public static IEnumerable<MethodInfo> GetExtensionMethods(Type type)
     {
-        if (type.IsSealed && type.IsAbstract && !type.IsGenericType && !type.IsNested)
-        {
-            var query = from method in type.GetMethods(BindingFlags.Static | BindingFlags.Public |
-                                                       BindingFlags.NonPublic)
-                where method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false)
-                select method;
-            return query;
-        }
+        if (!type.IsSealed || !type.IsAbstract || type.IsGenericType || type.IsNested) return [];
+        var query = from method in type.GetMethods(BindingFlags.Static | BindingFlags.Public |
+                                                   BindingFlags.NonPublic)
+            where method.IsDefined(typeof(System.Runtime.CompilerServices.ExtensionAttribute), false)
+            select method;
+        return query;
 
-        return [];
     }
 
     public class DelegateInfo(Type returnType, Parameter[] parameters)
