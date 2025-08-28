@@ -14,7 +14,7 @@ using OfX.Statics;
 
 namespace OfX.Builders;
 
-public class QueryHandlerBuilder<TModel, TAttribute>(
+public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     IServiceProvider serviceProvider,
     GetOfXConfiguration getOfXConfiguration)
     where TModel : class
@@ -39,7 +39,9 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
     private const string ModelName = "x";
     private const string IdsNaming = "ids";
     private static MemberExpression _idMemberExpression;
-    private readonly IOfXConfigAttribute _configAttribute = getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
+
+    private readonly IOfXConfigAttribute _configAttribute =
+        getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
 
     private static readonly ParameterExpression ModelParameterExpression =
         Expression.Parameter(typeof(TModel), ModelName);
@@ -117,8 +119,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
                                 var orderedDirection = collectionItems[0];
                                 var orderedPropertyName = collectionItems[1];
                                 var expressionQueryableData = ExpressionHelpers.GetManyExpression(currentExpression,
-                                    collectionPropertyName,
-                                    orderedDirection, orderedPropertyName);
+                                    collectionPropertyName, orderedDirection, orderedPropertyName);
                                 currentExpression = expressionQueryableData.Expression;
                                 currentType = expressionQueryableData.TargetType;
                                 continue;
@@ -133,8 +134,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
                                     throw new ArgumentException(
                                         $"First parameter [{indexAsString}] must be 0(First item) or -1(Last item)");
                                 var expressionQueryableData = ExpressionHelpers.GetOneExpression(currentExpression,
-                                    collectionPropertyName,
-                                    orderedDirection, orderedPropertyName, index);
+                                    collectionPropertyName, orderedDirection, orderedPropertyName, index);
                                 currentExpression = expressionQueryableData.Expression;
                                 currentType = expressionQueryableData.TargetType;
                                 continue;
@@ -148,10 +148,10 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
                                 var orderedPropertyName = collectionItems[3];
                                 if (!int.TryParse(offsetAsString, out var offset) || offset < 0)
                                     throw new ArgumentException(
-                                        $"Offset parameter [{offset}] must not be a negative or zero number!");
+                                        $"Offset parameter [{offset}] must not be a negative number!");
                                 if (!int.TryParse(limitAsString, out var limit) || limit < 0)
                                     throw new ArgumentException(
-                                        $"Limit parameter [{limit}] must not be a negative or zero number!");
+                                        $"Limit parameter [{limit}] must not be a negative number!");
                                 var expressionQueryableData = ExpressionHelpers.GetManyExpression(currentExpression,
                                     collectionPropertyName, orderedDirection, orderedPropertyName, offset, limit);
 
@@ -198,8 +198,7 @@ public class QueryHandlerBuilder<TModel, TAttribute>(
                     var newExpression = Expression.MemberInit(Expression.New(OfXStatics.OfXValueType), bindings);
 
                     // Return the lambda expression
-                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression,
-                        ModelParameterExpression);
+                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression, ModelParameterExpression);
                 }
                 catch (Exception)
                 {

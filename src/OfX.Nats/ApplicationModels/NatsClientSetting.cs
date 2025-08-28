@@ -5,12 +5,9 @@ namespace OfX.Nats.ApplicationModels;
 
 public sealed class NatsClientSetting
 {
-    public void Url(string url) => NatsStatics.NatsUrl = url;
+    private const string DefaultUrl = "nats://localhost:4222";
+    public void Url(string url) => NatsStatics.NatsUrl = url ?? DefaultUrl;
     public void TopicPrefix(string topicPrefix) => NatsStatics.NatsTopicPrefix = topicPrefix;
-    public void NatsOpts(Action<NatsOpts>  options)
-    {
-        var opts = new NatsOpts();
-        options.Invoke(opts);
-        NatsStatics.NatsOpts = opts;
-    }
+
+    public void NatsOpts(NatsOpts options = null) => NatsStatics.NatsOpts = options;
 }

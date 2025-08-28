@@ -2,10 +2,6 @@ namespace OfX.DynamicExpression.Exceptions;
 
 public class DynamicExpressionException : Exception
 {
-    public DynamicExpressionException()
-    {
-    }
-
     public DynamicExpressionException(string message) : base(message)
     {
     }

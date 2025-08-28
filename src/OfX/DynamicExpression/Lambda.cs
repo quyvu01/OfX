@@ -17,7 +17,7 @@ public class Lambda
         Expression = expression ?? throw new ArgumentNullException(nameof(expression));
         _parserArguments = parserArguments ?? throw new ArgumentNullException(nameof(parserArguments));
 
-        // Note: I always lazy compile the generic lambda. Maybe in the future this can be a setting because if I generate a typed delegate this compilation is not required.
+        // Note: I always lazy compile the generic lambda. Maybe in the future this can be a setting because if I generate a typed delegate, this compilation is not required.
         _delegate = new Lazy<Delegate>(() =>
             Expression.Lambda(Expression, _parserArguments.UsedParameters.Select(p => p.Expression).ToArray())
                 .Compile());

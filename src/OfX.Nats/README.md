@@ -40,10 +40,18 @@ Add OfX-Nats to your service configuration during application startup:
 For Client:
 
 ```csharp
+// Simple way
 builder.Services.AddOfX(cfg =>
 {
     cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddNats(config => config.Url("nats://localhost:4222"));
+    cfg.AddNats(config => config.Url("nats://localhost:4222")); // Or just cfg.AddNats();
+});
+
+// Or with NatsOp
+builder.Services.AddOfX(cfg =>
+{
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddNats(config => config.NatsOpts(new NatsOpts{...})); // Or just cfg.AddNats();
 });
 
 ...

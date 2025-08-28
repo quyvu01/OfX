@@ -21,7 +21,7 @@ public enum InterpreterOptions
     CommonTypes = 4,
 
     /// <summary>
-    /// Variables and parameters names are case insensitive.
+    /// Variables and parameters names are case-insensitive.
     /// </summary>
     CaseInsensitive = 8,
 

@@ -140,11 +140,9 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter SetFunction(string name, Delegate value)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException(nameof(name));
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
 
-        if (_settings.Identifiers.TryGetValue(name, out var identifier) &&
-            identifier is FunctionIdentifier fIdentifier)
+        if (_settings.Identifiers.TryGetValue(name, out var identifier) && identifier is FunctionIdentifier fIdentifier)
         {
             fIdentifier.AddOverload(value);
             return this;
@@ -163,9 +161,7 @@ public class Interpreter
     /// <returns></returns>
     public Interpreter SetVariable(string name, object value)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException(nameof(name));
-
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
         return SetExpression(name, Expression.Constant(value));
     }
 
@@ -187,9 +183,7 @@ public class Interpreter
     public Interpreter SetVariable(string name, object value, Type type)
     {
         ArgumentNullException.ThrowIfNull(type);
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentNullException(nameof(name));
-
+        if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
         return SetExpression(name, Expression.Constant(value, type));
     }
 
@@ -261,7 +255,6 @@ public class Interpreter
     public Interpreter UnsetIdentifier(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
-
         _settings.Identifiers.Remove(name);
         return this;
     }
@@ -438,14 +431,12 @@ public class Interpreter
     public IdentifiersInfo DetectIdentifiers(string expression)
     {
         var detector = new Detector(_settings);
-
         return detector.DetectIdentifiers(expression, DetectorOptions.None);
     }
 
     public IdentifiersInfo DetectIdentifiers(string expression, DetectorOptions options)
     {
         var detector = new Detector(_settings);
-
         return detector.DetectIdentifiers(expression, options);
     }
 
