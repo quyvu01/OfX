@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using OfX.Exceptions;
 
 namespace OfX.Helpers;
 
@@ -11,42 +12,38 @@ public static class ExpressionHelpers
     /// <summary>
     /// Builds an expression to navigate and select an item in a collection with ordering and indexing.
     /// </summary>
-    /// <param name="currentExpr"></param>
+    /// <param name="currentExpression"></param>
     /// <param name="navigator">The name of the navigated property.</param>
     /// <param name="orderDirection">The direction of the order ("ASC" or "DESC").</param>
     /// <param name="orderBy">The property to order by within the collection.</param>
     /// <param name="index">The index of the desired item (0 for first, -1 for last).</param>
     /// <returns>An expression to retrieve the desired item.</returns>
-    public static ExpressionQueryableData GetOneExpression(Expression currentExpr, string navigator,
+    public static ExpressionQueryableData GetOneExpression(Expression currentExpression, string navigator,
         string orderDirection, string orderBy, int index)
     {
-        if (!OrderDirections.Contains(orderDirection.ToLower()))
-            throw new ArgumentException(
-                $"Second parameter [{orderDirection}] must be an ordered direction `ASC|DESC`");
-
-        if (index != 0 && index != -1)
-            throw new IndexOutOfRangeException("Only 0 (first) or -1 (last) are supported for indexing.");
+        var orderDirectionNormalized = orderDirection.ToLower();
+        if (!OrderDirections.Contains(orderDirectionNormalized))
+            throw new OfXException.CollectionOrderDirectionIncorrect(orderDirection);
 
         // Create the expression to navigate to the collection
-        var parameter = currentExpr;
-        var collectionExpression = BuildPropertyAccessExpression(parameter, navigator);
+        var parameter = currentExpression;
+        var navigatorExpression = BuildPropertyAccessExpression(parameter, navigator);
 
         // Determine the item type of the collection
-        var collectionType = collectionExpression.Type;
+        var collectionType = navigatorExpression.Type;
         if (collectionType == null)
-            throw new ArgumentException(
-                $"Property '{collectionType}' does not exist on type '{collectionType.FullName}'");
+            throw new OfXException.NavigatorIncorrect(navigator, collectionType.FullName);
         var itemType = collectionType.GetGenericArguments()[0];
         var parameterOrder = Expression.Parameter(itemType, "a");
         var orderPropertyExpression = BuildPropertyAccessExpression(parameterOrder, orderBy);
 
         // Build the ordering expression
-        var orderMethod = orderDirection.Equals(Asc, StringComparison.OrdinalIgnoreCase)
+        var orderMethod = orderDirectionNormalized == Asc
             ? nameof(Enumerable.OrderBy)
             : nameof(Enumerable.OrderByDescending);
 
         var orderByCall = Expression.Call(typeof(Enumerable), orderMethod, [itemType, orderPropertyExpression.Type],
-            collectionExpression, Expression.Lambda(orderPropertyExpression, parameterOrder));
+            navigatorExpression, Expression.Lambda(orderPropertyExpression, parameterOrder));
 
         // Access the element at the desired index
         var elementMethod = index == 0 ? nameof(Enumerable.FirstOrDefault) : nameof(Enumerable.LastOrDefault);
@@ -57,33 +54,28 @@ public static class ExpressionHelpers
     public static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
         string orderDirection, string orderBy, int? skip = null, int? take = null)
     {
-        if (!OrderDirections.Contains(orderDirection.ToLower()))
-            throw new ArgumentException(
-                $"Second parameter [{orderDirection}] must be an ordered direction `ASC|DESC`");
-
-        if (skip is <= 0 && take is <= 0)
-            throw new IndexOutOfRangeException("Either Offset and limit cannot be a negative number or zero!");
+        var orderDirectionNormalized = orderDirection.ToLower();
+        if (!OrderDirections.Contains(orderDirectionNormalized))
+            throw new OfXException.CollectionOrderDirectionIncorrect(orderDirection);
 
         // Create the expression to navigate to the collection
         var collectionExpression = BuildPropertyAccessExpression(currentExpr, navigator);
         var collectionType = collectionExpression.Type;
         if (collectionType == null)
-            throw new ArgumentException(
-                $"Property '{collectionType}' does not exist on type '{collectionType.FullName}'");
+            throw new OfXException.NavigatorIncorrect(navigator, collectionType.FullName);
         var itemType = collectionType.GetGenericArguments()[0];
         var parameterOrder = Expression.Parameter(itemType, "a");
         var orderPropertyExpression = BuildPropertyAccessExpression(parameterOrder, orderBy);
 
         // Build the ordering expression
-        var orderMethod = orderDirection.Equals(Asc, StringComparison.OrdinalIgnoreCase)
+        var orderMethod = orderDirectionNormalized == Asc
             ? nameof(Enumerable.OrderBy)
             : nameof(Enumerable.OrderByDescending);
 
         var orderByCall = Expression.Call(typeof(Enumerable), orderMethod, [itemType, orderPropertyExpression.Type],
             collectionExpression, Expression.Lambda(orderPropertyExpression, parameterOrder));
-        if (skip is null && take is null) return new ExpressionQueryableData(collectionType, orderByCall);
-
-        if (skip is null || take is null) return new ExpressionQueryableData(collectionType, orderByCall);
+        if (skip is null && take is null || skip is null || take is null)
+            return new ExpressionQueryableData(collectionType, orderByCall);
 
         var skipByCall = Expression.Call(typeof(Enumerable), nameof(Enumerable.Skip), [itemType], orderByCall,
             Expression.Constant(skip, typeof(int)));

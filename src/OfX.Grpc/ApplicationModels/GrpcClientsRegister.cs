@@ -1,21 +1,21 @@
 using OfX.Extensions;
-using OfX.Grpc.Statics;
 
 namespace OfX.Grpc.ApplicationModels;
 
 public class GrpcClientsRegister
 {
+    private readonly List<string> _serverHost = [];
+    public IReadOnlyCollection<string> ServiceHosts => _serverHost;
+
     public void AddGrpcHosts(params string[] serviceHosts)
     {
-        serviceHosts?.ForEach(a =>
-        {
-            if (!GrpcStatics.ServiceHosts.Contains(a)) GrpcStatics.ServiceHosts.Add(a);
-        });
+        ArgumentNullException.ThrowIfNull(serviceHosts);
+        serviceHosts.Where(a => !_serverHost.Contains(a)).ForEach(a => _serverHost.Add(a));
     }
 
     public void AddGrpcHosts(string serviceHost)
     {
         ArgumentNullException.ThrowIfNull(serviceHost);
-        if (!GrpcStatics.ServiceHosts.Contains(serviceHost)) GrpcStatics.ServiceHosts.Add(serviceHost);
+        if (!_serverHost.Contains(serviceHost)) _serverHost.Add(serviceHost);
     }
 }

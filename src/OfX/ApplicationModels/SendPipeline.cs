@@ -11,7 +11,7 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
 
     public SendPipeline OfType<TSendPipeline>(ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
-        OfType(typeof(TSendPipeline));
+        OfType(typeof(TSendPipeline), serviceLifetime);
         return this;
     }
 
@@ -24,14 +24,11 @@ public sealed class SendPipeline(IServiceCollection serviceCollection)
 
         if (signatureInterfaceTypes is not { Count: > 0 })
             throw new OfXException.TypeIsNotSendPipelineBehavior(pipelineType);
-        if (pipelineType.IsGenericType)
+        if (pipelineType.IsGenericType && pipelineType.ContainsGenericParameters)
         {
-            if (pipelineType.ContainsGenericParameters)
-            {
-                var serviceDescriptor = new ServiceDescriptor(SendPipelineInterface, pipelineType, serviceLifetime);
-                serviceCollection.TryAdd(serviceDescriptor);
-                return this;
-            }
+            var serviceDescriptor = new ServiceDescriptor(SendPipelineInterface, pipelineType, serviceLifetime);
+            serviceCollection.TryAdd(serviceDescriptor);
+            return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>

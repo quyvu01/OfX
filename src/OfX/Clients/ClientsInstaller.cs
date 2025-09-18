@@ -11,6 +11,7 @@ public static class ClientsInstaller
     /// <summary>
     /// RequestHandlerImplGenericType must be implemented from IMappableRequestHandler and have only IServiceProvider!
     /// This is reflection and run one time at the program startup, so don't worry about performance.'
+    /// Todo: Need to update this one. This should not be Install by this way. The Security is not good!
     /// </summary>
     /// <param name="serviceCollection"></param>
     /// <param name="requestHandlerImplGenericType"></param>
@@ -29,11 +30,11 @@ public static class ClientsInstaller
                     if (existedService.ImplementationType !=
                         typeof(DefaultMappableRequestHandler<>).MakeGenericType(x.AttributeType)) return;
                     serviceCollection.Replace(
-                        new ServiceDescriptor(x.ServiceType, x.ImplHandlerType, ServiceLifetime.Scoped));
+                        new ServiceDescriptor(x.ServiceType, x.ImplHandlerType, ServiceLifetime.Transient));
                     return;
                 }
 
-                serviceCollection.AddScoped(x.ServiceType, x.ImplHandlerType);
+                serviceCollection.AddTransient(x.ServiceType, x.ImplHandlerType);
             });
     }
 }

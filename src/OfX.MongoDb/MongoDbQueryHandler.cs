@@ -25,8 +25,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(
         var result = await _collectionInternal.Collection.Find(filter)
             .ToListAsync(context.CancellationToken);
         var items = result
-            .AsQueryable()
-            .Select(BuildResponse(context.Query));
+            .Select(BuildResponse(context.Query).Compile());
         return new ItemsResponse<OfXDataResponse>([..items]);
     }
 }

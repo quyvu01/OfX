@@ -1,13 +1,11 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
-using NATS.Client.Core;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
 using OfX.MongoDb.Extensions;
-using OfX.Nats.Extensions;
 using Serilog;
 using Service1;
 using Service1.Contexts;
@@ -55,15 +53,31 @@ List<string> provinceIds =
 
 // Seeding MemberSocials
 
-foreach (var memberSocialId in Enumerable.Range(1, 3))
-{
-    var existed = await memberSocialCollection
-        .Find(m => m.Id.Equals(memberSocialId))
-        .FirstOrDefaultAsync();
-    if (existed is null)
-        await memberSocialCollection.InsertOneAsync(new MemberSocial
-            { Id = memberSocialId, Name = $"Social name: {memberSocialId}" });
-}
+// foreach (var id in Enumerable.Range(1, 3))
+// {
+//     var existed = await memberSocialCollection
+//         .Find(m => m.Id.Equals(id))
+//         .FirstOrDefaultAsync();
+//     if (existed is not null)
+//         await memberSocialCollection
+//             .DeleteOneAsync(x => x.Id == id);
+//     if (existed is null)
+//         await memberSocialCollection.InsertOneAsync(new MemberSocial
+//         {
+//             Id = id, Name = $"Social name: {id}",
+//             OtherValue = $"SomeOtherValue Of: {id}",
+//             Metadata =
+//             [
+//                 new MemerSocialMetadata
+//                 {
+//                     Key = $"Key of: {id}", Value = $"Value of: {id}", ExternalOfMetadata = new ExternalOfMetadata
+//                     {
+//                         JustForTest = $"Just for test: {id}"
+//                     }
+//                 }
+//             ]
+//         });
+// }
 
 
 builder.Services.AddDbContextPool<Service1Context>(options =>

@@ -16,7 +16,7 @@ public static class KafkaExtensions
         options.Invoke(config);
         ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
         ofXRegister.ServiceCollection.AddSingleton<IKafkaClient, KafkaClient>();
-        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXKafkaClient<>));
         ofXRegister.ServiceCollection.AddHostedService<KafkaServerWorker>();
+        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXKafkaClient<>));
     }
 }
