@@ -40,6 +40,7 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         var data = allTasks.First().Result;
         try
         {
+            if (data is null) return null;
             var result = JsonSerializer.Deserialize(data, currentContext.TargetPropertyInfo.PropertyType);
             return result;
         }

@@ -23,39 +23,14 @@ public static class OfXExtensions
     {
         var newOfRegister = new OfXRegister(serviceCollection);
         options.Invoke(newOfRegister);
-        if (OfXStatics.AttributesRegister is not { Count: > 0 })
-            throw new OfXException.OfXAttributesMustBeSet();
+        if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
         var modelMapOfXConfigs =
             new ConcurrentDictionary<(Type ModelType, Type OfXAttributeType), IOfXConfigAttribute>();
 
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
-        if (OfXStatics.HandlersRegisterAssembly is { } handlersRegister)
-        {
-            // We don't need to care about this so much, exactly.
-            // Because if there are not any handlers. It should be return an empty collection!
-            handlersRegister.ExportedTypes
-                .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
-                            x is { IsInterface: false, IsAbstract: false, IsClass: true })
-                .ForEach(handlerType => handlerType.GetInterfaces()
-                    .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == mappableRequestHandlerType)
-                    .ForEach(interfaceType =>
-                    {
-                        var attributeArgument = interfaceType.GetGenericArguments()[0];
-                        var serviceType = mappableRequestHandlerType.MakeGenericType(attributeArgument);
-                        var existedService = serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
-                        if (existedService is null)
-                        {
-                            serviceCollection.AddScoped(serviceType, handlerType);
-                            return;
-                        }
-
-                        serviceCollection.Replace(new ServiceDescriptor(serviceType, handlerType,
-                            ServiceLifetime.Scoped));
-                    }));
-        }
-
         var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
+        
         OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
@@ -89,7 +64,7 @@ public static class OfXExtensions
         serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
 
         serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
-        
+
         serviceCollection.AddScoped(typeof(DefaultQueryOfHandler<,>));
 
         serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>

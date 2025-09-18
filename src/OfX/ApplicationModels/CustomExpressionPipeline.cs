@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Exceptions;
 
@@ -19,15 +18,12 @@ public sealed class CustomExpressionPipeline(IServiceCollection serviceCollectio
 
         if (signatureInterfaceTypes is not { Count: > 0 })
             throw new OfXException.TypeIsNotCustomExpressionPipelineBehavior(pipelineType);
-        if (pipelineType.IsGenericType)
+        if (pipelineType.IsGenericType && pipelineType.ContainsGenericParameters)
         {
-            if (pipelineType.ContainsGenericParameters)
-            {
-                var serviceDescriptor =
-                    new ServiceDescriptor(CustomExpressionPipelineInterface, pipelineType, serviceLifetime);
-                serviceCollection.Add(serviceDescriptor);
-                return this;
-            }
+            var serviceDescriptor =
+                new ServiceDescriptor(CustomExpressionPipelineInterface, pipelineType, serviceLifetime);
+            serviceCollection.Add(serviceDescriptor);
+            return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>

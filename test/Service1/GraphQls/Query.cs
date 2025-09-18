@@ -19,6 +19,17 @@ public class Query
             })
         ];
     }
+    
+    public List<MemberSocialResponseTest> GetMemberSocials()
+    {
+        return
+        [
+            .. Enumerable.Range(1, 3).Select(a => new MemberSocialResponseTest
+            {
+                Id = a.ToString(),
+            })
+        ];
+    }
 }
 
 public sealed class MembersType : ObjectTypeExtension<MemberResponse>

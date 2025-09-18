@@ -9,39 +9,41 @@ internal class IdConverter<TId>(IServiceProvider serviceProvider)
 {
     public object ConvertIds(List<string> selectorIds)
     {
-        if (typeof(TId) == typeof(string)) return ParseStringIds(selectorIds);
+        var idType = typeof(TId);
 
-        if (typeof(TId) == typeof(Guid)) return ParseGuidIds(selectorIds);
+        if (idType == typeof(string)) return ParseStringIds(selectorIds);
 
-        if (typeof(TId) == typeof(Guid?)) return ParseNullableGuidIds(selectorIds);
+        if (idType == typeof(Guid)) return ParseGuidIds(selectorIds);
 
-        if (typeof(TId) == typeof(int)) return ParseIntegerIds(selectorIds);
+        if (idType == typeof(Guid?)) return ParseNullableGuidIds(selectorIds);
 
-        if (typeof(TId) == typeof(int?)) return ParseNullableIntegerIds(selectorIds);
+        if (idType == typeof(int)) return ParseIntegerIds(selectorIds);
 
-        if (typeof(TId) == typeof(long)) return ParseLongIds(selectorIds);
+        if (idType == typeof(int?)) return ParseNullableIntegerIds(selectorIds);
 
-        if (typeof(TId) == typeof(long?)) return ParseNullableLongIds(selectorIds);
+        if (idType == typeof(long)) return ParseLongIds(selectorIds);
 
-        if (typeof(TId) == typeof(short)) return ParseShortIds(selectorIds);
+        if (idType == typeof(long?)) return ParseNullableLongIds(selectorIds);
 
-        if (typeof(TId) == typeof(short?)) return ParseNullableShortIds(selectorIds);
+        if (idType == typeof(short)) return ParseShortIds(selectorIds);
 
-        if (typeof(TId) == typeof(ulong)) return ParseULongIds(selectorIds);
+        if (idType == typeof(short?)) return ParseNullableShortIds(selectorIds);
 
-        if (typeof(TId) == typeof(ulong?)) return ParseNullableULongIds(selectorIds);
+        if (idType == typeof(ulong)) return ParseULongIds(selectorIds);
 
-        if (typeof(TId) == typeof(ushort)) return ParseUShortIds(selectorIds);
+        if (idType == typeof(ulong?)) return ParseNullableULongIds(selectorIds);
 
-        if (typeof(TId) == typeof(ushort?)) return ParseNullableUShortIds(selectorIds);
+        if (idType == typeof(ushort)) return ParseUShortIds(selectorIds);
 
-        if (typeof(TId) == typeof(byte)) return ParseByteIds(selectorIds);
+        if (idType == typeof(ushort?)) return ParseNullableUShortIds(selectorIds);
 
-        if (typeof(TId) == typeof(byte?)) return ParseNullableByteIds(selectorIds);
+        if (idType == typeof(byte)) return ParseByteIds(selectorIds);
 
-        if (typeof(TId) == typeof(sbyte)) return ParseSByteIds(selectorIds);
+        if (idType == typeof(byte?)) return ParseNullableByteIds(selectorIds);
 
-        if (typeof(TId) == typeof(sbyte?)) return ParseNullableSByteIds(selectorIds);
+        if (idType == typeof(sbyte)) return ParseSByteIds(selectorIds);
+
+        if (idType == typeof(sbyte?)) return ParseNullableSByteIds(selectorIds);
 
         // If all the ID type does not match with provided types. We will try to resolve it from IdConverter Service.
         return ParseStronglyTypeIds(serviceProvider, selectorIds);

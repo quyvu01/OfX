@@ -1,8 +1,9 @@
 using System.Linq.Expressions;
-using DynamicExpresso;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Queries;
 using Service1.Contexts;
@@ -29,22 +30,6 @@ public sealed class TestController : ControllerBase
             })
         ];
         await dataMappableService.MapDataAsync(models);
-        return Ok(models);
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> TestGetUsingDynamicExpresso([FromServices] Service1Context context)
-    {
-        var list = new List<string> { "1", "2", "3" };
-
-        var interpreter = new Interpreter();
-
-        interpreter.SetVariable("list", list);
-
-        var lambda = interpreter.ParseAsExpression<Func<MemberAdditionalData, bool>>(
-            "list.Contains(x.Id)", "x");
-
-        var models = await context.MemberAdditionalDatas.Where(lambda).ToListAsync();
         return Ok(models);
     }
 
@@ -80,6 +65,26 @@ public sealed class TestController : ControllerBase
         return Ok(members);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetMemberSocialDynamic()
+    {
+        var client = new MongoClient("mongodb://localhost:27017");
+        var database = client.GetDatabase("Service1MongoDb");
+        var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
+        var data = await memberSocialCollection.Aggregate()
+            .Project(new BsonDocument {
+                { "Id", 1 },
+                { "Name", 1 },
+                { "SortedMetadata", new BsonDocument("$sortArray", new BsonDocument {
+                    { "input", "$Metadata" },
+                    { "sortBy", new BsonDocument("Key", 1) }
+                }) }
+            })
+            .ToListAsync();
+        
+        return Ok();
+    }
+    
     [HttpGet]
     public async Task<IActionResult> FetchUsers([FromServices] IDataMappableService dataMappableService)
     {

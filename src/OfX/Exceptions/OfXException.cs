@@ -39,4 +39,33 @@ public static class OfXException
 
     public sealed class ReceivedException(string message)
         : Exception($"{AppDomain.CurrentDomain.FriendlyName} : {message}");
+
+    public sealed class CollectionFormatNotCorrected(string collectionPropertyName) : Exception($"""
+         Collection data [{collectionPropertyName}] must be defined as 
+         [OrderDirection OrderedProperty] or 
+         [Offset Limit OrderDirection OrderedProperty] or 
+         [0 OrderDirection OrderedProperty](First item) or 
+         [-1 OrderDirection OrderedProperty](Last item)
+         """);
+
+    public sealed class CollectionIndexIncorrect(string indexAsString)
+        : Exception($"First parameter [{indexAsString}] must be 0(First item) or -1(Last item).");
+
+    public sealed class CollectionOffsetIncorrect(string offsetAsString)
+        : Exception($"Parameter offset [{offsetAsString}] must be a number.");
+
+    public sealed class CollectionLimitIncorrect(string limitAsString)
+        : Exception($"Parameter limit [{limitAsString}] must be a number.");
+
+    public sealed class CollectionOffsetCannotBeNegative(int offset)
+        : Exception($"Offset [{offset}] cannot be negative.");
+
+    public sealed class CollectionLimitCannotBeNegative(int limit)
+        : Exception($"Limit [{limit}] cannot be negative.");
+
+    public sealed class CollectionOrderDirectionIncorrect(string orderDirection)
+        : Exception($"Second parameter [{orderDirection}] must be an ordered direction `ASC|DESC`");
+
+    public sealed class NavigatorIncorrect(string navigator, string parentType)
+        : Exception($"Object: '{parentType}' does not include navigator: {navigator}");
 }

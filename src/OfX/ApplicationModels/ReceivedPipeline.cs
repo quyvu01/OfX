@@ -24,14 +24,11 @@ public sealed class ReceivedPipeline(IServiceCollection serviceCollection)
 
         if (signatureInterfaceTypes is not { Count: > 0 })
             throw new OfXException.TypeIsNotReceivedPipelineBehavior(pipelineType);
-        if (pipelineType.IsGenericType)
+        if (pipelineType.IsGenericType && pipelineType.ContainsGenericParameters)
         {
-            if (pipelineType.ContainsGenericParameters)
-            {
-                var serviceDescriptor = new ServiceDescriptor(ReceivedPipelineInterface, pipelineType, serviceLifetime);
-                serviceCollection.TryAdd(serviceDescriptor);
-                return this;
-            }
+            var serviceDescriptor = new ServiceDescriptor(ReceivedPipelineInterface, pipelineType, serviceLifetime);
+            serviceCollection.TryAdd(serviceDescriptor);
+            return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>
