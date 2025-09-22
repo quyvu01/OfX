@@ -1,18 +1,18 @@
 using System.Reflection;
-using OfX.Abstractions;
+using OfX.Attributes;
 
 namespace OfX.ApplicationModels;
 
 internal sealed record MappableDataProperty(
     PropertyInfo PropertyInfo,
     object Model,
-    IOfXAttributeCore Attribute,
+    OfXAttribute Attribute,
     Func<object, object> Func,
     string Expression,
     int Order);
 
 internal sealed record MappableDataPropertyCache(
-    IOfXAttributeCore Attribute,
+    OfXAttribute Attribute,
     Func<object, object> Func,
     string Expression,
     int Order);

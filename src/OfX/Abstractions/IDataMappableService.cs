@@ -22,7 +22,6 @@ public interface IDataMappableService
     /// </summary>
     /// <param name="query">The input data e.g SelectorIds and Expressions</param>
     /// <param name="context">Context contains Headers and CancellationToken</param>
-    /// <typeparam name="TAttribute"></typeparam>
     /// <returns></returns>
     Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null)
         where TAttribute : OfXAttribute;

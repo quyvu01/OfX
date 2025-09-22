@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
-using OfX.Clients;
 using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
@@ -16,6 +15,7 @@ using OfX.Helpers;
 using OfX.Registries;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Wrappers;
 
 namespace OfX.Grpc.Extensions;
 
@@ -81,7 +81,7 @@ public static class GrpcExtensions
                 var itemsResponse = new ItemsResponse<OfXDataResponse>([..dataResponse]);
                 return itemsResponse;
             });
-        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXGrpcRequestClient<>));
+        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(OfXGrpcRequestClient<>));
     }
 
     private static async Task<ConcurrentDictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
