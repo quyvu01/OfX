@@ -6,12 +6,18 @@ using OfX.Responses;
 
 namespace OfX.Implementations;
 
+internal abstract class SendPipelinesOrchestrator
+{
+    internal abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message, IContext context);
+}
+
 internal sealed class SendPipelinesOrchestrator<TAttribute>(
     IEnumerable<ISendPipelineBehavior<TAttribute>> behaviors,
     IMappableRequestHandler<TAttribute> handler)
-    : ISendPipelinesWrapped where TAttribute : OfXAttribute
+    : SendPipelinesOrchestrator where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message, IContext context)
+    internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
+        IContext context)
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

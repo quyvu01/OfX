@@ -28,7 +28,7 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
         _receivedPipelinesOrchestratorType ??= typeof(ReceivedPipelinesOrchestrator<,>)
             .MakeGenericType(handlerType.GetGenericArguments());
         var receivedPipelineBehavior = serviceProvider.GetService(_receivedPipelinesOrchestratorType);
-        if (receivedPipelineBehavior is not IReceivedPipelinesBase<TAttribute> receivedPipelinesBase)
+        if (receivedPipelineBehavior is not IReceivedPipelinesOrchestrator<TAttribute> receivedPipelinesBase)
             return await next.Invoke();
         return await receivedPipelinesBase.ExecuteAsync(requestContext);
     }

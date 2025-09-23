@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
-using OfX.Nats.Extensions;
 using Serilog;
 using Service3Api;
 using Service3Api.Contexts;

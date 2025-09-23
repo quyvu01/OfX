@@ -1,16 +1,24 @@
 using System.Text.Json;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Responses;
 
 namespace OfX.Implementations;
 
+public abstract class ReceivedPipelinesOrchestrator
+{
+    public abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
+        Dictionary<string, string> headers, CancellationToken cancellationToken);
+}
+
 public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     IEnumerable<IReceivedPipelineBehavior<TAttribute>> behaviors,
     IEnumerable<IQueryOfHandler<TModel, TAttribute>> handlers,
     IEnumerable<ICustomExpressionBehavior<TAttribute>> customExpressionHandlers) :
-    IReceivedPipelinesBase<TAttribute>
+    ReceivedPipelinesOrchestrator,
+    IReceivedPipelinesOrchestrator<TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
     public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
@@ -63,5 +71,13 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
             it.OfXValues = [..fi];
         });
         return result;
+    }
+
+    public override Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
+        Dictionary<string, string> headers, CancellationToken cancellationToken)
+    {
+        var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+        var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers ?? [], cancellationToken);
+        return ExecuteAsync(requestContext);
     }
 }

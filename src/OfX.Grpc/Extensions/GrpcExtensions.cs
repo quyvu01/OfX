@@ -42,10 +42,10 @@ public static class GrpcExtensions
                     try
                     {
                         if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                        var probeMissingHosts = hostMapAttributes
+                        var probeHosts = hostMapAttributes
                             .Where(a => !a.Key.IsProbed)
                             .Select(a => a.Key.ServiceHost);
-                        var missingTypes = await GetHostMapAttributesAsync(probeMissingHosts, context);
+                        var missingTypes = await GetHostMapAttributesAsync(probeHosts, context);
                         missingTypes.Where(a => a.Key.IsProbed)
                             .ForEach(x =>
                             {
@@ -78,19 +78,18 @@ public static class GrpcExtensions
                         .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
                     return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
                 });
-                var itemsResponse = new ItemsResponse<OfXDataResponse>([..dataResponse]);
-                return itemsResponse;
+                return new ItemsResponse<OfXDataResponse>([..dataResponse]);
             });
         OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(OfXGrpcRequestClient<>));
     }
 
-    private static async Task<ConcurrentDictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
+    private static async Task<Dictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
         IEnumerable<string> serverHosts, IContext context)
     {
         var tasks = serverHosts
             .Select(a => (Host: a, OfXAttributesTask: GetAttributesByHost(a, context))).ToList();
         await Task.WhenAll(tasks.Select(a => a.OfXAttributesTask));
-        var result = new ConcurrentDictionary<HostProbe, Type[]>();
+        var result = new Dictionary<HostProbe, Type[]>();
         tasks.ForEach(a =>
         {
             var isProbed = a.OfXAttributesTask.Result.IsProbed;

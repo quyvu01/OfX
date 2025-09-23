@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Exceptions;
@@ -16,19 +15,19 @@ namespace OfX.Grpc.Servers;
 
 public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private readonly Lazy<ConcurrentDictionary<string, Type>> _receivedPipelineTypes = new(() => []);
+    private static readonly Lazy<ConcurrentDictionary<string, Type>> _receivedPipelineTypes = new(() => []);
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
         {
-            var receivedPipelineType = _receivedPipelineTypes.Value
-                .GetOrAdd(request.AttributeAssemblyType, attributeAssemblyType =>
+            var receivedPipelinesType = _receivedPipelineTypes.Value
+                .GetOrAdd(request.AttributeAssemblyType, ofXAttributeType =>
                 {
-                    var attributeType = Type.GetType(attributeAssemblyType);
+                    var attributeType = Type.GetType(ofXAttributeType);
 
                     if (attributeType is null)
-                        throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(attributeAssemblyType);
+                        throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(ofXAttributeType);
 
                     if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
                         throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
@@ -37,13 +36,14 @@ public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTranspo
                     return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType);
                 });
 
-            var pipeline = (IReceivedPipelinesBase)serviceProvider
-                .GetRequiredService(receivedPipelineType)!;
+            var receivedPipelinesOrchestrator = (ReceivedPipelinesOrchestrator)serviceProvider
+                .GetRequiredService(receivedPipelinesType)!;
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
             var message = new MessageDeserializable([..request.SelectorIds], request.Expression);
-            var response = await pipeline.ExecuteAsync(message, headers, context.CancellationToken);
+            var response = await receivedPipelinesOrchestrator
+                .ExecuteAsync(message, headers, context.CancellationToken);
 
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a =>
