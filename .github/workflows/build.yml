@@ -77,7 +77,7 @@ jobs:
           fetch-depth: 0
       - id: version
         run: |
-          TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          TAG=$(git tag --sort=-v:refname | head -n 1)
           if [ -n "$TAG" ]; then
             VERSION=${TAG#v} # remove leading 'v'
           else
