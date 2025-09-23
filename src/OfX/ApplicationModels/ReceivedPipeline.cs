@@ -5,7 +5,7 @@ using OfX.Exceptions;
 
 namespace OfX.ApplicationModels;
 
-public sealed class ReceivedPipeline(IServiceCollection serviceCollection)
+public sealed class ReceivedPipeline(IServiceCollection serviceCollection) : IPipelineRegistration<ReceivedPipeline>
 {
     private static readonly Type ReceivedPipelineInterface = typeof(IReceivedPipelineBehavior<>);
 
@@ -16,24 +16,25 @@ public sealed class ReceivedPipeline(IServiceCollection serviceCollection)
     }
 
     // Hmmm, this one is temporary!. I think we should test more cases!
-    public ReceivedPipeline OfType(Type pipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+    public ReceivedPipeline OfType(Type runtimePipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
-        var signatureInterfaceTypes = pipelineType.GetInterfaces()
+        var signatureInterfaceTypes = runtimePipelineType.GetInterfaces()
             .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == ReceivedPipelineInterface)
             .ToList();
 
         if (signatureInterfaceTypes is not { Count: > 0 })
-            throw new OfXException.TypeIsNotReceivedPipelineBehavior(pipelineType);
-        if (pipelineType.IsGenericType && pipelineType.ContainsGenericParameters)
+            throw new OfXException.TypeIsNotReceivedPipelineBehavior(runtimePipelineType);
+        if (runtimePipelineType.IsGenericType && runtimePipelineType.ContainsGenericParameters)
         {
-            var serviceDescriptor = new ServiceDescriptor(ReceivedPipelineInterface, pipelineType, serviceLifetime);
+            var serviceDescriptor =
+                new ServiceDescriptor(ReceivedPipelineInterface, runtimePipelineType, serviceLifetime);
             serviceCollection.TryAdd(serviceDescriptor);
             return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>
         {
-            var serviceDescriptor = new ServiceDescriptor(serviceType, pipelineType, serviceLifetime);
+            var serviceDescriptor = new ServiceDescriptor(serviceType, runtimePipelineType, serviceLifetime);
             serviceCollection.TryAdd(serviceDescriptor);
         });
         return this;

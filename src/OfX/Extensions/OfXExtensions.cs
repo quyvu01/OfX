@@ -30,7 +30,7 @@ public static class OfXExtensions
 
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
         var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
-        
+
         OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
@@ -68,11 +68,9 @@ public static class OfXExtensions
         serviceCollection.AddScoped(typeof(DefaultQueryOfHandler<,>));
 
         serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
-        {
-            if (!modelMapOfXConfigs.TryGetValue((mt, at), out var config))
-                throw new UnreachableException();
-            return new OfXConfig(config.IdProperty, config.DefaultProperty);
-        });
+            modelMapOfXConfigs.TryGetValue((mt, at), out var config)
+                ? new OfXConfig(config.IdProperty, config.DefaultProperty)
+                : throw new UnreachableException());
 
         newOfRegister.AddSendPipelines(c => c
             .OfType(typeof(SendPipelineRoutingBehavior<>))

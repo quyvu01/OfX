@@ -87,7 +87,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
     {
         var sendPipelineType = SendOrchestratorTypes
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
-        var sendPipelineWrapped = (ISendPipelinesWrapped)serviceProvider.GetService(sendPipelineType)!;
+        var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
             .ExecuteAsync(new MessageDeserializable(query.SelectorIds,
                 JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);

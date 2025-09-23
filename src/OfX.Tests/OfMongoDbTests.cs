@@ -46,13 +46,19 @@ public class OfMongoDbTests : ServicesBuilding
     {
         var collection = ServiceProvider.GetRequiredService<IMongoCollection<User>>();
         var client = ServiceProvider.GetRequiredService<IMongoClient>();
-        var member = new Member { UserId = userId };
-        var asyncCursor = await collection.FindAsync(a => a.Id == userId);
-        var user = await asyncCursor.FirstAsync();
-        var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
-        await dataMappableService.MapDataAsync(member);
-        Assert.Equal(user?.Name, member.UserName);
-        Assert.Equal(user?.Email, member.UserEmail);
-        await client.DropDatabaseAsync(_databaseName);
+        try
+        {
+            var member = new Member { UserId = userId };
+            var asyncCursor = await collection.FindAsync(a => a.Id == userId);
+            var user = await asyncCursor.FirstAsync();
+            var dataMappableService = ServiceProvider.GetRequiredService<IDataMappableService>();
+            await dataMappableService.MapDataAsync(member);
+            Assert.Equal(user?.Name, member.UserName);
+            Assert.Equal(user?.Email, member.UserEmail);
+        }
+        finally
+        {
+            await client.DropDatabaseAsync(_databaseName);
+        }
     }
 }

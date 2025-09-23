@@ -1,10 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Clients;
+using OfX.Extensions;
 using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.BackgroundServices;
 using OfX.RabbitMq.Implementations;
 using OfX.Registries;
+using OfX.Wrappers;
 
 namespace OfX.RabbitMq.Extensions;
 
@@ -18,6 +19,6 @@ public static class RabbitMqExtensions
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqClient, RabbitMqClient>();
         ofXRegister.ServiceCollection.AddTransient(typeof(IRabbitMqServerRpc<,>), typeof(RabbitMqServerRpc<,>));
         ofXRegister.ServiceCollection.AddHostedService<RabbitMqServerWorker>();
-        ClientsInstaller.InstallRequestHandlers(ofXRegister.ServiceCollection, typeof(OfXRabbitMqClient<>));
+        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(OfXRabbitMqClient<>));
     }
 }

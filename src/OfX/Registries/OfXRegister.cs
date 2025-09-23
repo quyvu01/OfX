@@ -39,8 +39,11 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void AddDefaultReceiversFromNamespaceContaining<TAssemblyMarker>() =>
         OfXStatics.DefaultReceiversRegisterAssembly = typeof(TAssemblyMarker).Assembly;
 
-    public void AddAttributesContainNamespaces(params Assembly[] attributeAssemblies) =>
-        OfXStatics.AttributesRegister = [..attributeAssemblies];
+    public void AddAttributesContainNamespaces(Assembly attributeAssembly, params Assembly[] otherAssemblies)
+    {
+        ArgumentNullException.ThrowIfNull(attributeAssembly);
+        OfXStatics.AttributesRegister = [attributeAssembly, ..otherAssemblies ?? []];
+    }
 
     public void AddModelConfigurationsFromNamespaceContaining<TAssembly>() =>
         OfXStatics.ModelConfigurationAssembly = typeof(TAssembly).Assembly;
