@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 
 namespace OfX.Serializable;
@@ -11,4 +12,8 @@ public static class SerializeObjects
 
     public static object DeserializeObject(string objSerialized, Type objectType) =>
         JsonSerializer.Deserialize(objSerialized, objectType);
+
+
+    internal static readonly MethodInfo SerializeObjectMethod = typeof(SerializeObjects)
+        .GetMethod(nameof(SerializeObject), [typeof(object)]);
 }
