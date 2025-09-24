@@ -1,10 +1,13 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Builders;
 using OfX.Delegates;
 using OfX.MongoDb.Abstractions;
+using OfX.MongoDb.Extensions;
 using OfX.Responses;
 
 namespace OfX.MongoDb;
@@ -21,11 +24,44 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(
 
     public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
+        var exps = JsonSerializer.Deserialize<List<string>>(context.Query.Expression);
         var filter = BuildFilter(context.Query);
-        var result = await _collectionInternal.Collection.Find(filter)
-            .ToListAsync(context.CancellationToken);
-        var items = result
-            .Select(BuildResponse(context.Query).Compile());
-        return new ItemsResponse<OfXDataResponse>([..items]);
+
+        var expressions = exps
+            .Select(a => a ?? OfXConfigAttribute.DefaultProperty)
+            .Distinct()
+            .Select((a, idx) => (Expression: a, ExpressionName: $"exp_{idx}"))
+            .ToDictionary(kv => kv.ExpressionName, kv => kv.Expression);
+
+        var bsonDocument = ExpressionToBsonBuilder.BuildProjectionDocument(expressions);
+        var finalData = await _collectionInternal.Collection.Find(filter)
+            .Project(bsonDocument)
+            .ToListAsync();
+
+        var res = finalData.Select(bs =>
+        {
+            var id = bs["_id"].AsBsonValue.ToString();
+            var dataResponse = new OfXDataResponse { Id = id };
+            var values = exps.Select(ex =>
+            {
+                var ofxValue = new OfXValueResponse();
+                var finalEx = ex ?? OfXConfigAttribute.DefaultProperty;
+                if (finalEx == OfXConfigAttribute.IdProperty)
+                {
+                    ofxValue.Expression = ex;
+                    ofxValue.Value = JsonSerializer.Serialize(id);
+                    return ofxValue;
+                }
+
+                var matchedKey = expressions.FirstOrDefault(a => a.Value == finalEx).Key;
+                if (matchedKey is null) return ofxValue;
+                var valueSerialize = bs[matchedKey].AsBsonValue.ToJson();
+                return new OfXValueResponse { Expression = ex, Value = valueSerialize };
+            });
+            dataResponse.OfXValues = [..values];
+            return dataResponse;
+        });
+
+        return new ItemsResponse<OfXDataResponse>([..res]);
     }
 }

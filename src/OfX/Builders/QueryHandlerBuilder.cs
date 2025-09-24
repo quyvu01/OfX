@@ -41,7 +41,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     private const string IdsNaming = "ids";
     private static Type _idConverterType;
 
-    private readonly IOfXConfigAttribute _ofXConfigAttribute =
+    protected readonly IOfXConfigAttribute OfXConfigAttribute =
         getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
 
     private static readonly ParameterExpression ModelParameterExpression =
@@ -58,13 +58,13 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
         _idConverterType ??= typeof(IIdConverter<>)
-            .MakeGenericType(Expression.Property(ModelParameterExpression, _ofXConfigAttribute.IdProperty).Type);
+            .MakeGenericType(Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty).Type);
         var idConverterService = (IIdConverter)serviceProvider.GetService(_idConverterType)!;
         var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
         var interpreter = new Interpreter();
         interpreter.SetVariable(IdsNaming, idsConverted);
         return interpreter.ParseAsExpression<Func<TModel, bool>>(
-            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{_ofXConfigAttribute.IdProperty})", ModelName);
+            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{OfXConfigAttribute.IdProperty})", ModelName);
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
             {
                 try
                 {
-                    var expOrDefault = expression.Expression ?? _ofXConfigAttribute.DefaultProperty;
+                    var expOrDefault = expression.Expression ?? OfXConfigAttribute.DefaultProperty;
                     var expressionParts = expOrDefault.Split('.');
                     Expression currentExpression = ModelParameterExpression;
                     var currentType = typeof(TModel);
@@ -207,7 +207,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
 
         var idExpression = QueryHandlerBuilderStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
         {
-            var idProperty = Expression.Property(ModelParameterExpression, _ofXConfigAttribute.IdProperty);
+            var idProperty = Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty);
             var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
             return Expression.Call(idProperty, toStringMethod!);
         });
