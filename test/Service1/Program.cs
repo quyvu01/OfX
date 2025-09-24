@@ -68,13 +68,14 @@ List<string> provinceIds =
 //             OtherValue = $"SomeOtherValue Of: {id}",
 //             Metadata =
 //             [
-//                 new MemerSocialMetadata
-//                 {
-//                     Key = $"Key of: {id}", Value = $"Value of: {id}", ExternalOfMetadata = new ExternalOfMetadata
+//                 ..Enumerable.Range(1, id).Select(x =>
+//                     new MemerSocialMetadata
 //                     {
-//                         JustForTest = $"Just for test: {id}"
-//                     }
-//                 }
+//                         Key = $"Key of: {x}", Value = $"Value of: {x}", ExternalOfMetadata = new ExternalOfMetadata
+//                         {
+//                             JustForTest = $"Just for test: {x}"
+//                         }
+//                     })
 //             ]
 //         });
 // }

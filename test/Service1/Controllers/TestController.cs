@@ -6,6 +6,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Queries;
+using Serilog;
 using Service1.Contexts;
 using Service1.Contract.Responses;
 using Service1.Models;
@@ -75,10 +76,24 @@ public sealed class TestController : ControllerBase
             .Project(new BsonDocument {
                 { "Id", 1 },
                 { "Name", 1 },
-                { "SortedMetadata", new BsonDocument("$sortArray", new BsonDocument {
-                    { "input", "$Metadata" },
-                    { "sortBy", new BsonDocument("Key", 1) }
-                }) }
+                { "FirstSortedMetadata", new BsonDocument("$first",
+                    new BsonDocument("$sortArray", new BsonDocument {
+                        { "input", "$Metadata" },
+                        { "sortBy", new BsonDocument("Key", -1) }
+                    })
+                )},
+                { "FirstJustForTest",
+                    new BsonDocument("$first",
+                        new BsonDocument("$map", new BsonDocument {
+                            { "input", new BsonDocument("$sortArray", new BsonDocument {
+                                { "input", "$Metadata" },
+                                { "sortBy", new BsonDocument("Key", -1) }
+                            }) },
+                            { "as", "m" },
+                            { "in", "$$m.ExternalOfMetadata.JustForTest" }
+                        })
+                    )
+                }
             })
             .ToListAsync();
         
