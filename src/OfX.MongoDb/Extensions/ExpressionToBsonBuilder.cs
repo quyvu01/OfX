@@ -70,7 +70,7 @@ public static class ExpressionToBsonBuilder
 
     private static BsonValue WrapGetField(BsonValue input, BsonValue nextStage)
     {
-        // Khi nextStage là một stage aggregation, có thể wrap dưới dạng $let hoặc giữ nguyên tùy DSL mở rộng
-        return nextStage; // để đơn giản: override input bằng stage tiếp theo
+        // When the nextStage is aggregation stage, we can wrap by using $let or keep DSL extensible
+        return nextStage; // To make it easier: override input by next stage
     }
 }
