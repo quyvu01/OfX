@@ -25,6 +25,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     private const string ModelName = "x";
     private const string IdsNaming = "ids";
     private static Type _idConverterType;
+    private static MemberAssignment IdToStringMemberAssignment;
 
     protected readonly IOfXConfigAttribute OfXConfigAttribute =
         getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
@@ -53,43 +54,40 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     }
 
     /// <summary>
-    /// Currently, I accept this is the best solution at the time.
-    /// I need to investigate to use DynamicExpression to this one.
-    /// Also, the response should be the Expression[Func[TModel, object]].
-    /// This should be updated later one.
+    /// For almost cases, we can use this one as the response building.
+    /// If this is not support by driver as MongoDb Driver, we should build the specific response for them... 
     /// </summary>
-    /// <param name="request">is an instance of RequestOf[TAttribute], contains SelectorIds and Expression parsed from string to string[]</param>
+    /// <param name="request">is an instance of RequestOf&lt;Func&gt;, contains SelectorIds and Expression parsed from string to string[]</param>
     /// <returns></returns>
     protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
-
+        IdToStringMemberAssignment ??= Expression.Bind(OfXStatics.OfXIdProp, IdToStringCall());
         var valueExpression = expressions
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
             {
                 try
                 {
                     var expOrDefault = expression.Expression ?? OfXConfigAttribute.DefaultProperty;
-                    var expressionParts = expOrDefault.Split('.');
+                    var segments = expOrDefault.Split('.');
                     var expressionQueryableData = new ExpressionQueryableData(typeof(TModel), ModelParameterExpression);
-                    var expressionQueryableResult = expressionParts
-                        .Aggregate(expressionQueryableData, (acc, part) =>
+                    var expressionQueryableResult = segments
+                        .Aggregate(expressionQueryableData, (acc, segment) =>
                         {
-                            if (part.Contains('['))
+                            if (segment.Contains('['))
                             {
-                                var collectionData = ExpressionHelpers.GetCollectionQueryableData(acc.Expression, part);
-                                return new ExpressionQueryableData(collectionData.TargetType,
-                                    collectionData.Expression);
+                                var data = ExpressionHelpers.GetCollectionQueryableData(acc.Expression, segment);
+                                return new ExpressionQueryableData(data.TargetType, data.Expression);
                             }
 
-                            if (part == nameof(IList.Count))
+                            if (segment == nameof(IList.Count))
                                 return new ExpressionQueryableData(typeof(int),
                                     Expression.Property(acc.Expression, nameof(IList.Count)));
 
                             // Handle normal property access
-                            var propertyInfo = acc.TargetType.GetProperty(part);
+                            var propertyInfo = acc.TargetType.GetProperty(segment);
                             if (propertyInfo is null)
-                                throw new OfXException.NavigatorIncorrect(part, acc.TargetType.FullName);
+                                throw new OfXException.NavigatorIncorrect(segment, acc.TargetType.FullName);
                             return new ExpressionQueryableData(propertyInfo.PropertyType,
                                 Expression.Property(acc.Expression, propertyInfo));
                         });
@@ -120,26 +118,16 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
         var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
             valueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
-        var idExpression = QueryHandlerBuilderStatics.IdMethodCallExpressions.Value.GetOrAdd(typeof(TModel), _ =>
-        {
-            var idProperty = Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty);
-            var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
-            return Expression.Call(idProperty, toStringMethod!);
-        });
-
-        MemberBinding[] bindings =
-        [
-            Expression.Bind(OfXStatics.OfXIdProp, idExpression),
-            Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray)
-        ];
-        var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)), bindings);
+        var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)),
+            IdToStringMemberAssignment, Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray));
 
         return Expression.Lambda<Func<TModel, OfXDataResponse>>(responseExpression, ModelParameterExpression);
     }
-}
 
-internal static class QueryHandlerBuilderStatics
-{
-    internal static readonly Lazy<ConcurrentDictionary<Type, MethodCallExpression>> IdMethodCallExpressions =
-        new(() => []);
+    private MethodCallExpression IdToStringCall()
+    {
+        var idProperty = Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty);
+        var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
+        return Expression.Call(idProperty, toStringMethod!);
+    }
 }

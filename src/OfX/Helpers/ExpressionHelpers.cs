@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
-using OfX.ApplicationModels;
 using OfX.Exceptions;
 using OfX.Internals;
 
