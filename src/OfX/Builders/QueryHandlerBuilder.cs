@@ -39,7 +39,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     /// <summary>
     /// We are using DynamicExpression to convert string to Expression
     /// </summary>
-    /// <param name="query">is an instance of RequestOf[TAttribute], contains SelectorIds and Expression parsed from string to string[]</param>
+    /// <param name="query">is an instance of RequestOf&lt;TAttribute&gt;, contains SelectorIds and Expression</param>
     /// <returns></returns>
     protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
@@ -55,9 +55,9 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
 
     /// <summary>
     /// For almost cases, we can use this one as the response building.
-    /// If this is not support by driver as MongoDb Driver, we should build the specific response for them... 
+    /// If this is not support by driver (i.e: MongoDb Driver), we should build the specific response for them... 
     /// </summary>
-    /// <param name="request">is an instance of RequestOf&lt;Func&gt;, contains SelectorIds and Expression parsed from string to string[]</param>
+    /// <param name="request">is an instance of RequestOf&lt;TAttribute&gt;, contains SelectorIds and Expression</param>
     /// <returns></returns>
     protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
