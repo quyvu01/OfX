@@ -7,6 +7,7 @@ using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Constants;
 using OfX.Exceptions;
+using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
@@ -32,7 +33,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         var connectionFactory = new ConnectionFactory
         {
             HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption,
+            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
             UserName = userName, Password = password
         };
 
@@ -60,31 +61,25 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var props = ea.BasicProperties;
             var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
 
-            var rabbitMqServerRpcType = AttributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
+            var receivedPipelineOrchestrator = AttributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
                 if (!OfXCached.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))
                     throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
                 var modelType = handlerType.GetGenericArguments()[0];
-                return typeof(IRabbitMqServerRpc<,>).MakeGenericType(modelType, ofXAttributeType);
+                return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelType, ofXAttributeType);
             });
 
             using var scope = serviceProvider.CreateScope();
-
-            var server = scope.ServiceProvider.GetService(rabbitMqServerRpcType);
-
-            if (server is not IRabbitMqServerRpc serverRpc)
-            {
-                await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false);
-                return;
-            }
-
+            var server = scope.ServiceProvider
+                .GetService(receivedPipelineOrchestrator) as ReceivedPipelinesOrchestrator;
+            ArgumentNullException.ThrowIfNull(server);
             try
             {
                 var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
                 var headers = props.Headers?
                     .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-                var response = await serverRpc.GetResponseAsync(message, headers, ea.CancellationToken);
+                var response = await server.ExecuteAsync(message, headers, ea.CancellationToken);
                 var responseAsString = JsonSerializer.Serialize(response);
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,

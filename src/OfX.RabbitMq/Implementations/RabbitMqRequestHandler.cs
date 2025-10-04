@@ -5,7 +5,7 @@ using OfX.Responses;
 
 namespace OfX.RabbitMq.Implementations;
 
-internal sealed class OfXRabbitMqClient<TAttribute>(IRabbitMqClient client)
+internal sealed class RabbitMqRequestHandler<TAttribute>(IRabbitMqClient client)
     : IMappableRequestHandler<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)

@@ -11,9 +11,9 @@ using OfX.Helpers;
 using OfX.Implementations;
 using OfX.Statics;
 
-namespace OfX.Grpc.Servers;
+namespace OfX.Grpc.Implementations;
 
-public sealed class OfXGrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
+public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>> _receivedPipelineTypes = new(() => []);
 

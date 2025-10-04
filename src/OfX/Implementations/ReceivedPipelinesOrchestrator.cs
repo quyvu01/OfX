@@ -23,8 +23,15 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
 {
     public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
     {
-        var handler = handlers.FirstOrDefault(x => x is not DefaultQueryOfHandler);
-        if (handler is null) throw new OfXException.CannotFindHandlerForOfAttribute(typeof(TAttribute));
+        var executableHandlers = handlers
+            .Where(x => x is not DefaultQueryOfHandler)
+            .ToArray();
+        var handler = executableHandlers.Length switch
+        {
+            0 => throw new OfXException.CannotFindHandlerForOfAttribute(typeof(TAttribute)),
+            1 => executableHandlers.First(),
+            _ => throw new OfXException.AttributeHasBeenConfiguredForModel(typeof(TModel), typeof(TAttribute)),
+        };
 
         // Deserialize expressions from Expression, we handle the custom expressions and original expression as well
         var expressions = JsonSerializer.Deserialize<List<string>>(requestContext.Query.Expression);

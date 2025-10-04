@@ -4,7 +4,7 @@ using OfX.Responses;
 
 namespace OfX.Nats.Abstractions;
 
-internal interface INatsRequester<TAttribute> where TAttribute : OfXAttribute
+internal interface INatsClient<TAttribute> where TAttribute : OfXAttribute
 {
     Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext);
 }

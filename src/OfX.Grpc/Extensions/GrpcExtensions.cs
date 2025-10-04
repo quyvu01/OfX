@@ -10,7 +10,6 @@ using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Implementations;
-using OfX.Grpc.Servers;
 using OfX.Helpers;
 using OfX.Registries;
 using OfX.Responses;
@@ -80,7 +79,7 @@ public static class GrpcExtensions
                 });
                 return new ItemsResponse<OfXDataResponse>([..dataResponse]);
             });
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(OfXGrpcRequestClient<>));
+        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(GrpcClient<>));
     }
 
     private static async Task<Dictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
@@ -136,5 +135,5 @@ public static class GrpcExtensions
         }
     }
 
-    public static void MapOfXGrpcService(this IEndpointRouteBuilder builder) => builder.MapGrpcService<OfXGrpcServer>();
+    public static void MapOfXGrpcService(this IEndpointRouteBuilder builder) => builder.MapGrpcService<GrpcServer>();
 }

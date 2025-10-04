@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.MongoDb.ApplicationModels;
@@ -19,10 +18,8 @@ public static class MongoDbExtensions
         var registrar = new OfXMongoDbRegistrar(ofXServiceInjector.OfXRegister.ServiceCollection);
         registrarAction.Invoke(registrar);
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
-        if (OfXStatics.ModelConfigurationAssembly is null)
-            throw new OfXException.ModelConfigurationMustBeSet();
+        if (OfXStatics.ModelConfigurationAssembly is null) throw new OfXException.ModelConfigurationMustBeSet();
         OfXStatics.OfXConfigureStorage.Value
-            .Where(a => a.OfXConfigAttribute is not CustomOfXConfigForAttribute)
             .ForEach(m =>
             {
                 if (!OfXMongoDbStatics.ModelTypes.Contains(m.ModelType)) return;
@@ -30,7 +27,7 @@ public static class MongoDbExtensions
                 var attributeType = m.OfXAttributeType;
                 var serviceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
                 var implementedType = MongoDbQueryOfHandlerType.MakeGenericType(modelType, attributeType);
-                serviceCollection.AddScoped(serviceType,implementedType);
+                serviceCollection.AddTransient(serviceType, implementedType);
             });
         return ofXServiceInjector;
     }

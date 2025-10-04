@@ -20,8 +20,8 @@ internal sealed class NatsServerWorker(IServiceProvider serviceProvider, ILogger
                     var handlerType = x.Value;
                     var modelArg = handlerType.GetGenericArguments()[0];
                     var natsServerRpc = serviceProvider
-                        .GetService(typeof(INatsServerRpc<,>).MakeGenericType(modelArg, attributeType));
-                    if (natsServerRpc is not INatsServerRpc serverRpc) return;
+                        .GetService(typeof(INatsServer<,>).MakeGenericType(modelArg, attributeType));
+                    if (natsServerRpc is not INatsServer serverRpc) return;
                     await serverRpc.StartAsync();
                 });
                 await Task.WhenAll(tasks);

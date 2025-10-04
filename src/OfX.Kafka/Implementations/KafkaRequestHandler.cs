@@ -5,7 +5,7 @@ using OfX.Responses;
 
 namespace OfX.Kafka.Implementations;
 
-internal sealed class OfXKafkaClient<TAttribute>(IKafkaClient kafkaClient)
+internal sealed class KafkaRequestHandler<TAttribute>(IKafkaClient kafkaClient)
     : IMappableRequestHandler<TAttribute> where TAttribute : OfXAttribute
 {
     public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext) =>

@@ -37,7 +37,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
         var connectionFactory = new ConnectionFactory
         {
             HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption,
+            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
             UserName = userName, Password = password
         };
 

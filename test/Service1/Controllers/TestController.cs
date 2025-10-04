@@ -6,7 +6,6 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Queries;
-using Serilog;
 using Service1.Contexts;
 using Service1.Contract.Responses;
 using Service1.Models;
@@ -45,7 +44,6 @@ public sealed class TestController : ControllerBase
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
                 MemberAddressId = a.ToString(),
                 MemberSocialId = a.ToString(),
-                ExternalId = a.ToString()
             })
         ];
         await dataMappableService.MapDataAsync(members);

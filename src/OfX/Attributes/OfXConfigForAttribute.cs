@@ -10,10 +10,4 @@ public sealed class OfXConfigForAttribute<TAttribute>(string idProperty, string 
     public string DefaultProperty { get; } = defaultProperty;
 }
 
-public sealed class CustomOfXConfigForAttribute : IOfXConfigAttribute
-{
-    public string IdProperty => null;
-    public string DefaultProperty => null;
-}
-
 internal sealed record OfXConfig(string IdProperty, string DefaultProperty) : IOfXConfigAttribute;

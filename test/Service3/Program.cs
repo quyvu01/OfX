@@ -7,7 +7,6 @@ using Serilog;
 using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Models;
-using Service3Api.Pipelines;
 using Shared;
 using Shared.RunSqlMigration;
 
@@ -19,9 +18,7 @@ builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         // cfg.AddNats(config => config.Url("nats://localhost:4222"));
-        cfg.AddDefaultReceiversFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        cfg.AddCustomExpressionPipelines(c => c.OfType<OtherTestReceivedPipeline>());
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 builder.Services.AddGrpc();
@@ -64,7 +61,6 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 }, 128);
 
 #endregion
-
 
 var app = builder.Build();
 
