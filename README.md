@@ -143,23 +143,6 @@ Example:
 cfg.AddHandlersFromNamespaceContaining<SomeHandlerAssemblyMarker>();
 ```
 
-#### AddDefaultReceiversFromNamespaceContaining
-
-```csharp
-cfg.AddDefaultReceiversFromNamespaceContaining<ReceiversAssembly>();
-
-```
-
-Add assemblies that contain types are implemented from interface `IDefaultReceivedHandler<>`.
-
-Parameters:
-`Type`: A marker type within the assembly that includes the default receiver handler for OfXAttribute implementations.
-Example:
-
-```csharp
-cfg.AddDefaultReceiversFromNamespaceContaining<ReceiversAssembly>();
-```
-
 #### AddReceivedPipelines
 
 ```csharp
@@ -203,7 +186,7 @@ cfg.AddReceivedPipelines(c => c.OfType(typeof(GenericPipeline<>)).OfType<OtherPi
 cfg.AddStronglyTypeIdConverter(a => a.OfType<StronglyTypeIdRegisters>());
 ```
 
-When your models(entities) are using Strongly Type Id, you have to configure to tell how OfX can convert from general ID
+When your models(entities) are using Strongly Type ID, you have to configure to tell how OfX can convert from general ID
 type(string) to your strongly type ID.
 
 Parameters:
@@ -212,7 +195,7 @@ Parameters:
 #### OfType
 
 You have to create a class and implement interface `IStronglyTypeConverter<T>`, then you have to override 2 methods(
-`Convert` and `CanConvert`) to help OfX convert from general Id type(string) to your strongly type.
+`Convert` and `CanConvert`) to help OfX convert from general ID type(string) to your strongly type.
 Please check the example above!
 
 #### AddModelConfigurationsFromNamespaceContaining
@@ -242,7 +225,7 @@ cfg.SetMaxObjectSpawnTimes(16); // Add this when you want to limit the maxObject
 ```
 
 This function sets an upper limit on the number of times an object can be spawned during recursive data mapping.
-By default (Max spawn times: `32`), OfX allows objects to be dynamically created and mapped, but in complex object
+By default, (Max spawn times: `128`), OfX allows objects to be dynamically created and mapped, but in complex object
 structures, excessive recursive mapping can lead to performance issues or infinite loops.
 Setting maxTimes helps prevent excessive nesting by defining a safe threshold, ensuring that the mapping process remains
 efficient and controlled.
