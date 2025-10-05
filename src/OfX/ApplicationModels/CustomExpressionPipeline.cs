@@ -8,24 +8,17 @@ public sealed class CustomExpressionPipeline(IServiceCollection serviceCollectio
 {
     private static readonly Type CustomExpressionPipelineInterface = typeof(ICustomExpressionBehavior<>);
 
-    public CustomExpressionPipeline OfType<ICustomExpressionPipeline>(
+    public CustomExpressionPipeline OfType<TCustomExpressionPipelineBehavior>(
         ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
-        var pipelineType = typeof(ICustomExpressionPipeline);
+        var pipelineType = typeof(TCustomExpressionPipelineBehavior);
         var signatureInterfaceTypes = pipelineType.GetInterfaces()
             .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == CustomExpressionPipelineInterface)
             .ToList();
 
         if (signatureInterfaceTypes is not { Count: > 0 })
             throw new OfXException.TypeIsNotCustomExpressionPipelineBehavior(pipelineType);
-        if (pipelineType.IsGenericType && pipelineType.ContainsGenericParameters)
-        {
-            var serviceDescriptor =
-                new ServiceDescriptor(CustomExpressionPipelineInterface, pipelineType, serviceLifetime);
-            serviceCollection.Add(serviceDescriptor);
-            return this;
-        }
-
+        
         signatureInterfaceTypes.ForEach(serviceType =>
         {
             var serviceDescriptor = new ServiceDescriptor(serviceType, pipelineType, serviceLifetime);

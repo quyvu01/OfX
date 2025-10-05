@@ -17,8 +17,7 @@ public static class RabbitMqExtensions
         options.Invoke(config);
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqServer, RabbitMqServer>();
         ofXRegister.ServiceCollection.AddSingleton<IRabbitMqClient, RabbitMqClient>();
-        ofXRegister.ServiceCollection.AddTransient(typeof(IRabbitMqServerRpc<,>), typeof(RabbitMqServerRpc<,>));
         ofXRegister.ServiceCollection.AddHostedService<RabbitMqServerWorker>();
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(OfXRabbitMqClient<>));
+        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(RabbitMqRequestHandler<>));
     }
 }

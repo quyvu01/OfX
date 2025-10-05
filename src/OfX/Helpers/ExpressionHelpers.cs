@@ -1,13 +1,32 @@
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using OfX.Exceptions;
+using OfX.Internals;
 
 namespace OfX.Helpers;
 
-public static class ExpressionHelpers
+public static partial class ExpressionHelpers
 {
     private const string Asc = "asc";
     private const string Desc = "desc";
     private static readonly string[] OrderDirections = [Asc, Desc];
+    private static readonly Regex ArrayPattern = CollectionRegex();
+
+    internal static ExpressionQueryableData GetCollectionQueryableData(Expression currentExpression, string segment)
+    {
+        var match = ArrayPattern.Match(segment);
+        if (!match.Success) throw new OfXException.CollectionFormatNotCorrected(segment);
+        var arrayName = match.Groups["name"].Value;
+        var orderBy = match.Groups["orderBy"].Value;
+        var orderDirection = match.Groups["orderDirection"].Value.ToLower();
+        var offset = match.Groups["skip"].Success ? int.Parse(match.Groups["skip"].Value) : (int?)null;
+        var limit = match.Groups["take"].Success ? int.Parse(match.Groups["take"].Value) : (int?)null;
+        if (offset is null == limit is null)
+            return GetManyExpression(currentExpression, arrayName, orderDirection, orderBy, offset, limit);
+        if (offset is not { } index)
+            throw new OfXException.CollectionIndexIncorrect(segment);
+        return GetOneExpression(currentExpression, arrayName, orderDirection, orderBy, index);
+    }
 
     /// <summary>
     /// Builds an expression to navigate and select an item in a collection with ordering and indexing.
@@ -18,7 +37,7 @@ public static class ExpressionHelpers
     /// <param name="orderBy">The property to order by within the collection.</param>
     /// <param name="index">The index of the desired item (0 for first, -1 for last).</param>
     /// <returns>An expression to retrieve the desired item.</returns>
-    public static ExpressionQueryableData GetOneExpression(Expression currentExpression, string navigator,
+    private static ExpressionQueryableData GetOneExpression(Expression currentExpression, string navigator,
         string orderDirection, string orderBy, int index)
     {
         var orderDirectionNormalized = orderDirection.ToLower();
@@ -51,7 +70,7 @@ public static class ExpressionHelpers
         return new ExpressionQueryableData(itemType, elementCall);
     }
 
-    public static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
+    private static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
         string orderDirection, string orderBy, int? skip = null, int? take = null)
     {
         var orderDirectionNormalized = orderDirection.ToLower();
@@ -96,5 +115,8 @@ public static class ExpressionHelpers
         return properties.Aggregate(parameter, Expression.Property);
     }
 
-    public sealed record ExpressionQueryableData(Type TargetType, Expression Expression);
+    [GeneratedRegex(
+        @"^(?<name>\w+)\[(?:(?<skip>-?\d+)(?:\s+(?<take>\d+))?\s+)?(?<orderDirection>asc|desc)\s+(?<orderBy>\w+)\]$",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-VN")]
+    private static partial Regex CollectionRegex();
 }

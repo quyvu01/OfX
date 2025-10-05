@@ -11,8 +11,8 @@ using OfX.Responses;
 
 namespace OfX.Nats.Implementations;
 
-internal sealed class NatsRequester<TAttribute>(NatsClientWrapper client)
-    : INatsRequester<TAttribute> where TAttribute : OfXAttribute
+internal sealed class NatsClient<TAttribute>(NatsClientWrapper client)
+    : INatsClient<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {

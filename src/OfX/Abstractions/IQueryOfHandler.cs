@@ -40,7 +40,7 @@ public interface IQueryOfHandler<TModel, TAttribute> where TModel : class where 
 /// <remarks>
 /// This type is primarily used for type resolution and should not be used directly.
 /// </remarks>
-public class DefaultQueryOfHandler;
+internal class DefaultQueryOfHandler;
 
 /// <summary>
 /// Provides a default no-op implementation of <see cref="IQueryOfHandler{TModel, TAttribute}"/>.
@@ -63,33 +63,4 @@ internal sealed class DefaultQueryOfHandler<TModel, TAttribute>
     /// <inheritdoc />
     public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
         Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
-}
-
-/// <summary>
-/// Provides a default implementation of <see cref="IQueryOfHandler{TModel, TAttribute}"/> 
-/// that echoes back the selector IDs as <see cref="OfXDataResponse"/> objects.
-/// </summary>
-/// <typeparam name="TModel">
-/// The model type representing the entity being queried.
-/// </typeparam>
-/// <typeparam name="TAttribute">
-/// The <see cref="OfXAttribute"/> type that describes the query mapping for <typeparamref name="TModel"/>.
-/// </typeparam>
-/// <remarks>
-/// This handler is useful for scenarios where you want to quickly verify that 
-/// requests are being received and processed, without querying an actual data source.
-/// </remarks>
-internal sealed class DefaultReceiverOfHandler<TModel, TAttribute> : IQueryOfHandler<TModel, TAttribute>
-    where TModel : class
-    where TAttribute : OfXAttribute
-{
-    /// <inheritdoc />
-    public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
-        Task.FromResult(new ItemsResponse<OfXDataResponse>([
-            ..context.Query.SelectorIds.Select(a => new OfXDataResponse
-            {
-                Id = a,
-                OfXValues = []
-            })
-        ]));
 }

@@ -5,9 +5,9 @@ using OfX.Responses;
 
 namespace OfX.Nats.Implementations;
 
-internal class OfXNatsClient<TAttribute>(INatsRequester<TAttribute> requester)
+internal class NatsRequestHandler<TAttribute>(INatsClient<TAttribute> client)
     : IMappableRequestHandler<TAttribute> where TAttribute : OfXAttribute
 {
     public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext) =>
-        requester.RequestAsync(requestContext);
+        client.RequestAsync(requestContext);
 }

@@ -9,7 +9,6 @@ using OfX.Delegates;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.InternalPipelines;
-using OfX.Internals;
 using OfX.Registries;
 using OfX.Services;
 using OfX.Statics;
@@ -42,20 +41,8 @@ public static class OfXExtensions
             serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
         });
 
-        var defaultQueryHandlerInterface = typeof(IQueryOfHandler<,>);
-        OfXStatics.DefaultReceiverTypes.Value.ForEach(attributeType =>
-        {
-            var hiddenModelOf = typeof(HiddenModelOf<>).MakeGenericType(attributeType);
-            var serviceType = defaultQueryHandlerInterface
-                .MakeGenericType(hiddenModelOf, attributeType);
-            var implementedType = OfXStatics.DefaultReceiverOfHandlerType.MakeGenericType(hiddenModelOf, attributeType);
-            serviceCollection.TryAddScoped(serviceType, implementedType);
-        });
-
         OfXStatics.OfXConfigureStorage.Value
-            .Where(a => a.OfXConfigAttribute is not CustomOfXConfigForAttribute)
-            .ForEach(m =>
-                modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
+            .ForEach(m => modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
 
         serviceCollection.AddTransient<IDataMappableService, DataMappableService>();
 

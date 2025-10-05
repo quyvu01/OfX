@@ -12,14 +12,14 @@ using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 
-namespace OfX.Nats.Servers;
+namespace OfX.Nats.Implementations;
 
-internal sealed class NatsServerRpc<TModel, TAttribute>(IServiceProvider serviceProvider)
-    : INatsServerRpc<TModel, TAttribute>
+internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider serviceProvider)
+    : INatsServer<TModel, TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
-    private readonly ILogger<NatsServerRpc<TModel, TAttribute>> _logger =
-        serviceProvider.GetService<ILogger<NatsServerRpc<TModel, TAttribute>>>();
+    private readonly ILogger<NatsServer<TModel, TAttribute>> _logger =
+        serviceProvider.GetService<ILogger<NatsServer<TModel, TAttribute>>>();
 
     private readonly NatsClientWrapper _natsClientWrapper = serviceProvider.GetRequiredService<NatsClientWrapper>();
 

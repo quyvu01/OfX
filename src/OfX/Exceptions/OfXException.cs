@@ -28,6 +28,9 @@ public static class OfXException
 
     public sealed class StronglyTypeConfigurationMustNotBeNull()
         : Exception("Strongly type Id configuration must not be null!");
+    
+    public sealed class AttributeHasBeenConfiguredForModel(Type modelType, Type attributeType)
+        : Exception($"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
 
     public sealed class OfXMappingObjectsSpawnReachableTimes()
         : Exception(
@@ -50,18 +53,6 @@ public static class OfXException
 
     public sealed class CollectionIndexIncorrect(string indexAsString)
         : Exception($"First parameter [{indexAsString}] must be 0(First item) or -1(Last item).");
-
-    public sealed class CollectionOffsetIncorrect(string offsetAsString)
-        : Exception($"Parameter offset [{offsetAsString}] must be a number.");
-
-    public sealed class CollectionLimitIncorrect(string limitAsString)
-        : Exception($"Parameter limit [{limitAsString}] must be a number.");
-
-    public sealed class CollectionOffsetCannotBeNegative(int offset)
-        : Exception($"Offset [{offset}] cannot be negative.");
-
-    public sealed class CollectionLimitCannotBeNegative(int limit)
-        : Exception($"Limit [{limit}] cannot be negative.");
 
     public sealed class CollectionOrderDirectionIncorrect(string orderDirection)
         : Exception($"Second parameter [{orderDirection}] must be an ordered direction `ASC|DESC`");

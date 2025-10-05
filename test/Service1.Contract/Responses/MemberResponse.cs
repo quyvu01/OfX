@@ -5,12 +5,6 @@ namespace Service1.Contract.Responses;
 public class MemberResponse
 {
     public string Id { get; set; }
-
-    public string ExternalId { get; set; }
-
-    [ExternalDataOf(nameof(ExternalId), Expression = "OtherTest")]
-    public string ExternalDataTest { get; set; }
-
     public string MemberAddressId { get; set; }
 
     [MemberAddressOf(nameof(MemberAddressId))]

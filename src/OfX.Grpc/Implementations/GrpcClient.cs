@@ -2,11 +2,12 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Grpc.Delegates;
+using OfX.Grpc.Internals;
 using OfX.Responses;
 
 namespace OfX.Grpc.Implementations;
 
-internal class OfXGrpcRequestClient<TAttribute>(GetOfXResponseFunc ofXResponseFunc)
+internal class GrpcClient<TAttribute>(GetOfXResponseFunc ofXResponseFunc)
     : IMappableRequestHandler<TAttribute>
     where TAttribute : OfXAttribute
 {
