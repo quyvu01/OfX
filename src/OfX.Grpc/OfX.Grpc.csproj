@@ -36,7 +36,4 @@
             <Link>OfX.png</Link>
         </None>
     </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Servers\" />
-    </ItemGroup>
 </Project>
