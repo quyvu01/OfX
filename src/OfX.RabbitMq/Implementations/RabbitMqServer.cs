@@ -88,9 +88,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             catch (Exception e)
             {
                 var logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
-                var attributeType = Type.GetType(props.Type!);
-                logger.LogError("Error while responding <{@Attribute}> with message : {@Error}",
-                    attributeType?.Name, e);
+                logger.LogError("Error while responding <{@Attribute}> with message : {@Error}", props.Type, e);
                 var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
                 replyProps.Headers ??= new Dictionary<string, object>();

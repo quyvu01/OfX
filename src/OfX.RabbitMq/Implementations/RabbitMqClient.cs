@@ -19,7 +19,6 @@ namespace OfX.RabbitMq.Implementations;
 
 internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
 {
-    // private readonly ConcurrentDictionary<string, TaskCompletionSource<byte[]>> _callbackMapper = new();
     private readonly ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>> _eventArgsMapper = new();
     private IConnection _connection;
     private IChannel _channel;

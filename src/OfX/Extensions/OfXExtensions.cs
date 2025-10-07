@@ -52,7 +52,7 @@ public static class OfXExtensions
 
         serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
 
-        serviceCollection.AddScoped(typeof(DefaultQueryOfHandler<,>));
+        serviceCollection.AddTransient(typeof(DefaultQueryOfHandler<,>));
 
         serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
             modelMapOfXConfigs.TryGetValue((mt, at), out var config)
@@ -60,6 +60,7 @@ public static class OfXExtensions
                 : throw new UnreachableException());
 
         newOfRegister.AddSendPipelines(c => c
+            .OfType(typeof(RetryPipelineBehavior<>))
             .OfType(typeof(SendPipelineRoutingBehavior<>))
             .OfType(typeof(ExceptionPipelineBehavior<>)));
 

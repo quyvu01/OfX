@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.ApplicationModels;
 using OfX.Constants;
 using OfX.Extensions;
 using OfX.Statics;
@@ -57,5 +58,12 @@ public class OfXRegister(IServiceCollection serviceCollection)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
         OfXConstants.DefaultRequestTimeout = timeout;
+    }
+
+    public void SetRetryPolicy(int retryCount = 3, Func<int, TimeSpan> sleepDurationProvider = null,
+        Action<Exception, TimeSpan> onRetry = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(retryCount, 0);
+        OfXStatics.RetryPolicy = new RetryPolicy(retryCount, sleepDurationProvider, onRetry);
     }
 }

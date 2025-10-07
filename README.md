@@ -104,6 +104,7 @@ builder.Services.AddOfX(cfg =>
     cfg.AddModelConfigurationsFromNamespaceContaining<SomeModelAssemblyMarker>();
     cfg.ThrowIfException(); // Add this when you want to handle the error and know why the errors are occupied
     cfg.SetMaxObjectSpawnTimes(16); // Add this when you want to limit the maxObject spawn times. It mean you can be noticed that your objects are so complex...
+    cfg.SetRetryPolicy(3, retryAttempt => retryAttempt * TimeSpan.FromSeconds(2), (e, ts) => Console.WriteLine($"Error: {e.Message}"));
 });
 ```
 
@@ -229,6 +230,21 @@ By default, (Max spawn times: `128`), OfX allows objects to be dynamically creat
 structures, excessive recursive mapping can lead to performance issues or infinite loops.
 Setting maxTimes helps prevent excessive nesting by defining a safe threshold, ensuring that the mapping process remains
 efficient and controlled.
+
+#### SetRetryPolicy
+
+```csharp
+cfg.SetRetryPolicy(3, retryAttempt => retryAttempt * TimeSpan.FromSeconds(2),
+    (e, ts) => Console.WriteLine($"Error: {e.Message}")); 
+```
+This function configures the retry mechanism for transient or recoverable operations during the mapping or data-handling process.
+
+- **maxRetryCount** (`3` in this example): The maximum number of retry attempts before the operation is considered failed.
+- **retryDelayProvider** (`retryAttempt => retryAttempt * TimeSpan.FromSeconds(2)`): A function that determines the waiting time before each retry. Here, it uses an exponential backoff pattern—each retry waits longer than the last (e.g., 2s, 4s, 6s…).
+- **onRetry** (`(e, ts) => Console.WriteLine($"Error: {e.Message}")`): A callback triggered whenever a retry occurs, useful for logging or monitoring.
+
+By default, OfX executes operations without retrying on failure. Using `SetRetryPolicy` helps improve resilience when dealing with unstable external dependencies, ensuring temporary issues don't cause the entire mapping process to fail.
+
 
 ### 2. Integrate the `OfXAttribute` into Your Models, Entities, or DTOs
 
