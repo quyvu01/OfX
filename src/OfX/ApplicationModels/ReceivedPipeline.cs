@@ -28,14 +28,14 @@ public sealed class ReceivedPipeline(IServiceCollection serviceCollection) : IPi
         {
             var serviceDescriptor =
                 new ServiceDescriptor(ReceivedPipelineInterface, runtimePipelineType, serviceLifetime);
-            serviceCollection.TryAdd(serviceDescriptor);
+            serviceCollection.Add(serviceDescriptor);
             return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>
         {
             var serviceDescriptor = new ServiceDescriptor(serviceType, runtimePipelineType, serviceLifetime);
-            serviceCollection.TryAdd(serviceDescriptor);
+            serviceCollection.Add(serviceDescriptor);
         });
         return this;
     }

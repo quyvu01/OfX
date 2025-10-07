@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Exceptions;
 
@@ -27,14 +26,14 @@ public sealed class SendPipeline(IServiceCollection serviceCollection) : IPipeli
         if (runtimePipelineType.IsGenericType && runtimePipelineType.ContainsGenericParameters)
         {
             var serviceDescriptor = new ServiceDescriptor(SendPipelineInterface, runtimePipelineType, serviceLifetime);
-            serviceCollection.TryAdd(serviceDescriptor);
+            serviceCollection.Add(serviceDescriptor);
             return this;
         }
 
         signatureInterfaceTypes.ForEach(serviceType =>
         {
             var serviceDescriptor = new ServiceDescriptor(serviceType, runtimePipelineType, serviceLifetime);
-            serviceCollection.TryAdd(serviceDescriptor);
+            serviceCollection.Add(serviceDescriptor);
         });
         return this;
     }
