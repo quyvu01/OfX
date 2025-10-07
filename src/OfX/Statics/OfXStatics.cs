@@ -12,6 +12,8 @@ public static class OfXStatics
     internal static int MaxObjectSpawnTimes { get; set; } = 128;
     public static bool ThrowIfExceptions { get; internal set; }
 
+    internal static RetryPolicy RetryPolicy { get; set; }
+
     internal static readonly Type OfXValueType = typeof(OfXValueResponse);
 
     public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
@@ -34,7 +36,7 @@ public static class OfXStatics
     public static readonly Lazy<IReadOnlyCollection<OfXModelData>> OfXConfigureStorage = new(() =>
     {
         var ofxConfigForAttributeType = typeof(OfXConfigForAttribute<>);
-        return 
+        return
         [
             ..ModelConfigurationAssembly?
                 .ExportedTypes
