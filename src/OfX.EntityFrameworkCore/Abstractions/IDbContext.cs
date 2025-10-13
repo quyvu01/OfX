@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace OfX.EntityFrameworkCore.Abstractions;
 
-internal interface IEfDbContext
+internal interface IDbContext
 {
-    DbSet<TModel> GetCollection<TModel>() where TModel : class;
+    DbContext DbContext { get; }
     bool HasCollection(Type modelType);
 }
