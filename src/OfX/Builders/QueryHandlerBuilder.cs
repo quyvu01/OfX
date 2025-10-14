@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -17,8 +18,7 @@ using OfX.Statics;
 namespace OfX.Builders;
 
 public abstract class QueryHandlerBuilder<TModel, TAttribute>(
-    IServiceProvider serviceProvider,
-    GetOfXConfiguration getOfXConfiguration)
+    IServiceProvider serviceProvider)
     where TModel : class
     where TAttribute : OfXAttribute
 {
@@ -27,8 +27,9 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     private static Type _idConverterType;
     private static MemberAssignment IdToStringMemberAssignment;
 
-    protected readonly IOfXConfigAttribute OfXConfigAttribute =
-        getOfXConfiguration.Invoke(typeof(TModel), typeof(TAttribute));
+    protected readonly IOfXConfigAttribute OfXConfigAttribute = serviceProvider
+        .GetRequiredService<GetOfXConfiguration>()
+        .Invoke(typeof(TModel), typeof(TAttribute));
 
     private static readonly ParameterExpression ModelParameterExpression =
         Expression.Parameter(typeof(TModel), ModelName);
