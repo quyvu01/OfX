@@ -1,8 +1,12 @@
-# OfX-Kafka
+# OfX-Azure-ServiceBus
 
-OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation. This package provides
-a high-performance, strongly-typed communication layer for OfX’s Attribute-based Data Mapping, enabling streamlined data
-retrieval across distributed systems.
+OfX-Azure-ServiceBus is an extension package for **OfX** that leverages **Azure Service Bus** for reliable and scalable
+message transportation.  
+This package provides a **strongly-typed**, **cloud-native** communication layer for OfX’s **Attribute-based Data
+Mapping**, enabling seamless data transfer across distributed systems using Microsoft Azure infrastructure.
+
+> [!WARNING]  
+> The Azure Service Bus transport only supports Standard and Premium tiers of the Microsoft Azure Service Bus service. Premium tier is recommended for production environments.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -10,54 +14,58 @@ retrieval across distributed systems.
 
 ## Introduction
 
-Kafka-based Transport: Implements Kafka to handle data communication between services, providing a fast, secure, and
-scalable solution.
+**Azure Service Bus-based Transport:**  
+Implements Azure Service Bus to handle data communication between distributed OfX services, providing an
+enterprise-grade, secure, and scalable messaging backbone with features like topics, queues, and session management.
 
 ---
 
 ## Installation
 
-To install the OfX-Kafka package, use the following NuGet command:
+To install the **OfX-Azure-ServiceBus** package, use the following NuGet command:
 
-```bash
-dotnet add package OfX-Kafka
+```csharp
+dotnet add package OfX.Azure.ServiceBus
 ```
 
 Or via the NuGet Package Manager:
 
-```bash
-Install-Package OfX-Kafka
+```csharp
+Install-Package OfX.Azure.ServiceBus
 ```
-
----
 
 ## How to Use
 
-### 1. Register OfX-Kafka
+### 1. Register OfX-Azure-ServiceBus
 
-Add OfX-Kafka to your service configuration during application startup:
+Add OfX-Azure-ServiceBus to your service configuration during application startup:
+
+Example
 
 ```csharp
 builder.Services.AddOfX(cfg =>
-{
-    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddKafka(c => c.Host("localhost:9092"));
-});
-
+    {
+        cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
+        cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+        cfg.AddAzureServiceBus(c => c.Host("SensitiveConnectionString"));
+    });
 ...
 
 var app = builder.Build();
 
-app.Run();
+...
 
+app.Run();
 ```
 
-`Note:` OfX-Kafka uses topics that start with `ofx-response-topic-[application.friendly.name]`. Therefore, you should
-avoid using other topics. Additionally, OfX-Kafka automatically creates the topic
-`ofx-request-topic-[ofx.attribute.metadata]`, so you should avoid creating a topic with the same name in your
-application.
+`Note:` OfX-Azure-ServiceBus uses message subjects that start with ofx-request-[OfXAttribute metadata].
+You should avoid using other queues or topics with the same naming pattern.
 
-That All, enjoy your moment!
+The package supports both queue-based and topic-based messaging models.
+
+When RequiresSession is enabled, all messages will be processed in a sessionful mode, ensuring ordered delivery.
+
+That’s all — enjoy building your distributed system with OfX!
 
 | Package Name                                       | Description                                                                                                             | .NET Version | Document                                                                                 |
 |----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
@@ -69,9 +77,9 @@ That All, enjoy your moment!
 | **Integrations**                                   |                                                                                                                         |
 | [OfX-HotChocolate][OfX-HotChocolate.nuget]         | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
 | **Transports**                                     |                                                                                                                         |
-| [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Azure.ServiceBus/README.md)    |
+| [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | This Document                                                                            |
 | [OfX-gRPC][OfX-gRPC.nuget]                         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
-| [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | This Document                                                                            |
+| [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
 | [OfX-Nats][OfX-Nats.nuget]                         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
 | [OfX-RabbitMq][OfX-RabbitMq.nuget]                 | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation.                 | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
 
