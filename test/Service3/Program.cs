@@ -8,7 +8,6 @@ using Service3Api;
 using Service3Api.Contexts;
 using Service3Api.Models;
 using Shared;
-using Shared.RunSqlMigration;
 
 var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
@@ -64,7 +63,7 @@ builder.Services.AddDbContextPool<Service3Context>(options =>
 
 var app = builder.Build();
 
-await MigrationDatabase.MigrationDatabaseAsync<Service3Context>(app);
+// await MigrationDatabase.MigrationDatabaseAsync<Service3Context>(app);
 
 app.MapOfXGrpcService();
 app.Run();
