@@ -11,7 +11,7 @@ public sealed class AzureServiceBusClientSetting
 
     public void MaxConcurrentSessions(int maxConcurrentSessions)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxConcurrentSessions);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxConcurrentSessions, 1);
         AzureServiceBusStatic.MaxConcurrentSessions = maxConcurrentSessions;
     }
 }
