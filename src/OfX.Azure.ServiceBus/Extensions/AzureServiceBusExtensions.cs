@@ -5,7 +5,6 @@ using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.ApplicationModels;
 using OfX.Azure.ServiceBus.BackgroundServices;
 using OfX.Azure.ServiceBus.Implementations;
-using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Extensions;
 using OfX.Registries;
@@ -23,7 +22,6 @@ public static class AzureServiceBusExtensions
         var client = new ServiceBusClient(connectionString);
         var adminClient = new ServiceBusAdministrationClient(connectionString);
         var clientWrapper = new AzureServiceBusClientWrapper(client, adminClient);
-        AzureServiceBusStatic.TopicPrefix = setting.Prefix;
         ofXRegister.ServiceCollection.AddSingleton(clientWrapper);
 
         ofXRegister.ServiceCollection.AddSingleton(typeof(IAzureServiceBusServer<,>), typeof(AzureServiceBusServer<,>));

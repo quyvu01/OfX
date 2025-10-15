@@ -6,6 +6,7 @@ using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;
+using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Constants;
 using OfX.Implementations;
@@ -23,6 +24,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         var requestQueue = typeof(TAttribute).GetAzureServiceBusRequestQueue();
         var options = new ServiceBusSessionProcessorOptions
         {
+            MaxConcurrentSessions = AzureServiceBusStatic.MaxConcurrentSessions,
             MaxConcurrentCallsPerSession = 1,
             AutoCompleteMessages = false
         };
@@ -32,11 +34,10 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         {
             var request = args.Message;
             var requestDeserialize = JsonSerializer.Deserialize<MessageDeserializable>(request.Body);
-            Console.WriteLine($"Test: {requestDeserialize.Expression} of attribute {typeof(TAttribute).Name}");
             using var serviceScope = serviceProvider.CreateScope();
             var pipeline = serviceScope.ServiceProvider
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
-        
+
             var headers = request.ApplicationProperties?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var requestOf = new RequestOf<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expression);
@@ -49,7 +50,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
                 CorrelationId = request.CorrelationId,
                 SessionId = request.SessionId
             };
-        
+
             var sender = clientWrapper.ServiceBusClient.CreateSender(request.ReplyTo);
             await sender.SendMessageAsync(responseMessage, cts.Token);
             await args.CompleteMessageAsync(request, cts.Token);
