@@ -237,14 +237,20 @@ efficient and controlled.
 cfg.SetRetryPolicy(3, retryAttempt => retryAttempt * TimeSpan.FromSeconds(2),
     (e, ts) => Console.WriteLine($"Error: {e.Message}")); 
 ```
-This function configures the retry mechanism for transient or recoverable operations during the mapping or data-handling process.
 
-- **maxRetryCount** (`3` in this example): The maximum number of retry attempts before the operation is considered failed.
-- **retryDelayProvider** (`retryAttempt => retryAttempt * TimeSpan.FromSeconds(2)`): A function that determines the waiting time before each retry. Here, it uses an exponential backoff pattern—each retry waits longer than the last (e.g., 2s, 4s, 6s…).
-- **onRetry** (`(e, ts) => Console.WriteLine($"Error: {e.Message}")`): A callback triggered whenever a retry occurs, useful for logging or monitoring.
+This function configures the retry mechanism for transient or recoverable operations during the mapping or data-handling
+process.
 
-By default, OfX executes operations without retrying on failure. Using `SetRetryPolicy` helps improve resilience when dealing with unstable external dependencies, ensuring temporary issues don't cause the entire mapping process to fail.
+- **maxRetryCount** (`3` in this example): The maximum number of retry attempts before the operation is considered
+  failed.
+- **retryDelayProvider** (`retryAttempt => retryAttempt * TimeSpan.FromSeconds(2)`): A function that determines the
+  waiting time before each retry. Here, it uses an exponential backoff pattern—each retry waits longer than the last (
+  e.g., 2s, 4s, 6s…).
+- **onRetry** (`(e, ts) => Console.WriteLine($"Error: {e.Message}")`): A callback triggered whenever a retry occurs,
+  useful for logging or monitoring.
 
+By default, OfX executes operations without retrying on failure. Using `SetRetryPolicy` helps improve resilience when
+dealing with unstable external dependencies, ensuring temporary issues don't cause the entire mapping process to fail.
 
 ### 2. Integrate the `OfXAttribute` into Your Models, Entities, or DTOs
 
@@ -538,20 +544,21 @@ Stay tuned for even more exciting updates as we expand the capabilities of `Expr
 
 That all, Enjoy your moment!
 
-| Package Name                               | Description                                                                                             | .NET Version | Document                                                                                 |
-|--------------------------------------------|---------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
-| **Core**                                   |                                                                                                         |
-| [OfX][OfX.nuget]                           | OfX core                                                                                                | 8.0, 9.0     | This Document                                                                            |
-| **Data Providers**                         |                                                                                                         |
-| [OfX-EFCore][OfX-EFCore.nuget]             | This is the OfX extension package using EntityFramework to fetch data                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
-| [OfX-MongoDb][OfX-MongoDb.nuget]           | This is the OfX extension package using MongoDb to fetch data                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
-| **Integrations**                           |                                                                                                         |
-| [OfX-HotChocolate][OfX-HotChocolate.nuget] | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
-| **Transports**                             |                                                                                                         |
-| [OfX-gRPC][OfX-gRPC.nuget]                 | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
-| [OfX-Kafka][OfX-Kafka.nuget]               | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
-| [OfX-Nats][OfX-Nats.nuget]                 | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
-| [OfX-RabbitMq][OfX-RabbitMq.nuget]         | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
+| Package Name                                       | Description                                                                                                             | .NET Version | Document                                                                                 |
+|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
+| **Core**                                           |                                                                                                                         |
+| [OfX][OfX.nuget]                                   | OfX core                                                                                                                | 8.0, 9.0     | This Document                                                                            |
+| **Data Providers**                                 |                                                                                                                         |
+| [OfX-EFCore][OfX-EFCore.nuget]                     | This is the OfX extension package using EntityFramework to fetch data                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]                   | This is the OfX extension package using MongoDb to fetch data                                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
+| **Integrations**                                   |                                                                                                                         |
+| [OfX-HotChocolate][OfX-HotChocolate.nuget]         | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
+| **Transports**                                     |                                                                                                                         |
+| [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Azure.ServiceBus/README.md)    |
+| [OfX-gRPC][OfX-gRPC.nuget]                         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
+| [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
+| [OfX-Nats][OfX-Nats.nuget]                         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
+| [OfX-RabbitMq][OfX-RabbitMq.nuget]                 | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation.                 | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
 
 ---
 
@@ -570,3 +577,5 @@ That all, Enjoy your moment!
 [OfX-RabbitMq.nuget]: https://www.nuget.org/packages/OfX-RabbitMq/
 
 [OfX-Kafka.nuget]: https://www.nuget.org/packages/OfX-Kafka/
+
+[OfX-Azure.ServiceBus.nuget]: https://www.nuget.org/packages/OfX-Azure.ServiceBus/
