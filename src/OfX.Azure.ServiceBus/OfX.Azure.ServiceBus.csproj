@@ -24,14 +24,11 @@
     <ItemGroup>
         <ProjectReference Include="..\OfX\OfX.csproj"/>
         <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
         <None Include="..\..\OfX.png">
             <Pack>True</Pack>
             <PackagePath/>
             <Link>OfX.png</Link>
-        </None>
-        <None Update="README.md">
-          <Pack>true</Pack>
-          <PackagePath>/</PackagePath>
         </None>
     </ItemGroup>
 
