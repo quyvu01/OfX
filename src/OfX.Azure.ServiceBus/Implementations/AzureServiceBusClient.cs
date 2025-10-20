@@ -77,7 +77,7 @@ internal class AzureServiceBusClient<TAttribute> : IAzureServiceBusClient<TAttri
 
     public async ValueTask DisposeAsync()
     {
-        await _replyProcessor.DisposeAsync();
-        await _serviceBusSender.DisposeAsync();
+        if (_serviceBusSender != null) await _serviceBusSender.DisposeAsync();
+        if (_replyProcessor != null) await _replyProcessor.DisposeAsync();
     }
 }

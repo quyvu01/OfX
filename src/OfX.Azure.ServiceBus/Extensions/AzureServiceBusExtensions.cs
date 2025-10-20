@@ -19,7 +19,8 @@ public static class AzureServiceBusExtensions
         var setting = new AzureServiceBusClientSetting();
         options.Invoke(setting);
         var connectionString = setting.ConnectionString;
-        var client = new ServiceBusClient(connectionString);
+        var serviceBusClientOptions = setting.ServiceBusClientOptions;
+        var client = new ServiceBusClient(connectionString, serviceBusClientOptions);
         var adminClient = new ServiceBusAdministrationClient(connectionString);
         var clientWrapper = new AzureServiceBusClientWrapper(client, adminClient);
         ofXRegister.ServiceCollection.AddSingleton(clientWrapper);

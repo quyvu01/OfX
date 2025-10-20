@@ -1,6 +1,8 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+using OfX.Azure.ServiceBus.ApplicationModels;
+using OfX.Azure.ServiceBus.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
@@ -40,6 +42,7 @@ builder.Services.AddOfX(cfg =>
             c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
         cfg.SetRetryPolicy(3, retryAttempt => retryAttempt * TimeSpan.FromSeconds(2),
             (e, ts) => Console.WriteLine($"Error: {e.Message}"));
+        cfg.AddAzureServiceBus(c => c.Host(""));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))
