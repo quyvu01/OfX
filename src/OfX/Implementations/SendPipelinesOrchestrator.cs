@@ -2,13 +2,15 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Constants;
+using OfX.Helpers;
 using OfX.Responses;
 
 namespace OfX.Implementations;
 
 internal abstract class SendPipelinesOrchestrator
 {
-    internal abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message, IContext context);
+    internal abstract Task<ItemsResponse<OfXDataResponse>>
+        ExecuteAsync(MessageDeserializable message, IContext context);
 }
 
 internal sealed class SendPipelinesOrchestrator<TAttribute>(
@@ -22,7 +24,14 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-        var request = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+        // Handle for normalize parameters
+        var expression = context switch
+        {
+            IExpressionParameters expressionParameters => RegexHelpers
+                .ResolvePlaceholders(message.Expression, expressionParameters.Parameters),
+            _ => message.Expression
+        };
+        var request = new RequestOf<TAttribute>(message.SelectorIds, expression);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
         return await behaviors.Reverse()
             .Aggregate(() => handler.RequestAsync(requestContext),

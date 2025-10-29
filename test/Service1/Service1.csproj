@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <PackageReference Include="DynamicExpresso.Core" Version="2.19.2" />
+        <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="15.1.11" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.2">
           <PrivateAssets>all</PrivateAssets>

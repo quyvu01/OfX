@@ -5,6 +5,7 @@ using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Helpers;
+using OfX.Internals;
 using OfX.Queries;
 using OfX.Responses;
 using OfX.Statics;
@@ -17,7 +18,8 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
     private static readonly ConcurrentDictionary<Type, Type> SendOrchestratorTypes = new();
 
-    public async Task MapDataAsync(object value, IContext context = null)
+    public async Task MapDataAsync(object value, object parameters = null,
+        CancellationToken cancellationToken = default)
     {
         while (true)
         {
@@ -56,8 +58,9 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                         .ToList();
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
+                    var requestContext = new InternalRequestContext([], parameters, cancellationToken);
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), context);
+                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestContext);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);
