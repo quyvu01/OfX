@@ -41,7 +41,6 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 ctx.Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo);
                 await next(context);
             })
-            .ResolveWith<DataResolvers<T>>(x =>
-                x.GetDataAsync(null!, null!))
+            .ResolveWith<DataResolvers<T>>(x => x.GetDataAsync(null!, null!))
             .Type(data.TargetPropertyInfo.PropertyType));
 }

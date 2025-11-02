@@ -1,14 +1,14 @@
 using OfX.Abstractions;
 
-namespace OfX.Internals;
+namespace OfX.Externals;
 
-internal sealed class InternalRequestContext(
+public sealed class RequestContext(
     Dictionary<string, string> headers,
-    object parameters,
+    Dictionary<string, string> parameters,
     CancellationToken cancellationToken)
-    : IContext, IExpressionParameters
+    : IContext
 {
     public Dictionary<string, string> Headers { get; } = headers;
     public CancellationToken CancellationToken { get; } = cancellationToken;
-    public object Parameters { get; } = parameters;
+    public Dictionary<string, string> Parameters { get; } = parameters;
 }

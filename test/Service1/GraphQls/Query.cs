@@ -5,7 +5,7 @@ namespace Service1.GraphQls;
 
 public class Query
 {
-    public List<MemberResponse> GetMembers()
+    public List<MemberResponse> GetMembers(int index = 0)
     {
         return
         [
@@ -18,17 +18,14 @@ public class Query
             })
         ];
     }
-    
-    public List<MemberSocialResponseTest> GetMemberSocials()
-    {
-        return
-        [
-            .. Enumerable.Range(1, 3).Select(a => new MemberSocialResponseTest
-            {
-                Id = a.ToString(),
-            })
-        ];
-    }
+
+    public List<MemberSocialResponseTest> GetMemberSocials() =>
+    [
+        .. Enumerable.Range(1, 3).Select(a => new MemberSocialResponseTest
+        {
+            Id = a.ToString(),
+        })
+    ];
 }
 
 public sealed class MembersType : ObjectTypeExtension<MemberResponse>

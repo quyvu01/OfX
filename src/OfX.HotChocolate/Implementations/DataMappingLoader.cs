@@ -17,7 +17,6 @@ internal class DataMappingLoader(
     {
         var resultData = new List<Dictionary<FieldBearing, string>>();
         var previousMapResult = new Dictionary<FieldBearing, string>();
-
         var keysGrouped = keys.GroupBy(k => k.Order).OrderBy(a => a.Key);
 
         foreach (var requestGrouped in keysGrouped)
@@ -43,8 +42,10 @@ internal class DataMappingLoader(
                     List<string> ids = [..gr.Select(k => k.SelectorId).Where(a => a is not null).Distinct()];
                     if (ids is not { Count: > 0 }) return [];
                     var expressions = gr.Select(k => k.Expression).Distinct().OrderBy(k => k);
+
                     var result = await dataMappableService
                         .FetchDataAsync(gr.Key, new DataFetchQuery([..ids], [..expressions]));
+
                     var res = result.Items.Join(gr, a => a.Id, k => k.SelectorId, (a, k) => (a, k))
                         .ToDictionary(x => x.k,
                             x => { return x.a.OfXValues.FirstOrDefault(a => a.Expression == x.k.Expression)?.Value; });
@@ -54,7 +55,7 @@ internal class DataMappingLoader(
             previousMapResult = result.SelectMany(a => a).ToDictionary(kv => kv.Key, kv => kv.Value);
             resultData.AddRange(result);
         }
-        
+
         return keys.ToDictionary(a => a,
             ex => resultData.Select(k => k.FirstOrDefault(x => x.Key.Equals(ex)).Value)
                 .FirstOrDefault(x => x != null));

@@ -13,9 +13,8 @@ public static class HotChocolateExtensions
     {
         var hotChocolateRegister = new OfXHotChocolateRegister();
         action.Invoke(hotChocolateRegister);
-        
-        ofXServiceInjector.OfXRegister.ServiceCollection
-            .AddSingleton<ICurrentContextProvider, CurrentContextProvider>();
+        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        serviceCollection.AddSingleton<ICurrentContextProvider, CurrentContextProvider>();
         return ofXServiceInjector;
     }
 }

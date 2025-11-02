@@ -16,8 +16,7 @@ internal sealed record FieldBearing(
     {
         if (other is null) return false;
         return ParentObject.Equals(other.ParentObject) && Expression == other.Expression && Order == other.Order &&
-               AttributeType == other.AttributeType &&
-               TargetPropertyInfo == other.TargetPropertyInfo;
+               AttributeType == other.AttributeType && TargetPropertyInfo == other.TargetPropertyInfo;
     }
 
     public (PropertyInfo, object) PreviousComparable => (TargetPropertyInfo, ParentObject);

@@ -4,8 +4,8 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
+using OfX.Externals;
 using OfX.Helpers;
-using OfX.Internals;
 using OfX.Queries;
 using OfX.Responses;
 using OfX.Statics;
@@ -18,8 +18,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
     private static readonly ConcurrentDictionary<Type, Type> SendOrchestratorTypes = new();
 
-    public async Task MapDataAsync(object value, object parameters = null,
-        CancellationToken cancellationToken = default)
+    public async Task MapDataAsync(object value, object parameters = null, CancellationToken token = default)
     {
         while (true)
         {
@@ -58,9 +57,13 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                         .ToList();
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
-                    var requestContext = new InternalRequestContext([], parameters, cancellationToken);
+                    IContext requestCt = parameters switch
+                    {
+                        null => new RequestContext([], [], token),
+                        _ => new RequestContextWithExpressionParams([], ObjectToDictionary(), token)
+                    };
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestContext);
+                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestCt);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);
@@ -80,6 +83,17 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             _currentObjectSpawnTimes += 1;
             value = nextMappableData;
         }
+
+        return;
+
+        Dictionary<string, object> ObjectToDictionary() => parameters switch
+        {
+            Dictionary<string, object> val => val,
+            _ => parameters
+                .GetType()
+                .GetProperties()
+                .ToDictionary(p => p.Name, p => p.GetValue(parameters))
+        };
     }
 
     public Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,

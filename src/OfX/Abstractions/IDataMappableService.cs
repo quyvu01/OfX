@@ -23,18 +23,33 @@ public interface IDataMappableService
     /// The source object to be mapped. This can be any type that is supported by the OfX mapping system.
     /// </param>
     /// <param name="parameters">
-    /// An optional object containing additional runtime parameters used during the mapping process.
-    /// These parameters can include dynamic values that influence how expressions or resolvers are evaluated at runtime.
-    /// Typically passed as an anonymous object (e.g., <c>new { index = 0, order = "asc" }</c>) or a dictionary.
+    /// An optional set of runtime parameters that influence how mapping expressions or resolvers are evaluated.
+    /// 
+    /// These parameters can be provided in two forms:
+    /// - As an **anonymous object** (e.g., <c>new { index = 0, order = "asc" }</c>)
+    /// - Or as a <c>Dictionary&lt;string, object&gt;</c>.<br></br>
+    ///
+    /// The mapping engine will internally convert anonymous objects to a dictionary for efficient lookup.
+    /// Parameters are typically used to resolve placeholders in mapping expressions, such as:
+    /// <c>${index|0}</c> — where <c>index</c> is taken from the parameters if present,
+    /// otherwise the default value (after the <c>|</c> symbol) is used.
+    /// 
+    /// Example:
+    /// <code>
+    /// await mapper.MapDataAsync(source, new { index = -1, orderDirection = "desc" }, cancellationToken);
+    /// </code>
+    /// 
+    /// In this example, an expression like <c>Users[${index|0} ${orderDirection|asc} Name]</c>
+    /// would resolve to <c>Users[-1 desc Name]</c>.
     /// </param>
-    /// <param name="cancellationToken">
+    /// <param name="token">
     /// A token that can be used to cancel the mapping operation before it completes.
     /// Useful for handling timeouts or user-initiated cancellations.
     /// </param>
     /// <returns>
     /// A task that represents the asynchronous mapping operation.
     /// </returns>
-    Task MapDataAsync(object value, object parameters = null, CancellationToken cancellationToken = default);
+    Task MapDataAsync(object value, object parameters = null, CancellationToken token = default);
 
     /// <summary>
     /// Fetches data for a given <typeparamref name="TAttribute"/> type.
@@ -51,8 +66,8 @@ public interface IDataMappableService
     /// <returns>
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing the fetched data.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null
-    ) where TAttribute : OfXAttribute;
+    Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null)
+        where TAttribute : OfXAttribute;
 
     /// <summary>
     /// Fetches data for a model determined at runtime, using the specified <see cref="Type"/>.

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -24,17 +25,35 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
-        // Handle for normalize parameters
-        var expression = context switch
+        var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
+        var expressionsResolved = expressions.Select(ex => new
         {
-            IExpressionParameters expressionParameters => RegexHelpers
-                .ResolvePlaceholders(message.Expression, expressionParameters.Parameters),
-            _ => message.Expression
-        };
+            originalExpression = ex, resolvedExpression = context switch
+            {
+                IExpressionParameters expressionParameters => RegexHelpers
+                    .ResolvePlaceholders(ex, expressionParameters.Parameters),
+                _ => RegexHelpers.ResolvePlaceholders(ex, null)
+            }
+        }).ToArray();
+
+        var expression = JsonSerializer.Serialize(expressionsResolved
+            .Select(a => a.resolvedExpression).Distinct());
+
         var request = new RequestOf<TAttribute>(message.SelectorIds, expression);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
-        return await behaviors.Reverse()
+        var result = await behaviors.Reverse()
             .Aggregate(() => handler.RequestAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
+        result.Items.ForEach(it => it.OfXValues =
+        [
+            ..expressionsResolved.Select(ex =>
+            {
+                var valueResult = it.OfXValues.FirstOrDefault(a => a.Expression == ex.resolvedExpression);
+                return valueResult is null
+                    ? null
+                    : new OfXValueResponse { Expression = ex.originalExpression, Value = valueResult.Value };
+            }).Where(a => a != null)
+        ]);
+        return result;
     }
 }

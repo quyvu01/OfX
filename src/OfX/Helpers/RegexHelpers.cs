@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using OfX.Exceptions;
 
 namespace OfX.Helpers;
 
@@ -6,27 +7,25 @@ public static partial class RegexHelpers
 {
     public static string ResolvePlaceholders(string expression, IDictionary<string, object> parameters)
     {
-        if (string.IsNullOrEmpty(expression) || parameters is null) return expression;
-
+        if (expression is null) return null;
         return ParametersRegex.Replace(expression, match =>
         {
-            var key = match.Groups[1].Value;
-            if (parameters.TryGetValue(key, out var value)) return value?.ToString() ?? string.Empty;
-            return match.Value;
-        });
-    }
+            var hasParameter = match.Groups["parameter"].Success;
+            if (!hasParameter) return expression;
+            var parameter = match.Groups["parameter"].Value;
+            var hasDefault = match.Groups["default"].Success;
+            if (!hasDefault) throw new OfXException.InvalidParameter(expression);
+            var fallback = match.Groups["default"].Value;
 
-    public static string ResolvePlaceholders(string expression, object parameters)
-    {
-        var paramAsDictionary = parameters
-            .GetType()
-            .GetProperties()
-            .ToDictionary(p => p.Name, p => p.GetValue(parameters));
-        return ResolvePlaceholders(expression, paramAsDictionary);
+            if (parameters != null && parameters.TryGetValue(parameter, out var value) && value != null)
+                return value.ToString();
+
+            return fallback;
+        });
     }
 
     private static readonly Regex ParametersRegex = ExpressionParametersRegex();
 
-    [GeneratedRegex(@"\$\{([a-zA-Z0-9_]+)\}", RegexOptions.Compiled)]
+    [GeneratedRegex(@"\$\{(?<parameter>[A-Za-z_][A-Za-z0-9_]*)(\|(?<default>[^}]*))?\}", RegexOptions.Compiled)]
     private static partial Regex ExpressionParametersRegex();
 }

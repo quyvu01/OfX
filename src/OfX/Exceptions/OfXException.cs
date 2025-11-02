@@ -28,9 +28,10 @@ public static class OfXException
 
     public sealed class StronglyTypeConfigurationMustNotBeNull()
         : Exception("Strongly type Id configuration must not be null!");
-    
+
     public sealed class AttributeHasBeenConfiguredForModel(Type modelType, Type attributeType)
-        : Exception($"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
+        : Exception(
+            $"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
 
     public sealed class OfXMappingObjectsSpawnReachableTimes()
         : Exception(
@@ -59,4 +60,7 @@ public static class OfXException
 
     public sealed class NavigatorIncorrect(string navigator, string parentType)
         : Exception($"Object: '{parentType}' does not include navigator: {navigator}");
+
+    public sealed class InvalidParameter(string expression)
+        : Exception($"Expression:  '{expression}' is must be look like this: '${{index|0}}'");
 }
