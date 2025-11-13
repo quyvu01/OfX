@@ -2,8 +2,10 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+using OfX.Accessors;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Cached;
 using OfX.Extensions;
 using OfX.ObjectContexts;
 using OfX.Responses;
@@ -154,7 +156,9 @@ internal static class ReflectionHelpers
                 try
                 {
                     var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
-                    ap.PropertyInfo.SetValue(ap.Model, valueSet);
+                    var model = OfXModelCache.GetModel(ap.Model.GetType());
+                    var accessor = model.GetProperty(ap.PropertyInfo.Name);
+                    accessor?.Set(ap.Model, valueSet);
                 }
                 catch (Exception)
                 {
