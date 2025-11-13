@@ -89,8 +89,8 @@ public sealed class TestController : ControllerBase
                 }
             })
             .ToListAsync();
-
-        return Ok();
+        var result = data.Select(x => x.ToJson());
+        return Ok(result);
     }
 
     [HttpGet]
