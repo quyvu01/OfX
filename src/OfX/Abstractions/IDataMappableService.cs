@@ -32,7 +32,7 @@ public interface IDataMappableService
     /// The mapping engine will internally convert anonymous objects to a dictionary for efficient lookup.
     /// Parameters are typically used to resolve placeholders in mapping expressions, such as:
     /// <c>${index|0}</c> — where <c>index</c> is taken from the parameters if present,
-    /// otherwise the default value (after the <c>|</c> symbol) is used.
+    /// otherwise the default value (after the <c>|</c> symbol) is used.<br></br>
     /// 
     /// Example:
     /// <code>

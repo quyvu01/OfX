@@ -1,11 +1,12 @@
 using HotChocolate.Types;
+using OfX.HotChocolate.Attributes;
 using Service1.Contract.Responses;
 
 namespace Service1.GraphQls;
 
 public class Query
 {
-    public List<MemberResponse> GetMembers(int index = 0)
+    public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters, int index = 0)
     {
         return
         [
@@ -27,6 +28,8 @@ public class Query
         })
     ];
 }
+
+public sealed record GetMembersParameters(int index = 0);
 
 public sealed class MembersType : ObjectTypeExtension<MemberResponse>
 {

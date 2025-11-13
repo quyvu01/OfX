@@ -26,13 +26,13 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
         var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
-        var expressionsResolved = expressions.Select(ex => new
+        var expressionsResolved = expressions.Select(originalExpression => new
         {
-            originalExpression = ex, resolvedExpression = context switch
+            originalExpression, resolvedExpression = context switch
             {
                 IExpressionParameters expressionParameters => RegexHelpers
-                    .ResolvePlaceholders(ex, expressionParameters.Parameters),
-                _ => RegexHelpers.ResolvePlaceholders(ex, null)
+                    .ResolvePlaceholders(originalExpression, expressionParameters.Parameters),
+                _ => RegexHelpers.ResolvePlaceholders(originalExpression, null)
             }
         }).ToArray();
 
@@ -44,6 +44,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
         var result = await behaviors.Reverse()
             .Aggregate(() => handler.RequestAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
+        
         result.Items.ForEach(it => it.OfXValues =
         [
             ..expressionsResolved.Select(ex =>

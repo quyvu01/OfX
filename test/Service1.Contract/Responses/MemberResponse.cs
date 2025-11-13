@@ -44,6 +44,6 @@ public class MemberResponse
     [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
     public List<ProvinceResponse> Provinces { get; set; }
     
-    [CountryOf(nameof(CountryId), Expression = "Provinces[${index|0} asc Name]")]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[${index|0} ${order|asc} Name]")]
     public ProvinceResponse Province { get; set; }
 }

@@ -1,4 +1,5 @@
 using System.Reflection;
+using HotChocolate.Resolvers;
 using OfX.Attributes;
 using OfX.Extensions;
 using OfX.HotChocolate.Abstractions;
@@ -29,6 +30,21 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                     await next(context);
                     return;
                 }
+
+                var args = context.Selection
+                    .DeclaringOperation
+                    .RootSelectionSet
+                    .Selections
+                    .Select(a => a.Arguments)
+                    .OfType<IReadOnlyCollection<KeyValuePair<string, ArgumentValue>>>()
+                    .SelectMany(a => a);
+
+                var parameters = args
+                    .Select(a => a.Value)
+                    .Select(a => (a.RuntimeType, a.ValueLiteral))
+                    .ToList();
+                
+                // Yup, I need to get the MethodInfo to get the parameters are marked by [ParametersAttribute]...
 
                 var currentContext = context.Service<ICurrentContextProvider>();
                 var ctx = currentContext.CreateContext();

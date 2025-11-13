@@ -155,7 +155,9 @@ internal static class ReflectionHelpers
                 try
                 {
                     var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
-                    ap.PropertyInfo.SetValue(ap.Model, valueSet);
+                    var setter = PropertyAccessorCache.GetSetter(ap.PropertyInfo);
+                    setter(ap.Model, valueSet);
+                    // ap.PropertyInfo.SetValue(ap.Model, valueSet);
                 }
                 catch (Exception)
                 {
@@ -165,5 +167,28 @@ internal static class ReflectionHelpers
 
                 return value;
             }).IteratorVoid();
+    }
+}
+
+public static class PropertyAccessorCache
+{
+    private static readonly ConcurrentDictionary<PropertyInfo, Action<object, object>> _setters = new();
+
+    public static Action<object, object> GetSetter(PropertyInfo propertyInfo) =>
+        _setters.GetOrAdd(propertyInfo, CreateSetter);
+
+    private static Action<object, object> CreateSetter(PropertyInfo propertyInfo)
+    {
+        // object (target), object (value) => void
+        var instance = Expression.Parameter(typeof(object), "instance");
+        var value = Expression.Parameter(typeof(object), "value");
+
+        var convertInstance = Expression.Convert(instance, propertyInfo.DeclaringType!);
+        var convertValue = Expression.Convert(value, propertyInfo.PropertyType);
+
+        var body = Expression.Assign(Expression.Property(convertInstance, propertyInfo), convertValue);
+        var lambda = Expression.Lambda<Action<object, object>>(body, instance, value);
+
+        return lambda.Compile();
     }
 }
