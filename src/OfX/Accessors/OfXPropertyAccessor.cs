@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace OfX.Accessors;
 
-internal class OfXPropertyAccessor<T, TProp> : IOfXPropertyAccessor
+public class OfXPropertyAccessor<T, TProp> : IOfXPropertyAccessor
 {
     private readonly Action<T, TProp> _setter;
     private readonly Func<T, TProp> _getter;
