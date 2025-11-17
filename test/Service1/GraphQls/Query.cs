@@ -20,11 +20,11 @@ public class Query
         ];
     }
 
-    public List<MemberSocialResponseTest> GetMemberSocials() =>
+    public List<SimpleMemberResponse> GetSimpleMembers([Parameters] GetMembersParameters parameters) =>
     [
-        .. Enumerable.Range(1, 3).Select(a => new MemberSocialResponseTest
+        .. Enumerable.Range(1, 3).Select(a => new SimpleMemberResponse
         {
-            Id = a.ToString(),
+            UserId = a.ToString(),
         })
     ];
 }
