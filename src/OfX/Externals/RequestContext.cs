@@ -6,7 +6,7 @@ public sealed class RequestContext(
     Dictionary<string, string> headers,
     Dictionary<string, string> parameters,
     CancellationToken cancellationToken)
-    : IContext
+    : IContext, IExpressionParameters
 {
     public Dictionary<string, string> Headers { get; } = headers;
     public CancellationToken CancellationToken { get; } = cancellationToken;

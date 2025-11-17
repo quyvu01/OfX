@@ -24,7 +24,7 @@ public class MemberResponse
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 
-    [UserOf(nameof(UserId), Expression = "Email")]
+    [UserOf(nameof(UserId), Expression = "${UserAlias|Email}")]
     public string UserEmail { get; set; }
 
     [UserOf(nameof(UserId), Expression = "CustomExpression")]

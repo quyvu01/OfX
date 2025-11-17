@@ -1,11 +1,11 @@
 using System.Reflection;
+using HotChocolate.Resolvers;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
-using OfX.Azure.ServiceBus.ApplicationModels;
-using OfX.Azure.ServiceBus.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
+using OfX.HotChocolate.Attributes;
 using OfX.HotChocolate.Extensions;
 using OfX.MongoDb.Extensions;
 using Serilog;

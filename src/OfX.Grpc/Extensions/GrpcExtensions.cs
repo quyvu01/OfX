@@ -99,7 +99,7 @@ public static class GrpcExtensions
     }
 
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,
-        MessageDeserializable query, Type attributeType)
+        OfXRequest query, Type attributeType)
     {
         using var channel = GrpcChannel.ForAddress(serverHost);
         var client = new OfXTransportService.OfXTransportServiceClient(channel);

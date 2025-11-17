@@ -1,3 +1,4 @@
+using OfX.Abstractions;
 using OfX.Statics;
 
 namespace OfX.Exceptions;
@@ -12,13 +13,13 @@ public static class OfXException
         Exception("Current Id type was not supported. Create the IdConverter!");
 
     public sealed class TypeIsNotReceivedPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with ReceivedPipelineBehavior!");
+        Exception($"{type.Name} must implement {typeof(IReceivedPipelineBehavior<>).FullName}!");
 
     public sealed class TypeIsNotSendPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior!");
+        Exception($"{type.Name} must implement {typeof(ISendPipelineBehavior<>).FullName}!");
 
     public sealed class TypeIsNotCustomExpressionPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with CustomExpressionBehavior!");
+        Exception($"{type.Name} must implement {typeof(ICustomExpressionBehavior<>).FullName}!");
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");

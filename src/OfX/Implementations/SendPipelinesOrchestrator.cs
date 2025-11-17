@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -10,18 +11,15 @@ namespace OfX.Implementations;
 
 internal abstract class SendPipelinesOrchestrator
 {
-    internal abstract Task<ItemsResponse<OfXDataResponse>>
-        ExecuteAsync(MessageDeserializable message, IContext context);
+    internal abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context);
 }
 
-internal sealed class SendPipelinesOrchestrator<TAttribute>(
-    IEnumerable<ISendPipelineBehavior<TAttribute>> behaviors,
-    IMappableRequestHandler<TAttribute> handler)
-    : SendPipelinesOrchestrator where TAttribute : OfXAttribute
+internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider serviceProvider) : 
+    SendPipelinesOrchestrator where TAttribute : OfXAttribute
 {
-    internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
-        IContext context)
+    internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context)
     {
+        var handler = serviceProvider.GetRequiredService<IMappableRequestHandler<TAttribute>>();
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
@@ -41,10 +39,12 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(
 
         var request = new RequestOf<TAttribute>(message.SelectorIds, expression);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
-        var result = await behaviors.Reverse()
+        var result = await serviceProvider
+            .GetServices<ISendPipelineBehavior<TAttribute>>()
+            .Reverse()
             .Aggregate(() => handler.RequestAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
-        
+
         result.Items.ForEach(it => it.OfXValues =
         [
             ..expressionsResolved.Select(ex =>

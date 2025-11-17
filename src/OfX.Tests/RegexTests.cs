@@ -11,9 +11,9 @@ public sealed class RegexTests
         const string input =
             "[CountryOf(nameof(CountryId), Expression = \"Provinces[${index|0} ${customOrderDirection|asc} Name].${nextProperty|Name}\")]";
         const string expectedResult = "[CountryOf(nameof(CountryId), Expression = \"Provinces[1 asc Name].Name\")]";
-        var actualResult = RegexHelpers.ResolvePlaceholders(input, new Dictionary<string, object>
+        var actualResult = RegexHelpers.ResolvePlaceholders(input, new Dictionary<string, string>
         {
-            ["index"] = 1,
+            ["index"] = "1",
             ["customOrderDirection"] = "asc"
         });
         Assert.Equal(expectedResult, actualResult);

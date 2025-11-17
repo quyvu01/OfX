@@ -6,7 +6,7 @@ namespace Service1.GraphQls;
 
 public class Query
 {
-    public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters, int index = 0)
+    public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters)
     {
         return
         [
@@ -29,7 +29,7 @@ public class Query
     ];
 }
 
-public sealed record GetMembersParameters(int index = 0);
+public sealed record GetMembersParameters(string UserAlias = "Email");
 
 public sealed class MembersType : ObjectTypeExtension<MemberResponse>
 {

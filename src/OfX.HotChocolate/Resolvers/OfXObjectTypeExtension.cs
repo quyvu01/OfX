@@ -1,8 +1,8 @@
 using System.Reflection;
-using HotChocolate.Resolvers;
 using OfX.Attributes;
 using OfX.Extensions;
 using OfX.HotChocolate.Abstractions;
+using OfX.HotChocolate.Constants;
 using OfX.HotChocolate.Statics;
 
 namespace OfX.HotChocolate.Resolvers;
@@ -31,20 +31,16 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                     return;
                 }
 
-                var args = context.Selection
-                    .DeclaringOperation
-                    .RootSelectionSet
-                    .Selections
-                    .Select(a => a.Arguments)
-                    .OfType<IReadOnlyCollection<KeyValuePair<string, ArgumentValue>>>()
-                    .SelectMany(a => a);
-
-                var parameters = args
-                    .Select(a => a.Value)
-                    .Select(a => (a.RuntimeType, a.ValueLiteral))
-                    .ToList();
-                
-                // Yup, I need to get the MethodInfo to get the parameters are marked by [ParametersAttribute]...
+                var expressionParameters = context.ContextData
+                        .TryGetValue(OfXHotChocolateConstants.ContextDataParametersHeader, out var value) switch
+                    {
+                        true => value switch
+                        {
+                            Dictionary<string, string> parameters => parameters,
+                            _ => null
+                        },
+                        _ => null
+                    };
 
                 var currentContext = context.Service<ICurrentContextProvider>();
                 var ctx = currentContext.CreateContext();
@@ -55,6 +51,7 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 ctx.SelectorPropertyName = attribute.PropertyName;
                 ctx.RequiredPropertyInfo = data.RequiredPropertyInfo;
                 ctx.Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo);
+                ctx.ExpressionParameters = expressionParameters;
                 await next(context);
             })
             .ResolveWith<DataResolvers<T>>(x => x.GetDataAsync(null!, null!))

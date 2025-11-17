@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -57,11 +58,9 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                         .ToList();
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
-                    IContext requestCt = parameters switch
-                    {
-                        null => new RequestContext([], [], token),
-                        _ => new RequestContextWithExpressionParams([], ObjectToDictionary(), token)
-                    };
+                    
+                    var requestCt = new RequestContext([], ObjectToDictionary(), token);
+                    
                     var result = await FetchDataAsync(x.OfXAttributeType,
                         new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestCt);
                     return (x.OfXAttributeType, Response: result);
@@ -86,13 +85,14 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
         return;
 
-        Dictionary<string, object> ObjectToDictionary() => parameters switch
+        Dictionary<string, string> ObjectToDictionary() => parameters switch
         {
-            Dictionary<string, object> val => val,
+            null => [],
+            Dictionary<string, string> val => val,
             _ => parameters
                 .GetType()
-                .GetProperties()
-                .ToDictionary(p => p.Name, p => p.GetValue(parameters))
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .ToDictionary(p => p.Name, p => p.GetValue(parameters)?.ToString())
         };
     }
 
@@ -106,7 +106,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
-            .ExecuteAsync(new MessageDeserializable(query.SelectorIds,
+            .ExecuteAsync(new OfXRequest(query.SelectorIds,
                 JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);
         return result;
     }

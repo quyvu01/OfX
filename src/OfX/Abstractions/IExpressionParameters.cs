@@ -12,5 +12,5 @@ public interface IExpressionParameters
     /// and are used to dynamically substitute values (e.g., <c>${offset}</c>, <c>${limit}</c>, <c>${order}</c>)
     /// in OfX expressions during evaluation.
     /// </summary>
-    Dictionary<string, object> Parameters { get; }
+    Dictionary<string, string> Parameters { get; }
 }

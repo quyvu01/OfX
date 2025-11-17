@@ -11,6 +11,7 @@ internal sealed record FieldBearing(
     PropertyInfo RequiredPropertyInfo)
 {
     public string SelectorId { get; set; }
+    public Dictionary<string, string> ExpressionParameters { get; set; }
 
     public bool Equals(FieldBearing other)
     {
@@ -26,5 +27,5 @@ internal sealed record FieldBearing(
         HashCode.Combine(Expression, Order, AttributeType, TargetPropertyInfo, RequiredPropertyInfo);
 
     public FieldBearing Copy() => new(ParentObject, Expression, Order, AttributeType, TargetPropertyInfo,
-        RequiredPropertyInfo) { SelectorId = SelectorId };
+        RequiredPropertyInfo) { SelectorId = SelectorId,  ExpressionParameters = ExpressionParameters };
 }

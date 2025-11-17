@@ -41,7 +41,7 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
-            var message = new MessageDeserializable([..request.SelectorIds], request.Expression);
+            var message = new OfXRequest([..request.SelectorIds], request.Expression);
             var response = await receivedPipelinesOrchestrator
                 .ExecuteAsync(message, headers, context.CancellationToken);
 

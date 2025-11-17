@@ -5,7 +5,7 @@ namespace OfX.Helpers;
 
 public static partial class RegexHelpers
 {
-    public static string ResolvePlaceholders(string expression, IDictionary<string, object> parameters)
+    public static string ResolvePlaceholders(string expression, IDictionary<string, string> parameters)
     {
         if (expression is null) return null;
         return ParametersRegex.Replace(expression, match =>
@@ -17,8 +17,7 @@ public static partial class RegexHelpers
             if (!hasDefault) throw new OfXException.InvalidParameter(expression);
             var fallback = match.Groups["default"].Value;
 
-            if (parameters != null && parameters.TryGetValue(parameter, out var value) && value != null)
-                return value.ToString();
+            if (parameters != null && parameters.TryGetValue(parameter, out var value) && value != null) return value;
 
             return fallback;
         });

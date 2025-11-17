@@ -9,15 +9,18 @@ using Service2.Contexts;
 using Service2.Models;
 using Service2.Pipelines;
 using Shared;
+using Shared.Attributes;
 using Shared.RunSqlMigration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
+        cfg.AddHandlersFromNamespaceContaining<IKernelAssemblyMarker>();
         // cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         cfg.AddCustomExpressionPipelines(c => c.OfType<TestCustomUseData>());
+        cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<UserOfAttribute>)));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 

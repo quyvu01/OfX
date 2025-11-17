@@ -59,8 +59,9 @@ public sealed class DataResolvers<TResponse> where TResponse : class
             // Fetch the dependency fields
             var fieldResult = await dataMappingLoader
                 .LoadAsync(new FieldBearing(response, fieldContext.Expression, fieldContext.Order,
-                        fieldContext.RuntimeAttributeType, fieldContext.TargetPropertyInfo,
-                        fieldContext.RequiredPropertyInfo) { SelectorId = selectorId },
+                            fieldContext.RuntimeAttributeType, fieldContext.TargetPropertyInfo,
+                            fieldContext.RequiredPropertyInfo)
+                        { SelectorId = selectorId, ExpressionParameters = fieldContext.ExpressionParameters },
                     resolverContext.RequestAborted);
             return fieldResult;
         }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Extensions;
+using OfX.Externals;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.Queries;
 
@@ -17,7 +18,11 @@ internal class DataMappingLoader(
     {
         var resultData = new List<Dictionary<FieldBearing, string>>();
         var previousMapResult = new Dictionary<FieldBearing, string>();
-        var keysGrouped = keys.GroupBy(k => k.Order).OrderBy(a => a.Key);
+        var keysGrouped = keys.GroupBy(k => k.Order)
+            .OrderBy(a => a.Key);
+        var expressionParameters = keys.FirstOrDefault()?.ExpressionParameters;
+
+        var context = new RequestContext([], expressionParameters, cancellationToken);
 
         foreach (var requestGrouped in keysGrouped)
         {
@@ -44,7 +49,7 @@ internal class DataMappingLoader(
                     var expressions = gr.Select(k => k.Expression).Distinct().OrderBy(k => k);
 
                     var result = await dataMappableService
-                        .FetchDataAsync(gr.Key, new DataFetchQuery([..ids], [..expressions]));
+                        .FetchDataAsync(gr.Key, new DataFetchQuery([..ids], [..expressions]), context);
 
                     var res = result.Items.Join(gr, a => a.Id, k => k.SelectorId, (a, k) => (a, k))
                         .ToDictionary(x => x.k,
