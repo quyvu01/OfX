@@ -1,6 +1,7 @@
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Extensions;
+using OfX.Externals;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.Queries;
 
@@ -17,14 +18,14 @@ internal class DataMappingLoader(
     {
         var resultData = new List<Dictionary<FieldBearing, string>>();
         var previousMapResult = new Dictionary<FieldBearing, string>();
-
-        var keysGrouped = keys.GroupBy(k => k.Order).OrderBy(a => a.Key);
+        var keysGrouped = keys.GroupBy(k => k.Order)
+            .OrderBy(a => a.Key);
 
         foreach (var requestGrouped in keysGrouped)
         {
             // Implement how to map next value with previous value
             var mapResult = previousMapResult;
-            var tasks = requestGrouped.GroupBy(a => a.AttributeType)
+            var tasks = requestGrouped.GroupBy(a => (a.AttributeType, a.GroupId))
                 .Select(async gr =>
                 {
                     var matchedExpressionData = mapResult.Where(a =>
@@ -43,8 +44,15 @@ internal class DataMappingLoader(
                     List<string> ids = [..gr.Select(k => k.SelectorId).Where(a => a is not null).Distinct()];
                     if (ids is not { Count: > 0 }) return [];
                     var expressions = gr.Select(k => k.Expression).Distinct().OrderBy(k => k);
+
+                    var expressionParameters = keys
+                        .FirstOrDefault(k => k.GroupId == gr.Key.GroupId)?.ExpressionParameters;
+
+                    var context = new RequestContext([], expressionParameters, cancellationToken);
+
                     var result = await dataMappableService
-                        .FetchDataAsync(gr.Key, new DataFetchQuery([..ids], [..expressions]));
+                        .FetchDataAsync(gr.Key.AttributeType, new DataFetchQuery([..ids], [..expressions]), context);
+
                     var res = result.Items.Join(gr, a => a.Id, k => k.SelectorId, (a, k) => (a, k))
                         .ToDictionary(x => x.k,
                             x => { return x.a.OfXValues.FirstOrDefault(a => a.Expression == x.k.Expression)?.Value; });
@@ -54,7 +62,7 @@ internal class DataMappingLoader(
             previousMapResult = result.SelectMany(a => a).ToDictionary(kv => kv.Key, kv => kv.Value);
             resultData.AddRange(result);
         }
-        
+
         return keys.ToDictionary(a => a,
             ex => resultData.Select(k => k.FirstOrDefault(x => x.Key.Equals(ex)).Value)
                 .FirstOrDefault(x => x != null));

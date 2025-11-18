@@ -76,7 +76,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             ArgumentNullException.ThrowIfNull(server);
             try
             {
-                var message = JsonSerializer.Deserialize<MessageDeserializable>(Encoding.UTF8.GetString(body));
+                var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
                 var headers = props.Headers?
                     .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
                 var response = await server.ExecuteAsync(message, headers, ea.CancellationToken);

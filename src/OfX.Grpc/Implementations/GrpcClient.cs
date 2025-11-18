@@ -15,7 +15,7 @@ internal class GrpcClient<TAttribute>(GetOfXResponseFunc ofXResponseFunc)
     {
         var func = ofXResponseFunc.Invoke(typeof(TAttribute));
         return await func.Invoke(
-            new MessageDeserializable(requestContext.Query.SelectorIds, requestContext.Query.Expression),
+            new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
             new GrpcClientContext(requestContext.Headers, requestContext.CancellationToken));
     }
 }

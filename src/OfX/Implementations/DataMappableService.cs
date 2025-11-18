@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
+using System.Reflection;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
+using OfX.Externals;
 using OfX.Helpers;
 using OfX.Queries;
 using OfX.Responses;
@@ -17,7 +19,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
     private static readonly ConcurrentDictionary<Type, Type> SendOrchestratorTypes = new();
 
-    public async Task MapDataAsync(object value, IContext context = null)
+    public async Task MapDataAsync(object value, object parameters = null, CancellationToken token = default)
     {
         while (true)
         {
@@ -56,8 +58,11 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                         .ToList();
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
+                    
+                    var requestCt = new RequestContext([], ObjectToDictionary(), token);
+                    
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), context);
+                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestCt);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);
@@ -77,6 +82,18 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             _currentObjectSpawnTimes += 1;
             value = nextMappableData;
         }
+
+        return;
+
+        Dictionary<string, string> ObjectToDictionary() => parameters switch
+        {
+            null => [],
+            Dictionary<string, string> val => val,
+            _ => parameters
+                .GetType()
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .ToDictionary(p => p.Name, p => p.GetValue(parameters)?.ToString())
+        };
     }
 
     public Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
@@ -89,7 +106,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
-            .ExecuteAsync(new MessageDeserializable(query.SelectorIds,
+            .ExecuteAsync(new OfXRequest(query.SelectorIds,
                 JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);
         return result;
     }

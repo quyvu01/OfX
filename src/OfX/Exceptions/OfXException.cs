@@ -1,3 +1,4 @@
+using OfX.Abstractions;
 using OfX.Statics;
 
 namespace OfX.Exceptions;
@@ -12,13 +13,13 @@ public static class OfXException
         Exception("Current Id type was not supported. Create the IdConverter!");
 
     public sealed class TypeIsNotReceivedPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with ReceivedPipelineBehavior!");
+        Exception($"{type.Name} must implement {typeof(IReceivedPipelineBehavior<>).FullName}!");
 
     public sealed class TypeIsNotSendPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with SendPipelineBehavior!");
+        Exception($"{type.Name} must implement {typeof(ISendPipelineBehavior<>).FullName}!");
 
     public sealed class TypeIsNotCustomExpressionPipelineBehavior(Type type) :
-        Exception($"The input type: {type.Name} is not matched with CustomExpressionBehavior!");
+        Exception($"{type.Name} must implement {typeof(ICustomExpressionBehavior<>).FullName}!");
 
     public sealed class CannotFindHandlerForOfAttribute(Type type)
         : Exception($"Cannot find handler for OfXAttribute type: {type.Name}!");
@@ -28,9 +29,10 @@ public static class OfXException
 
     public sealed class StronglyTypeConfigurationMustNotBeNull()
         : Exception("Strongly type Id configuration must not be null!");
-    
+
     public sealed class AttributeHasBeenConfiguredForModel(Type modelType, Type attributeType)
-        : Exception($"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
+        : Exception(
+            $"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
 
     public sealed class OfXMappingObjectsSpawnReachableTimes()
         : Exception(
@@ -59,4 +61,7 @@ public static class OfXException
 
     public sealed class NavigatorIncorrect(string navigator, string parentType)
         : Exception($"Object: '{parentType}' does not include navigator: {navigator}");
+
+    public sealed class InvalidParameter(string expression)
+        : Exception($"Expression:  '{expression}' is must be look like this: '${{index|0}}'");
 }

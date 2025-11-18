@@ -24,7 +24,7 @@ public class MemberResponse
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 
-    [UserOf(nameof(UserId), Expression = "Email")]
+    [UserOf(nameof(UserId), Expression = "${UserAlias|Email}")]
     public string UserEmail { get; set; }
 
     [UserOf(nameof(UserId), Expression = "CustomExpression")]
@@ -44,6 +44,6 @@ public class MemberResponse
     [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
     public List<ProvinceResponse> Provinces { get; set; }
     
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]")]
+    [CountryOf(nameof(CountryId), Expression = "Provinces[${index|0} ${order|asc} Name]")]
     public ProvinceResponse Province { get; set; }
 }

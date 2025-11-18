@@ -82,7 +82,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     private async Task ProcessMessageAsync(ConsumeResult<string, string> consumeResult)
     {
         var messageUnWrapped = JsonSerializer
-            .Deserialize<KafkaMessageWrapped<MessageDeserializable>>(consumeResult.Message.Value);
+            .Deserialize<KafkaMessageWrapped<OfXRequest>>(consumeResult.Message.Value);
 
         var serviceScope = _serviceProvider.CreateScope();
 

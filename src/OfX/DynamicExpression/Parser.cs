@@ -753,7 +753,7 @@ internal class Parser
             var c = source[i];
             if (c == '\\')
             {
-                if ((i + 1) == source.Length)
+                if (i + 1 == source.Length)
                     throw ParseException.Create(_token.pos, "Invalid character escape sequence");
 
                 builder.Append(EvalEscapeChar(source[++i]));
@@ -2211,7 +2211,7 @@ internal class Parser
                 {
                     isEscapeS = _parseChar == '\\' && !isEscapeS;
                     NextChar();
-                    isEndS = (_parseChar == '\"' && !isEscapeS);
+                    isEndS = _parseChar == '\"' && !isEscapeS;
                 }
 
                 if (_parsePosition == _expressionTextLength)
@@ -2229,7 +2229,7 @@ internal class Parser
                 {
                     isEscapeC = _parseChar == '\\' && !isEscapeC;
                     NextChar();
-                    isEndC = (_parseChar == '\'' && !isEscapeC);
+                    isEndC = _parseChar == '\'' && !isEscapeC;
                 }
 
                 if (_parsePosition == _expressionTextLength)

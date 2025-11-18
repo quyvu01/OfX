@@ -9,7 +9,7 @@ namespace OfX.Implementations;
 
 public abstract class ReceivedPipelinesOrchestrator
 {
-    public abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
+    public abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken);
 }
 
@@ -80,7 +80,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         return result;
     }
 
-    public override Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(MessageDeserializable message,
+    public override Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
         var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);

@@ -33,7 +33,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         processor.ProcessMessageAsync += async args =>
         {
             var request = args.Message;
-            var requestDeserialize = JsonSerializer.Deserialize<MessageDeserializable>(request.Body);
+            var requestDeserialize = JsonSerializer.Deserialize<OfXRequest>(request.Body);
             using var serviceScope = serviceProvider.CreateScope();
             var pipeline = serviceScope.ServiceProvider
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();

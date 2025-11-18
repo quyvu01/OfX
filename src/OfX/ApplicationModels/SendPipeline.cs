@@ -14,7 +14,6 @@ public sealed class SendPipeline(IServiceCollection serviceCollection) : IPipeli
         return this;
     }
 
-    // Hmmm, this one is temporary!. I think we should test more cases!
     public SendPipeline OfType(Type runtimePipelineType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
     {
         var signatureInterfaceTypes = runtimePipelineType.GetInterfaces()

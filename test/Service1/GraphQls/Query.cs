@@ -1,11 +1,12 @@
 using HotChocolate.Types;
+using OfX.HotChocolate.Attributes;
 using Service1.Contract.Responses;
 
 namespace Service1.GraphQls;
 
 public class Query
 {
-    public List<MemberResponse> GetMembers()
+    public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters)
     {
         return
         [
@@ -18,18 +19,17 @@ public class Query
             })
         ];
     }
-    
-    public List<MemberSocialResponseTest> GetMemberSocials()
-    {
-        return
-        [
-            .. Enumerable.Range(1, 3).Select(a => new MemberSocialResponseTest
-            {
-                Id = a.ToString(),
-            })
-        ];
-    }
+
+    public List<SimpleMemberResponse> GetSimpleMembers([Parameters] GetMembersParameters parameters) =>
+    [
+        .. Enumerable.Range(1, 3).Select(a => new SimpleMemberResponse
+        {
+            UserId = a.ToString(),
+        })
+    ];
 }
+
+public sealed record GetMembersParameters(string UserAlias = "Email");
 
 public sealed class MembersType : ObjectTypeExtension<MemberResponse>
 {

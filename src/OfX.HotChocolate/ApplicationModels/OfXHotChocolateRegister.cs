@@ -3,6 +3,7 @@ using HotChocolate.Execution.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Extensions;
 using OfX.Helpers;
+using OfX.HotChocolate.Extensions;
 using OfX.HotChocolate.Implementations;
 using OfX.HotChocolate.Resolvers;
 using OfX.HotChocolate.Statics;
@@ -14,7 +15,9 @@ public sealed class OfXHotChocolateRegister
     public void AddRequestExecutorBuilder(IRequestExecutorBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
-        builder.AddDataLoader<DataMappingLoader>();
+        builder
+            .AddDataLoader<DataMappingLoader>()
+            .UseInternalParametersMiddleware();
         var schema = builder.BuildSchemaAsync().Result;
         var types = schema.Types;
         types.ForEach(a =>

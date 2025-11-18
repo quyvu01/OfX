@@ -19,21 +19,6 @@ namespace Service1.Controllers;
 public sealed class TestController : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetComplexModels([FromServices] IDataMappableService dataMappableService)
-    {
-        List<ComplexModelResponse> models =
-        [
-            .. Enumerable.Range(1, 3).Select(a => new ComplexModelResponse
-            {
-                UserId = a.ToString(),
-                Users = [..Enumerable.Range(1, a).Select(k => new UserResponse { Id = k.ToString() })]
-            })
-        ];
-        await dataMappableService.MapDataAsync(models);
-        return Ok(models);
-    }
-
-    [HttpGet]
     public async Task<IActionResult> GetMembers([FromServices] IDataMappableService dataMappableService)
     {
         List<MemberResponse> members =
@@ -51,7 +36,8 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetSimpleMembers([FromServices] IDataMappableService dataMappableService)
+    public async Task<IActionResult> GetSimpleMembers([FromServices] IDataMappableService dataMappableService,
+        string userAlias, CancellationToken token = default)
     {
         List<SimpleMemberResponse> members =
         [
@@ -60,7 +46,7 @@ public sealed class TestController : ControllerBase
                 UserId = a.ToString()
             })
         ];
-        await dataMappableService.MapDataAsync(members);
+        await dataMappableService.MapDataAsync(members, new { userAlias }, token);
         return Ok(members);
     }
 
@@ -71,22 +57,31 @@ public sealed class TestController : ControllerBase
         var database = client.GetDatabase("Service1MongoDb");
         var memberSocialCollection = database.GetCollection<MemberSocial>("MemberSocials");
         var data = await memberSocialCollection.Aggregate()
-            .Project(new BsonDocument {
+            .Project(new BsonDocument
+            {
                 { "Id", 1 },
                 { "Name", 1 },
-                { "FirstSortedMetadata", new BsonDocument("$first",
-                    new BsonDocument("$sortArray", new BsonDocument {
-                        { "input", "$Metadata" },
-                        { "sortBy", new BsonDocument("Key", -1) }
-                    })
-                )},
-                { "FirstJustForTest",
+                {
+                    "FirstSortedMetadata", new BsonDocument("$first",
+                        new BsonDocument("$sortArray", new BsonDocument
+                        {
+                            { "input", "$Metadata" },
+                            { "sortBy", new BsonDocument("Key", -1) }
+                        })
+                    )
+                },
+                {
+                    "FirstJustForTest",
                     new BsonDocument("$first",
-                        new BsonDocument("$map", new BsonDocument {
-                            { "input", new BsonDocument("$sortArray", new BsonDocument {
-                                { "input", "$Metadata" },
-                                { "sortBy", new BsonDocument("Key", -1) }
-                            }) },
+                        new BsonDocument("$map", new BsonDocument
+                        {
+                            {
+                                "input", new BsonDocument("$sortArray", new BsonDocument
+                                {
+                                    { "input", "$Metadata" },
+                                    { "sortBy", new BsonDocument("Key", -1) }
+                                })
+                            },
                             { "as", "m" },
                             { "in", "$$m.ExternalOfMetadata.JustForTest" }
                         })
@@ -94,10 +89,10 @@ public sealed class TestController : ControllerBase
                 }
             })
             .ToListAsync();
-        
-        return Ok();
+        var result = data.Select(x => x.ToJson());
+        return Ok(result);
     }
-    
+
     [HttpGet]
     public async Task<IActionResult> FetchUsers([FromServices] IDataMappableService dataMappableService)
     {

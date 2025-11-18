@@ -10,4 +10,6 @@ public class FieldContext
     public PropertyInfo RequiredPropertyInfo { get; set; }
     public Type RuntimeAttributeType { get; set; }
     public int Order { get; set; }
+    public Dictionary<string, string> ExpressionParameters { get; set; }
+    public string GroupId { get; set; }
 }

@@ -8,6 +8,7 @@ using OfX.Extensions;
 using OfX.ObjectContexts;
 using OfX.Responses;
 using OfX.Serializable;
+using OfX.Statics;
 
 namespace OfX.Helpers;
 
@@ -154,12 +155,15 @@ internal static class ReflectionHelpers
                 try
                 {
                     var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
+                    // var model = OfXModelCache.GetModel(ap.Model.GetType());
+                    // var accessor = model.GetProperty(ap.PropertyInfo.Name);
+                    // accessor?.Set(ap.Model, valueSet);
                     ap.PropertyInfo.SetValue(ap.Model, valueSet);
                 }
                 catch (Exception)
                 {
-                    // In case when we cannot know the response type, and we accept this is a string, just save the serializable data to a string. Self-handle!
-                    if (ap.PropertyInfo.PropertyType == typeof(string)) ap.PropertyInfo.SetValue(ap.Model, value);
+                    if (OfXStatics.ThrowIfExceptions) throw;
+                    // Ignore this field as well
                 }
 
                 return value;

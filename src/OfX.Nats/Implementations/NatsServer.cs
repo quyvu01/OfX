@@ -26,12 +26,12 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
     public async Task StartAsync()
     {
         var natsScribeAsync = _natsClientWrapper.NatsClient
-            .SubscribeAsync<MessageDeserializable>(typeof(TAttribute).GetNatsSubject());
+            .SubscribeAsync<OfXRequest>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
             _ = ProcessMessageAsync(message);
     }
 
-    private async Task ProcessMessageAsync(NatsMsg<MessageDeserializable> message)
+    private async Task ProcessMessageAsync(NatsMsg<OfXRequest> message)
     {
         try
         {
