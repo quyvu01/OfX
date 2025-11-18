@@ -14,7 +14,7 @@ internal abstract class SendPipelinesOrchestrator
     internal abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context);
 }
 
-internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider serviceProvider) : 
+internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider serviceProvider) :
     SendPipelinesOrchestrator where TAttribute : OfXAttribute
 {
     internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context)
@@ -24,18 +24,23 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
         var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
-        var expressionsResolved = expressions.Select(originalExpression => new
-        {
-            originalExpression, resolvedExpression = context switch
-            {
-                IExpressionParameters expressionParameters => RegexHelpers
-                    .ResolvePlaceholders(originalExpression, expressionParameters.Parameters),
-                _ => RegexHelpers.ResolvePlaceholders(originalExpression, null)
-            }
-        }).ToArray();
+        var parameters = context is IExpressionParameters expressionParameters ? expressionParameters.Parameters : null;
 
-        var expression = JsonSerializer.Serialize(expressionsResolved
-            .Select(a => a.resolvedExpression).Distinct());
+        // Resolve expressions and build lookup in one pass
+
+        var (expressionMap, resolvedExpressions) = expressions.Aggregate((
+                ExpressionMap: new Dictionary<ExpressionWrapper, string>(expressions.Length),
+                ResolvedExpressions: new List<string>(expressions.Length)),
+            (acc, originalExpression) =>
+            {
+                var resolvedExpression = RegexHelpers.ResolvePlaceholders(originalExpression, parameters);
+                if (acc.ExpressionMap.TryAdd(new ExpressionWrapper(resolvedExpression), originalExpression))
+                    acc.ResolvedExpressions.Add(resolvedExpression);
+                return acc;
+            });
+
+        // Serialize only the distinct resolved expressions
+        var expression = JsonSerializer.Serialize(resolvedExpressions);
 
         var request = new RequestOf<TAttribute>(message.SelectorIds, expression);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
@@ -45,16 +50,28 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
             .Aggregate(() => handler.RequestAsync(requestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(requestContext, acc)).Invoke();
 
-        result.Items.ForEach(it => it.OfXValues =
-        [
-            ..expressionsResolved.Select(ex =>
+        result.Items.ForEach(it =>
+        {
+            var valueLookup = it.OfXValues
+                .ToDictionary(v => new ExpressionWrapper(v.Expression), v => v);
+
+            var values = expressionMap.Select(ex =>
             {
-                var valueResult = it.OfXValues.FirstOrDefault(a => a.Expression == ex.resolvedExpression);
+                var valueResult = valueLookup.GetValueOrDefault(ex.Key, null);
                 return valueResult is null
                     ? null
-                    : new OfXValueResponse { Expression = ex.originalExpression, Value = valueResult.Value };
-            }).Where(a => a != null)
-        ]);
+                    : new OfXValueResponse { Expression = ex.Value, Value = valueResult.Value };
+            }).Where(a => a != null);
+            it.OfXValues = [..values];
+        });
         return result;
     }
+}
+
+internal readonly record struct ExpressionWrapper(string Expression)
+{
+    public bool Equals(ExpressionWrapper other) =>
+        string.Equals(Expression, other.Expression, StringComparison.Ordinal);
+
+    public override int GetHashCode() => Expression?.GetHashCode() ?? 0;
 }
