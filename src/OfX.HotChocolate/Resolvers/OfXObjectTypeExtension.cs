@@ -1,8 +1,8 @@
 using System.Reflection;
 using OfX.Attributes;
 using OfX.Extensions;
-using OfX.HotChocolate.Abstractions;
 using OfX.HotChocolate.Constants;
+using OfX.HotChocolate.GraphQlContext;
 using OfX.HotChocolate.Statics;
 
 namespace OfX.HotChocolate.Resolvers;
@@ -25,6 +25,7 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
         .ForEach(data => descriptor.Field(data.TargetPropertyInfo)
             .Use(next => async context =>
             {
+                var methodPath = context.Path.ToList().FirstOrDefault()?.ToString();
                 if (!OfXHotChocolateStatics.DependencyGraphs.TryGetValue(typeof(T), out var dependencyGraphs))
                 {
                     await next(context);
@@ -32,7 +33,8 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 }
 
                 var expressionParameters = context.ContextData
-                        .TryGetValue(OfXHotChocolateConstants.ContextDataParametersHeader, out var value) switch
+                        .TryGetValue(GraphQlConstants.GetContextDataParametersHeader(methodPath),
+                            out var value) switch
                     {
                         true => value switch
                         {
@@ -42,16 +44,30 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                         _ => null
                     };
 
-                var currentContext = context.Service<ICurrentContextProvider>();
-                var ctx = currentContext.CreateContext();
+                var groupId = context.ContextData
+                        .TryGetValue(GraphQlConstants.GetContextDataGroupIdHeader(methodPath),
+                            out var groupIdFromHeader) switch
+                    {
+                        true => groupIdFromHeader?.ToString(),
+                        _ => null
+                    };
+
                 var attribute = data.Attribute;
-                ctx.TargetPropertyInfo = data.TargetPropertyInfo;
-                ctx.Expression = attribute.Expression;
-                ctx.RuntimeAttributeType = attribute.GetType();
-                ctx.SelectorPropertyName = attribute.PropertyName;
-                ctx.RequiredPropertyInfo = data.RequiredPropertyInfo;
-                ctx.Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo);
-                ctx.ExpressionParameters = expressionParameters;
+
+                var ctx = new FieldContext
+                {
+                    TargetPropertyInfo = data.TargetPropertyInfo,
+                    Expression = attribute.Expression,
+                    RuntimeAttributeType = attribute.GetType(),
+                    SelectorPropertyName = attribute.PropertyName,
+                    RequiredPropertyInfo = data.RequiredPropertyInfo,
+                    Order = dependencyGraphs.GetPropertyOrder(data.TargetPropertyInfo),
+                    ExpressionParameters = expressionParameters,
+                    GroupId = groupId
+                };
+
+                context.ContextData[GraphQlConstants.GetContextFieldContextHeader(methodPath)] = ctx;
+
                 await next(context);
             })
             .ResolveWith<DataResolvers<T>>(x => x.GetDataAsync(null!, null!))

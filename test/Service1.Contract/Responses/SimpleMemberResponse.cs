@@ -6,6 +6,6 @@ public class SimpleMemberResponse
 {
     public string UserId { get; set; }
 
-    [UserOf(nameof(UserId), Expression = "${userAlias|Name}")]
+    [UserOf(nameof(UserId), Expression = "${UserAlias|Name}")]
     public string UserAlias { get; set; }
 }

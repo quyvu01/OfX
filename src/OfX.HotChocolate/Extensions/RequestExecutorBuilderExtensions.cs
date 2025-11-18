@@ -17,6 +17,7 @@ internal static class RequestExecutorBuilderExtensions
         ConcurrentDictionary<ParameterInfo, Func<IResolverContext, object>> parameterInfoLookup = [];
         builder.UseField(next => async context =>
         {
+            var methodPath = context.Path.ToList().FirstOrDefault()?.ToString();
             if (context.Selection.Field.ResolverMember is not MethodInfo method)
             {
                 await next.Invoke(context);
@@ -25,7 +26,6 @@ internal static class RequestExecutorBuilderExtensions
 
             var paramWithAttr = methodInfoLookup.GetOrAdd(method, mt => mt.GetParameters()
                 .SingleOrDefault(p => p.GetCustomAttribute<ParametersAttribute>() != null));
-
 
             if (paramWithAttr == null)
             {
@@ -42,7 +42,10 @@ internal static class RequestExecutorBuilderExtensions
                 return;
             }
 
-            context.ContextData[OfXHotChocolateConstants.ContextDataParametersHeader] = ObjectToDictionary();
+            var methodSignature = $"{method.DeclaringType?.FullName}.{method.Name}".ToLower();
+
+            context.ContextData[GraphQlConstants.GetContextDataParametersHeader(methodPath)] = ObjectToDictionary();
+            context.ContextData[GraphQlConstants.GetContextDataGroupIdHeader(methodPath)] = methodSignature;
 
             await next(context);
             return;

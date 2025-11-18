@@ -20,15 +20,12 @@ internal class DataMappingLoader(
         var previousMapResult = new Dictionary<FieldBearing, string>();
         var keysGrouped = keys.GroupBy(k => k.Order)
             .OrderBy(a => a.Key);
-        var expressionParameters = keys.FirstOrDefault()?.ExpressionParameters;
-
-        var context = new RequestContext([], expressionParameters, cancellationToken);
 
         foreach (var requestGrouped in keysGrouped)
         {
             // Implement how to map next value with previous value
             var mapResult = previousMapResult;
-            var tasks = requestGrouped.GroupBy(a => a.AttributeType)
+            var tasks = requestGrouped.GroupBy(a => (a.AttributeType, a.GroupId))
                 .Select(async gr =>
                 {
                     var matchedExpressionData = mapResult.Where(a =>
@@ -48,8 +45,13 @@ internal class DataMappingLoader(
                     if (ids is not { Count: > 0 }) return [];
                     var expressions = gr.Select(k => k.Expression).Distinct().OrderBy(k => k);
 
+                    var expressionParameters = keys
+                        .FirstOrDefault(k => k.GroupId == gr.Key.GroupId)?.ExpressionParameters;
+
+                    var context = new RequestContext([], expressionParameters, cancellationToken);
+
                     var result = await dataMappableService
-                        .FetchDataAsync(gr.Key, new DataFetchQuery([..ids], [..expressions]), context);
+                        .FetchDataAsync(gr.Key.AttributeType, new DataFetchQuery([..ids], [..expressions]), context);
 
                     var res = result.Items.Join(gr, a => a.Id, k => k.SelectorId, (a, k) => (a, k))
                         .ToDictionary(x => x.k,

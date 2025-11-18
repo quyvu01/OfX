@@ -12,6 +12,7 @@ internal sealed record FieldBearing(
 {
     public string SelectorId { get; set; }
     public Dictionary<string, string> ExpressionParameters { get; set; }
+    public string GroupId { get; set; }
 
     public bool Equals(FieldBearing other)
     {
