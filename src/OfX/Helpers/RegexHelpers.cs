@@ -8,6 +8,9 @@ public static partial class RegexHelpers
     public static string ResolvePlaceholders(string expression, IDictionary<string, string> parameters)
     {
         if (expression is null) return null;
+        parameters ??= new Dictionary<string, string>();
+        var lookupCache = new Dictionary<string, string>(parameters.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var kvp in parameters) lookupCache[kvp.Key] = kvp.Value;
         return ParametersRegex.Replace(expression, match =>
         {
             var hasParameter = match.Groups["parameter"].Success;
@@ -16,10 +19,7 @@ public static partial class RegexHelpers
             var hasDefault = match.Groups["default"].Success;
             if (!hasDefault) throw new OfXException.InvalidParameter(expression);
             var fallback = match.Groups["default"].Value;
-
-            if (parameters != null && parameters.TryGetValue(parameter, out var value) && value != null) return value;
-
-            return fallback;
+            return lookupCache.GetValueOrDefault(parameter, fallback);
         });
     }
 

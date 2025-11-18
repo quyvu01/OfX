@@ -71,21 +71,20 @@ internal static class ReflectionHelpers
                     continue;
                 }
 
-                var ofXAttribute = property.GetCustomAttributes(true).OfType<OfXAttribute>().FirstOrDefault();
-                if (ofXAttribute is not null)
+                var attribute = property.GetCustomAttribute<OfXAttribute>();
+                if (attribute is not null)
                 {
                     var paramExpression = Expression.Parameter(typeof(object), nameof(obj));
                     var castExpression = Expression.Convert(paramExpression, obj.GetType());
-                    var propExpression = Expression.Property(castExpression, ofXAttribute.PropertyName);
+                    var propExpression = Expression.Property(castExpression, attribute.PropertyName);
                     var convertToObject = Expression.Convert(propExpression, typeof(object));
                     var expression = Expression.Lambda<Func<object, object>>(convertToObject, paramExpression);
                     var func = expression.Compile();
                     var graph = Graphs.GetOrAdd(obj.GetType(), DependencyGraphBuilder.BuildDependencyGraph);
                     var order = graph.GetPropertyOrder(property);
-                    yield return new MappableDataProperty(property, obj, ofXAttribute, func, ofXAttribute.Expression,
-                        order);
+                    yield return new MappableDataProperty(property, obj, attribute, func, attribute.Expression, order);
                     OfXPropertiesCache.TryAdd(property,
-                        new MappableDataPropertyCache(ofXAttribute, func, ofXAttribute.Expression, order));
+                        new MappableDataPropertyCache(attribute, func, attribute.Expression, order));
                     continue;
                 }
 
@@ -163,7 +162,6 @@ internal static class ReflectionHelpers
                 catch (Exception)
                 {
                     if (OfXStatics.ThrowIfExceptions) throw;
-                    // Ignore this field as well
                 }
 
                 return value;

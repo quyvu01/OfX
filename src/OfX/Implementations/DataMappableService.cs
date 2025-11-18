@@ -32,7 +32,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
             var allPropertyDatas = ReflectionHelpers
                 .GetMappableProperties(value)
-                .ToList();
+                .ToArray();
 
             var ofXTypesData = ReflectionHelpers
                 .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
