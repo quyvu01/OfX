@@ -533,7 +533,7 @@ public sealed class SomeDataResponse
 }
 ```
 
-### Runtime Parameters (New!)
+### 6. Runtime Parameters (New!)
 #### 1. Expressions now support dynamic runtime values:
 ```bash
 ${parameter|default}
