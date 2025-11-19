@@ -320,7 +320,7 @@ public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 }
 ```
 
-### 5. Unlock the Full Power of `Expressions` 🚀
+### 5. Unlock the Full Power of `Expressions`
 
 Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go
 beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how *
@@ -515,7 +515,7 @@ public sealed class SomeDataResponse
 }
 ```
 
-### 3.Offset & Limit: [`Offset` `Limit` `asc|desc` `Property`]
+#### 3.Offset & Limit: [`Offset` `Limit` `asc|desc` `Property`]
 
 - Retrieves a slice of the collection.
 - Example:
@@ -533,7 +533,58 @@ public sealed class SomeDataResponse
 }
 ```
 
-#### Conclusion:
+### Runtime Parameters (New!)
+#### 1. Expressions now support dynamic runtime values:
+```bash
+${parameter|default}
+```
+Example:
+```csharp
+public sealed class SomeDataResponse
+{
+    [CountryOf(nameof(CountryId), Expression = "Provinces[${index|0} ${order|asc} Name]")]
+    public ProvinceResponse Province { get; set; }
+}
+```
+Runtime input:
+```csharp
+await mapper.MapDataAsync(response, new { index = -1, order = "desc" });
+```
+Resolved expression:
+```csharp
+public sealed class SomeDataResponse
+{
+    [CountryOf(nameof(CountryId), Expression = "Provinces[-1 desc Name]")]
+    public ProvinceResponse Province { get; set; }
+}
+```
+#### 2. MapDataAsync with Parameters
+```csharp
+await mapper.MapDataAsync(response, new { index = 1, order = "desc" }, cancellationToken);
+```
+#### 3. GraphQL Parameters
+Use the `[Parameters]` attribute:
+```csharp
+public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters)
+{
+    // Execute logic here, the parameters will be passed to all Expression
+}
+```
+Run query:
+```bash
+{
+  members(index: 1, order: "desc") {
+    id
+    province 
+    {
+      id
+      name 
+    }
+  }
+}
+```
+
+### Conclusion:
 
 The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex
 relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered.
