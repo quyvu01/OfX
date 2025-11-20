@@ -576,7 +576,9 @@ public List<MemberResponse> GetMembers([Parameters] GetMembersParameters paramet
 Run query:
 ```bash
 {
-  members(index: 1, order: "desc") {
+  members(parameters: {
+       index: 1, order = "desc"
+    }) {
     id
     province 
     {
