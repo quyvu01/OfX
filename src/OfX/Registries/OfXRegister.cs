@@ -4,7 +4,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Constants;
+using OfX.Exceptions;
 using OfX.Extensions;
+using OfX.Helpers;
 using OfX.Statics;
 
 namespace OfX.Registries;
@@ -16,25 +18,27 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void AddHandlersFromNamespaceContaining<TAssemblyMarker>()
     {
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
-        typeof(TAssemblyMarker).Assembly.ExportedTypes
-            .Where(x => typeof(IMappableRequestHandler).IsAssignableFrom(x) &&
-                        x is { IsInterface: false, IsAbstract: false, IsClass: true })
-            .ForEach(handlerType => handlerType.GetInterfaces()
-                .Where(a => a.IsGenericType && a.GetGenericTypeDefinition() == mappableRequestHandlerType)
-                .ForEach(interfaceType =>
-                {
-                    var attributeArgument = interfaceType.GetGenericArguments()[0];
-                    var serviceType = mappableRequestHandlerType.MakeGenericType(attributeArgument);
-                    var existedService = ServiceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
-                    if (existedService is null)
-                    {
-                        ServiceCollection.AddTransient(serviceType, handlerType);
-                        return;
-                    }
+        var deepestClassesWithInterface = GenericDeepestImplementationFinder
+            .GetDeepestClassesWithInterface(typeof(TAssemblyMarker).Assembly, mappableRequestHandlerType);
 
-                    ServiceCollection.Replace(new ServiceDescriptor(serviceType, handlerType,
-                        ServiceLifetime.Transient));
-                }));
+        deepestClassesWithInterface.GroupBy(a => a.ImplementedClosedInterface)
+            .ForEach(it =>
+            {
+                var interfaceType = it.Key;
+                if (it.Count() > 1) throw new OfXException.AmbiguousHandlers(it.Key);
+                var attributeArgument = interfaceType.GetGenericArguments()[0];
+                var serviceType = mappableRequestHandlerType.MakeGenericType(attributeArgument);
+                var existedService = ServiceCollection.FirstOrDefault(a => a.ServiceType == serviceType);
+                var handlerType = it.First().ClassType;
+                if (existedService is null)
+                {
+                    ServiceCollection.AddTransient(serviceType, handlerType);
+                    return;
+                }
+
+                ServiceCollection.Replace(new ServiceDescriptor(serviceType, handlerType,
+                    ServiceLifetime.Transient));
+            });
     }
 
     public void AddAttributesContainNamespaces(Assembly attributeAssembly, params Assembly[] otherAssemblies)
