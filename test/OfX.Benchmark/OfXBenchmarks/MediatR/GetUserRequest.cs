@@ -1,5 +1,5 @@
 using MediatR;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks.MediatR;
+namespace OfX.Benchmark.OfXBenchmarks.MediatR;
 
 public sealed record GetUserRequest : IRequest<string>;

@@ -1,7 +1,7 @@
 using AutoMapper;
-using OfX.BenchmarkLab.OfXBenchmarks.Objects;
+using OfX.Benchmark.OfXBenchmarks.Objects;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks.AutoMapper;
+namespace OfX.Benchmark.OfXBenchmarks.AutoMapper;
 
 public sealed class MappingProfile : Profile
 {

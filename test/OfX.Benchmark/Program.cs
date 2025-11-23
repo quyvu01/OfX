@@ -1,9 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using BenchmarkDotNet.Running;
-using OfX.BenchmarkLab.OfXBenchmarks;
-using OfX.BenchmarkLab.OfXPropertyAssessors;
-using OfX.BenchmarkLab.Reflections;
+using OfX.Benchmark.OfXBenchmarks;
+using OfX.Benchmark.OfXPropertyAssessors;
+using OfX.Benchmark.Reflections;
 
 // BenchmarkRunner.Run<OfXPropertyAccessorBenchmark>();
 BenchmarkRunner.Run<MappingBenchmark>();

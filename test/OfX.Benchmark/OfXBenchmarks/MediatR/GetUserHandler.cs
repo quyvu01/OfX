@@ -1,6 +1,6 @@
 using MediatR;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks.MediatR;
+namespace OfX.Benchmark.OfXBenchmarks.MediatR;
 
 public sealed class GetUserHandler : IRequestHandler<GetUserRequest, string>
 {

@@ -1,9 +1,9 @@
 using System.Text.Json;
 using OfX.Abstractions;
-using OfX.BenchmarkLab.Attributes;
+using OfX.Benchmark.Attributes;
 using OfX.Responses;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks.Handlers;
+namespace OfX.Benchmark.OfXBenchmarks.Handlers;
 
 public sealed class UserOfHandler : IMappableRequestHandler<UserOfAttribute>
 {

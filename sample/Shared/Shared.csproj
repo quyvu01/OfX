@@ -10,15 +10,17 @@
       <ProjectReference Include="..\..\src\OfX.Azure.ServiceBus\OfX.Azure.ServiceBus.csproj" />
       <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\..\src\OfX.Grpc\OfX.Grpc.csproj" />
+      <ProjectReference Include="..\..\src\OfX.HotChocolate\OfX.HotChocolate.csproj" />
       <ProjectReference Include="..\..\src\OfX.Kafka\OfX.Kafka.csproj" />
+      <ProjectReference Include="..\..\src\OfX.MongoDb\OfX.MongoDb.csproj" />
       <ProjectReference Include="..\..\src\OfX.Nats\OfX.Nats.csproj" />
       <ProjectReference Include="..\..\src\OfX.RabbitMq\OfX.RabbitMq.csproj" />
       <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.4"/>
     </ItemGroup>
 
 </Project>
