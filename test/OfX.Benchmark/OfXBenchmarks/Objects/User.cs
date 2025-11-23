@@ -1,6 +1,6 @@
-using OfX.BenchmarkLab.Attributes;
+using OfX.Benchmark.Attributes;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks.Objects;
+namespace OfX.Benchmark.OfXBenchmarks.Objects;
 
 public class User
 {

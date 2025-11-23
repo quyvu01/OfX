@@ -1,3 +1,3 @@
-namespace OfX.BenchmarkLab;
+namespace OfX.Benchmark;
 
 public interface IBenchmarkAssemblyMarker;

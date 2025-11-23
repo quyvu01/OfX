@@ -3,13 +3,13 @@ using BenchmarkDotNet.Attributes;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
-using OfX.BenchmarkLab.Attributes;
-using OfX.BenchmarkLab.OfXBenchmarks.MediatR;
-using OfX.BenchmarkLab.OfXBenchmarks.Objects;
+using OfX.Benchmark.Attributes;
+using OfX.Benchmark.OfXBenchmarks.MediatR;
+using OfX.Benchmark.OfXBenchmarks.Objects;
 using OfX.Extensions;
 using OfX.Queries;
 
-namespace OfX.BenchmarkLab.OfXBenchmarks;
+namespace OfX.Benchmark.OfXBenchmarks;
 
 [MemoryDiagnoser]
 public class MappingBenchmark

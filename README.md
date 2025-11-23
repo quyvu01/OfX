@@ -11,8 +11,6 @@ boilerplate code, and improves maintainability
 > [!WARNING]  
 > All OfX* packages need to have the same version.
 
-[Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
-
 ## Give a Star! :star:
 If you like this project, learn something or you are using it in your applications, please give it a star. Thanks!
 

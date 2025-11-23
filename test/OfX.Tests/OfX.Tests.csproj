@@ -7,9 +7,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.2" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
         <PackageReference Include="MongoDB.Bson" Version="3.2.1" />
         <PackageReference Include="Serilog" Version="4.2.0" />
@@ -27,12 +27,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
-      <ProjectReference Include="..\OfX.Grpc\OfX.Grpc.csproj" />
-      <ProjectReference Include="..\OfX.MongoDb\OfX.MongoDb.csproj" />
-      <ProjectReference Include="..\OfX.Nats\OfX.Nats.csproj" />
-      <ProjectReference Include="..\OfX.RabbitMq\OfX.RabbitMq.csproj" />
-      <ProjectReference Include="..\OfX\OfX.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Azure.ServiceBus\OfX.Azure.ServiceBus.csproj" />
+      <ProjectReference Include="..\..\src\OfX.EntityFrameworkCore\OfX.EntityFrameworkCore.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Grpc\OfX.Grpc.csproj" />
+      <ProjectReference Include="..\..\src\OfX.HotChocolate\OfX.HotChocolate.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Kafka\OfX.Kafka.csproj" />
+      <ProjectReference Include="..\..\src\OfX.MongoDb\OfX.MongoDb.csproj" />
+      <ProjectReference Include="..\..\src\OfX.Nats\OfX.Nats.csproj" />
+      <ProjectReference Include="..\..\src\OfX.RabbitMq\OfX.RabbitMq.csproj" />
+      <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
     </ItemGroup>
 
 </Project>

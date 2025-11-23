@@ -1,9 +1,9 @@
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using OfX.Accessors;
-using OfX.BenchmarkLab.OfXPropertyAssessors;
+using OfX.Benchmark.OfXPropertyAssessors;
 
-namespace OfX.BenchmarkLab.Reflections;
+namespace OfX.Benchmark.Reflections;
 
 public class FastIlModel
 {

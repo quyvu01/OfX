@@ -2,9 +2,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using OfX.Accessors;
-using OfX.BenchmarkLab.Reflections;
+using OfX.Benchmark.Reflections;
 
-namespace OfX.BenchmarkLab.OfXPropertyAssessors;
+namespace OfX.Benchmark.OfXPropertyAssessors;
 
 public class Dummy
 {
