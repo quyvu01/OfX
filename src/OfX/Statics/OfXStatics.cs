@@ -2,16 +2,27 @@ using System.Reflection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Extensions;
 using OfX.Responses;
 
 namespace OfX.Statics;
 
 public static class OfXStatics
 {
-    internal static List<Assembly> AttributesRegister { get; set; } = [];
-    internal static int MaxObjectSpawnTimes { get; set; } = 128;
-    public static bool ThrowIfExceptions { get; internal set; }
+    private const int maxObjectSpawnTimes = 128;
 
+    internal static void Clear()
+    {
+        AttributesRegister = [];
+        MaxObjectSpawnTimes = maxObjectSpawnTimes;
+        ThrowIfExceptions = false;
+        RetryPolicy = null;
+        ModelConfigurationAssembly = null;
+    }
+
+    internal static List<Assembly> AttributesRegister { get; set; } = [];
+    internal static int MaxObjectSpawnTimes { get; set; } = maxObjectSpawnTimes;
+    public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
 
     internal static readonly Type OfXValueType = typeof(OfXValueResponse);
@@ -40,7 +51,7 @@ public static class OfXStatics
         [
             ..ModelConfigurationAssembly?
                 .ExportedTypes
-                .Where(a => a is { IsClass: true, IsAbstract: false, IsInterface: false })
+                .Where(a => a.IsConcrete())
                 .Where(a => a.GetCustomAttributes().Any(x =>
                 {
                     var attributeType = x.GetType();
@@ -66,6 +77,6 @@ public static class OfXStatics
     internal static readonly Lazy<IReadOnlyCollection<Type>> OfXAttributeTypes = new(() =>
     [
         ..AttributesRegister.SelectMany(a => a.ExportedTypes)
-            .Where(a => typeof(OfXAttribute).IsAssignableFrom(a) && !a.IsInterface && !a.IsAbstract && a.IsClass)
+            .Where(a => typeof(OfXAttribute).IsAssignableFrom(a) && a.IsConcrete())
     ]);
 }

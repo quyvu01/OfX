@@ -1,7 +1,7 @@
 using OfX.Helpers;
 using Xunit;
 
-namespace OfX.Tests;
+namespace OfX.Tests.DeepestConcretes;
 
 public sealed class DeepestClassesTests
 {
@@ -13,7 +13,7 @@ public sealed class DeepestClassesTests
         Assert.Contains(results, k =>
             k.ClassType == typeof(LowerThanClassTestNoneGeneric) &&
             k.ImplementedClosedInterface == typeof(ITestBased<string>));
-        
+
         Assert.Contains(results, k =>
             k.ClassType == typeof(LowerThanClassTestNoneGenericOther) &&
             k.ImplementedClosedInterface == typeof(ITestBased<string>));
@@ -43,6 +43,7 @@ public abstract class ClassTestGeneric<T> : ITestBased<T>;
 public class SomeClassTest<T> : ITestBased<T>;
 
 public class LowerThanClassTestNoneGeneric : ClassTestNoneGeneric;
+
 public class LowerThanClassTestNoneGenericOther : ClassTestNoneGeneric;
 
 public class LowerClassTestGeneric : ClassTestGeneric<int>;

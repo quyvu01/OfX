@@ -20,6 +20,7 @@ public static class OfXExtensions
 {
     public static OfXRegisterWrapped AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> options)
     {
+        OfXStatics.Clear();
         var newOfRegister = new OfXRegister(serviceCollection);
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
@@ -62,7 +63,8 @@ public static class OfXExtensions
         newOfRegister.AddSendPipelines(c => c
             .OfType(typeof(RetryPipelineBehavior<>))
             .OfType(typeof(SendPipelineRoutingBehavior<>))
-            .OfType(typeof(ExceptionPipelineBehavior<>)));
+            .OfType(typeof(ExceptionPipelineBehavior<>))
+        );
 
         OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
         {
