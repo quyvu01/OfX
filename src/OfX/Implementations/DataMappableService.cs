@@ -44,7 +44,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
             foreach (var mappableTypes in ofXTypesDataGrouped)
             {
                 var orderedProperties = allPropertyDatas
-                    .Where(x => x.Order == mappableTypes.Key);
+                    .Where(x => x.Dependency.Order == mappableTypes.Key);
                 var tasks = mappableTypes.Select(async x =>
                 {
                     var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
@@ -52,7 +52,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                     var propertyCalledStorages = x.PropertyCalledLaters.ToList();
                     if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
                     var selectorIds = propertyCalledStorages
-                        .Select(c => c.Func.Invoke(c.Model)?.ToString())
+                        .Select(c => c.PropertyAccessor.Get(c.Model)?.ToString())
                         .Where(c => c is not null)
                         .Distinct()
                         .ToList();

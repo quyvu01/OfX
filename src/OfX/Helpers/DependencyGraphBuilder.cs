@@ -4,7 +4,7 @@ using OfX.ObjectContexts;
 
 namespace OfX.Helpers;
 
-public class DependencyGraphBuilder
+public static class DependencyGraphBuilder
 {
     public static Dictionary<PropertyInfo, PropertyContext[]> BuildDependencyGraph(Type type)
     {
@@ -13,8 +13,7 @@ public class DependencyGraphBuilder
 
         foreach (var property in properties)
         {
-            var dependencies = GetDependenciesRecursive(property, properties)
-                .ToArray();
+            var dependencies = GetDependenciesRecursive(property, properties).ToArray();
             if (dependencies is { Length: > 0 }) graph[property] = dependencies;
         }
 

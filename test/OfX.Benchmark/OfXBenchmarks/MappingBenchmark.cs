@@ -43,18 +43,18 @@ public class MappingBenchmark
         var user = new User { Id = "1" };
         await _dataMappableService.MapDataAsync(user);
     }
-
-    [Benchmark]
-    public async Task MapWithOfXFetchData()
-    {
-        await _dataMappableService.FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1"], ["Email", "Name"]));
-    }
-    
-    [Benchmark]
-    public async Task MediatR()
-    {
-        await _sender.Send(new GetUserRequest());
-    }
+    //
+    // [Benchmark]
+    // public async Task MapWithOfXFetchData()
+    // {
+    //     await _dataMappableService.FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1"], ["Email", "Name"]));
+    // }
+    //
+    // [Benchmark]
+    // public async Task MediatR()
+    // {
+    //     await _sender.Send(new GetUserRequest());
+    // }
 
     [Benchmark]
     public void MapWithMapper()
@@ -66,4 +66,15 @@ public class MappingBenchmark
         var user = new User();
         _mapper.Map(userForMap, user);
     }
+    //
+    // [Benchmark]
+    // public void MapWithMiniMapper()
+    // {
+    //     var userForMap = new UserMock
+    //     {
+    //         Id = "1", Name = "Some value from expression Name", Email = "Some value from expression Email"
+    //     };
+    //     var user = new User();
+    //     MiniMapper.MiniMapper.Map(userForMap, user);
+    // }
 }

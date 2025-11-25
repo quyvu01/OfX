@@ -1,22 +1,12 @@
 using System.Reflection;
-using OfX.Attributes;
+using OfX.Accessors;
 
 namespace OfX.ApplicationModels;
 
 internal sealed record MappableDataProperty(
     PropertyInfo PropertyInfo,
     object Model,
-    OfXAttribute Attribute,
-    Func<object, object> Func,
-    string Expression,
-    int Order);
-
-internal sealed record MappableDataPropertyCache(
-    OfXAttribute Attribute,
-    Func<object, object> Func,
-    string Expression,
-    int Order);
-
+    OfXDependency Dependency);
 
 internal sealed record MappableTypeData(
     Type OfXAttributeType,
@@ -24,5 +14,4 @@ internal sealed record MappableTypeData(
     IEnumerable<string> Expressions,
     int Order);
 
-
-internal sealed record RuntimePropertyCalling(object Model, Func<object, object> Func);
+internal sealed record RuntimePropertyCalling(object Model, IOfXPropertyAccessor PropertyAccessor);

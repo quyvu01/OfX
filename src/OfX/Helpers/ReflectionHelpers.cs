@@ -1,11 +1,7 @@
 using System.Collections;
-using System.Collections.Concurrent;
-using System.Linq.Expressions;
-using System.Reflection;
 using OfX.ApplicationModels;
-using OfX.Attributes;
+using OfX.Cached;
 using OfX.Extensions;
-using OfX.ObjectContexts;
 using OfX.Responses;
 using OfX.Serializable;
 using OfX.Statics;
@@ -14,14 +10,9 @@ namespace OfX.Helpers;
 
 internal static class ReflectionHelpers
 {
-    private static readonly ConcurrentDictionary<PropertyInfo, MappableDataPropertyCache>
-        OfXPropertiesCache = new();
-
-    private static readonly ConcurrentDictionary<Type, Dictionary<PropertyInfo, PropertyContext[]>> Graphs = [];
-
     internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
-        if (rootObject is null || GeneralHelpers.IsPrimitiveType(rootObject)) yield break;
+        if (InvalidObject(rootObject)) yield break;
         Stack<object> stack = [];
         switch (rootObject)
         {
@@ -36,85 +27,35 @@ internal static class ReflectionHelpers
         while (stack.Count > 0)
         {
             var obj = stack.Pop();
-            if (obj is null || GeneralHelpers.IsPrimitiveType(obj)) continue;
-            var objType = obj.GetType();
-            var isCached = Graphs.TryGetValue(objType, out var graphs);
-            if (isCached)
-                foreach (var property in IterateMappableProperties(graphs.Keys, obj))
-                    yield return property;
-            var nextScanningProperties = isCached switch
-            {
-                true => objType.GetProperties()
-                    .Where(a => !GeneralHelpers.IsPrimitiveType(a.PropertyType))
-                    .Except(graphs.Keys),
-                _ => objType.GetProperties()
-            };
-            foreach (var property in IterateMappableProperties(nextScanningProperties, obj)) yield return property;
-        }
-
-        yield break;
-
-        IEnumerable<MappableDataProperty> IterateMappableProperties(IEnumerable<PropertyInfo> properties, object obj)
-        {
-            if (obj is IEnumerable objectAsEnumerable)
-            {
-                EnumerableObject(objectAsEnumerable, stack);
-                yield break;
-            }
-
-            foreach (var property in properties)
-            {
-                if (OfXPropertiesCache.TryGetValue(property, out var propertyCache))
-                {
-                    yield return new MappableDataProperty(property, obj, propertyCache.Attribute,
-                        propertyCache.Func, propertyCache.Expression, propertyCache.Order);
-                    continue;
-                }
-
-                var attribute = property.GetCustomAttribute<OfXAttribute>();
-                if (attribute is not null)
-                {
-                    var paramExpression = Expression.Parameter(typeof(object), nameof(obj));
-                    var castExpression = Expression.Convert(paramExpression, obj.GetType());
-                    var propExpression = Expression.Property(castExpression, attribute.PropertyName);
-                    var convertToObject = Expression.Convert(propExpression, typeof(object));
-                    var expression = Expression.Lambda<Func<object, object>>(convertToObject, paramExpression);
-                    var func = expression.Compile();
-                    var graph = Graphs.GetOrAdd(obj.GetType(), DependencyGraphBuilder.BuildDependencyGraph);
-                    var order = graph.GetPropertyOrder(property);
-                    yield return new MappableDataProperty(property, obj, attribute, func, attribute.Expression, order);
-                    OfXPropertiesCache.TryAdd(property,
-                        new MappableDataPropertyCache(attribute, func, attribute.Expression, order));
-                    continue;
-                }
-
-                try
-                {
-                    if (GeneralHelpers.IsPrimitiveType(property.PropertyType)) continue;
-                    var propertyValue = property.GetValue(obj);
-                    switch (propertyValue)
-                    {
-                        case null: continue;
-                        case IEnumerable propertyAsEnumerable:
-                            EnumerableObject(propertyAsEnumerable, stack);
-                            continue;
-                    }
-
-                    if (property.PropertyType.IsClass) stack.Push(propertyValue);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
+            foreach (var mappableDataProperty in GetMappableProperties(obj, stack)) yield return mappableDataProperty;
         }
     }
+
+    private static IEnumerable<MappableDataProperty> GetMappableProperties(object obj, Stack<object> stack)
+    {
+        if (InvalidObject(obj)) yield break;
+        if (obj is IEnumerable enumerable) EnumerableObject(enumerable, stack);
+        var objType = obj.GetType();
+        var objectCached = OfXModelCache.GetModel(objType);
+        foreach (var (propertyInfo, accessor) in objectCached.Accessors)
+        {
+            var dependency = objectCached.GetDependency(propertyInfo);
+            yield return new MappableDataProperty(propertyInfo, obj, dependency);
+            if (dependency.RequiredAccessor is not null) continue;
+            // Currently, I just agree this one, need to update to ignore required property i.e: UserId
+            var propValue = accessor.Get(obj);
+            if (InvalidObject(propValue)) continue;
+            foreach (var value in GetMappableProperties(propValue, stack)) yield return value;
+        }
+    }
+
+    private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
 
     private static void EnumerableObject(IEnumerable propertyValue, Stack<object> stack)
     {
         foreach (var item in propertyValue)
         {
-            if (item is null || GeneralHelpers.IsPrimitiveType(item)) continue;
+            if (InvalidObject(item)) continue;
             if (item is IEnumerable enumerable)
             {
                 EnumerableObject(enumerable, stack);
@@ -129,11 +70,11 @@ internal static class ReflectionHelpers
     internal static IEnumerable<MappableTypeData> GetOfXTypesData(
         IEnumerable<MappableDataProperty> datas, IEnumerable<Type> ofXAttributeTypes) =>
         datas
-            .GroupBy(x => new { AttributeType = x.Attribute.GetType(), x.Order })
+            .GroupBy(x => new { AttributeType = x.Dependency.RuntimeAttributeType, x.Dependency.Order })
             .Join(ofXAttributeTypes, d => d.Key.AttributeType, x => x,
                 (d, x) => new MappableTypeData(x, d
-                        .Select(a => new RuntimePropertyCalling(a.Model, a.Func)),
-                    d.Select(a => a.Expression), d.Key.Order));
+                        .Select(a => new RuntimePropertyCalling(a.Model, a.Dependency.RequiredAccessor)),
+                    d.Select(a => a.Dependency.Expression), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> mappableProperties,
         IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
@@ -143,21 +84,21 @@ internal static class ReflectionHelpers
                 .Select(x => (x.Id, x.OfXValues))
                 .Select(k => (a.OfXAttributeType, Data: k)))
             .SelectMany(x => x);
-        mappableProperties.Join(dataWithExpression, ap => (ap.Attribute.GetType(), ap.Func
-                .Invoke(ap.Model)?.ToString()),
+        mappableProperties.Join(dataWithExpression, ap => (ap.Dependency?.RuntimeAttributeType, ap.Dependency?
+                .RequiredAccessor?
+                .Get(ap.Model)?.ToString()),
             dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>
             {
                 var value = dt.Data
                     .OfXValues
-                    .FirstOrDefault(a => a.Expression == ap.Expression)?.Value;
+                    .FirstOrDefault(a => a.Expression == ap.Dependency.Expression)?.Value;
                 if (value is null || ap.PropertyInfo is not { } propertyInfo) return value;
                 try
                 {
                     var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
-                    // var model = OfXModelCache.GetModel(ap.Model.GetType());
-                    // var accessor = model.GetProperty(ap.PropertyInfo.Name);
-                    // accessor?.Set(ap.Model, valueSet);
-                    ap.PropertyInfo.SetValue(ap.Model, valueSet);
+                    var model = OfXModelCache.GetModel(ap.Model.GetType());
+                    var accessor = model.GetAccessor(ap.PropertyInfo);
+                    accessor?.Set(ap.Model, valueSet);
                 }
                 catch (Exception)
                 {
