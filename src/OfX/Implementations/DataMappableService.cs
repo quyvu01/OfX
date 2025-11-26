@@ -30,39 +30,40 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                 return;
             }
 
-            var allPropertyDatas = ReflectionHelpers
-                .GetMappableProperties(value)
-                .ToArray();
+            var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToArray();
 
-            var ofXTypesData = ReflectionHelpers
+            var typeData = ReflectionHelpers
                 .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
 
-            var ofXTypesDataGrouped = ofXTypesData
+            var typesDataGrouped = typeData
                 .GroupBy(a => a.Order)
                 .OrderBy(a => a.Key);
 
-            foreach (var mappableTypes in ofXTypesDataGrouped)
+            foreach (var mappableTypes in typesDataGrouped)
             {
                 var orderedProperties = allPropertyDatas
-                    .Where(x => x.Dependency.Order == mappableTypes.Key);
+                    .Where(x => x.PropertyInformation.Order == mappableTypes.Key);
                 var tasks = mappableTypes.Select(async x =>
                 {
                     var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
                     var emptyResponse = (x.OfXAttributeType, Response: emptyCollection);
-                    var propertyCalledStorages = x.PropertyCalledLaters.ToList();
-                    if (propertyCalledStorages is not { Count: > 0 }) return emptyResponse;
-                    var selectorIds = propertyCalledStorages
-                        .Select(c => c.PropertyAccessor.Get(c.Model)?.ToString())
+                    var accessors = x.Accessors.ToList();
+                    if (accessors is not { Count: > 0 }) return emptyResponse;
+                    var selectorIds = accessors
+                        .Select(c => c.PropertyInformation?.RequiredAccessor?.Get(c.Model)?.ToString())
                         .Where(c => c is not null)
                         .Distinct()
                         .ToList();
 
                     if (selectorIds is not { Count: > 0 }) return emptyResponse;
-                    
+
                     var requestCt = new RequestContext([], ObjectToDictionary(), token);
-                    
+
+                    var expressions = accessors
+                        .Select(a => a.PropertyInformation.Expression);
+
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..x.Expressions.Distinct()]), requestCt);
+                        new DataFetchQuery(selectorIds, [..expressions.Distinct()]), requestCt);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);

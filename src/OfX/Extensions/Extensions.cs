@@ -10,7 +10,7 @@ public static class Extensions
         foreach (var item in src ?? []) action?.Invoke(item);
     }
 
-    public static void IteratorVoid<T>(this IEnumerable<T> src) => src.ForEach(_ => { });
+    public static void Evaluate<T>(this IEnumerable<T> src) => src.ForEach(_ => { });
 
     public static int GetPropertyOrder(this Dictionary<PropertyInfo, PropertyContext[]> graph, PropertyInfo property)
     {

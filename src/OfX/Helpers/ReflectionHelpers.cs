@@ -14,24 +14,14 @@ internal static class ReflectionHelpers
     {
         if (InvalidObject(rootObject)) yield break;
         Stack<object> stack = [];
-        switch (rootObject)
-        {
-            case IEnumerable enumerable:
-                EnumerableObject(enumerable, stack);
-                break;
-            default:
-                stack.Push(rootObject);
-                break;
-        }
+        ObjectProcessing(rootObject, stack);
 
-        while (stack.Count > 0)
-        {
-            var obj = stack.Pop();
-            foreach (var mappableDataProperty in GetMappableProperties(obj, stack)) yield return mappableDataProperty;
-        }
+        while (stack.TryPop(out var obj))
+            foreach (var mappableDataProperty in GetMappablePropertiesRecursive(obj, stack))
+                yield return mappableDataProperty;
     }
 
-    private static IEnumerable<MappableDataProperty> GetMappableProperties(object obj, Stack<object> stack)
+    private static IEnumerable<MappableDataProperty> GetMappablePropertiesRecursive(object obj, Stack<object> stack)
     {
         if (InvalidObject(obj)) yield break;
         if (obj is IEnumerable enumerable) EnumerableObject(enumerable, stack);
@@ -39,42 +29,61 @@ internal static class ReflectionHelpers
         var objectCached = OfXModelCache.GetModel(objType);
         foreach (var (propertyInfo, accessor) in objectCached.Accessors)
         {
-            var dependency = objectCached.GetDependency(propertyInfo);
-            yield return new MappableDataProperty(propertyInfo, obj, dependency);
-            if (dependency.RequiredAccessor is not null) continue;
-            // Currently, I just agree this one, need to update to ignore required property i.e: UserId
+            var propertyInformation = objectCached.GetInformation(propertyInfo);
+            if (propertyInformation.RequiredAccessor is not null)
+            {
+                yield return new MappableDataProperty(propertyInfo, obj, propertyInformation);
+                continue;
+            }
+
             var propValue = accessor.Get(obj);
             if (InvalidObject(propValue)) continue;
-            foreach (var value in GetMappableProperties(propValue, stack)) yield return value;
+            foreach (var value in GetMappablePropertiesRecursive(propValue, stack)) yield return value;
         }
     }
 
     private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
 
-    private static void EnumerableObject(IEnumerable propertyValue, Stack<object> stack)
+    private static void EnumerableObject(IEnumerable enumerableObject, Stack<object> stack)
     {
-        foreach (var item in propertyValue)
+        if (enumerableObject is not IDictionary dictionary)
         {
-            if (InvalidObject(item)) continue;
-            if (item is IEnumerable enumerable)
-            {
-                EnumerableObject(enumerable, stack);
-                continue;
-            }
+            foreach (var item in enumerableObject) ObjectProcessing(item, stack);
+            return;
+        }
 
-            if (!stack.Contains(item)) stack.Push(item);
+        foreach (var key in dictionary.Keys)
+        {
+            var value = dictionary[key];
+            ObjectProcessing(key, stack);
+            ObjectProcessing(value, stack);
+        }
+    }
+
+    private static void ObjectProcessing(object obj, Stack<object> stack)
+    {
+        if (InvalidObject(obj)) return;
+        switch (obj)
+        {
+            case IEnumerable enumerable:
+                EnumerableObject(enumerable, stack);
+                break;
+            default:
+                if (!stack.Contains(obj)) stack.Push(obj);
+                break;
         }
     }
 
     // To use merge-expression, we have to group by attribute only, exclude expression as the older version!
-    internal static IEnumerable<MappableTypeData> GetOfXTypesData(
-        IEnumerable<MappableDataProperty> datas, IEnumerable<Type> ofXAttributeTypes) =>
-        datas
-            .GroupBy(x => new { AttributeType = x.Dependency.RuntimeAttributeType, x.Dependency.Order })
-            .Join(ofXAttributeTypes, d => d.Key.AttributeType, x => x,
-                (d, x) => new MappableTypeData(x, d
-                        .Select(a => new RuntimePropertyCalling(a.Model, a.Dependency.RequiredAccessor)),
-                    d.Select(a => a.Dependency.Expression), d.Key.Order));
+    internal static IEnumerable<MappableTypeData> GetOfXTypesData
+        (IEnumerable<MappableDataProperty> mappableDataProperties, IEnumerable<Type> attributeTypes) =>
+        mappableDataProperties
+            .GroupBy(mdp => (AttributeType: mdp.PropertyInformation?.RuntimeAttributeType,
+                Order: mdp.PropertyInformation?.Order ?? 0))
+            .Join(attributeTypes, gr => gr.Key.AttributeType, at => at,
+                (d, x) =>
+                    new MappableTypeData(x, d
+                        .Select(a => new PropertyAssessorData(a.Model, a.PropertyInformation)), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<MappableDataProperty> mappableProperties,
         IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
@@ -84,14 +93,15 @@ internal static class ReflectionHelpers
                 .Select(x => (x.Id, x.OfXValues))
                 .Select(k => (a.OfXAttributeType, Data: k)))
             .SelectMany(x => x);
-        mappableProperties.Join(dataWithExpression, ap => (ap.Dependency?.RuntimeAttributeType, ap.Dependency?
+        mappableProperties.Join(dataWithExpression, ap => (ap.PropertyInformation?.RuntimeAttributeType, ap
+                .PropertyInformation?
                 .RequiredAccessor?
                 .Get(ap.Model)?.ToString()),
             dt => (dt.OfXAttributeType, dt.Data.Id), (ap, dt) =>
             {
                 var value = dt.Data
                     .OfXValues
-                    .FirstOrDefault(a => a.Expression == ap.Dependency.Expression)?.Value;
+                    .FirstOrDefault(a => a.Expression == ap.PropertyInformation.Expression)?.Value;
                 if (value is null || ap.PropertyInfo is not { } propertyInfo) return value;
                 try
                 {
@@ -106,6 +116,6 @@ internal static class ReflectionHelpers
                 }
 
                 return value;
-            }).IteratorVoid();
+            }).Evaluate();
     }
 }

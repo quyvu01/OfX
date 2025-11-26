@@ -84,13 +84,13 @@ public class OfXTypeModel
 
     public IOfXPropertyAccessor GetAccessor(PropertyInfo propertyInfo) => Accessors.GetValueOrDefault(propertyInfo);
 
-    public OfXDependency GetDependency(PropertyInfo propertyInfo)
+    public PropertyInformation GetInformation(PropertyInfo propertyInfo)
     {
         if (!DependencyGraph.TryGetValue(propertyInfo, out var dependencies))
-            return new OfXDependency(0, null, null, null);
+            return new PropertyInformation(0, null, null, null);
         var dependency = dependencies.First();
         var requiredAccessor = GetAccessor(dependency.RequiredPropertyInfo);
-        return new OfXDependency(dependencies.Length - 1, dependency.Expression, dependency.RuntimeAttributeType,
+        return new PropertyInformation(dependencies.Length - 1, dependency.Expression, dependency.RuntimeAttributeType,
             requiredAccessor);
     }
 }

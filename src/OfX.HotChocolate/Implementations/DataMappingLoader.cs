@@ -39,7 +39,7 @@ internal class DataMappingLoader(
                             ? null
                             : JsonSerializer.Deserialize(value, j.Key.TargetPropertyInfo.PropertyType)?.ToString();
                         return g;
-                    }).IteratorVoid();
+                    }).Evaluate();
 
                     List<string> ids = [..gr.Select(k => k.SelectorId).Where(a => a is not null).Distinct()];
                     if (ids is not { Count: > 0 }) return [];
