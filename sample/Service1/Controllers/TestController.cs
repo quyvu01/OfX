@@ -23,7 +23,7 @@ public sealed class TestController : ControllerBase
     {
         List<MemberResponse> members =
         [
-            .. Enumerable.Range(1, 1).Select(a => new MemberResponse
+            .. Enumerable.Range(1, 3).Select(a => new MemberResponse
             {
                 Id = a.ToString(),
                 UserId = a.ToString(), MemberAdditionalId = a.ToString(),
@@ -48,6 +48,23 @@ public sealed class TestController : ControllerBase
         ];
         await dataMappableService.MapDataAsync(members, new { userAlias }, token);
         return Ok(members);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetObjectsAsDictionary([FromServices] IDataMappableService dataMappableService,
+        string userAlias, CancellationToken token = default)
+    {
+        var response = new ComplexObjectAsDictionary
+        {
+            Responses = new Dictionary<SimpleMemberResponse, MemberResponse>
+            {
+                { new SimpleMemberResponse { UserId = "1" }, new MemberResponse { UserId = "1" } },
+                { new SimpleMemberResponse { UserId = "2" }, new MemberResponse { UserId = "2" } }
+            }
+        };
+
+        await dataMappableService.MapDataAsync(response, new { userAlias }, token);
+        return Ok(response.Responses.Values);
     }
 
     [HttpGet]

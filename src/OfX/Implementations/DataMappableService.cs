@@ -32,8 +32,8 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
 
             var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToArray();
 
-            var typeData = ReflectionHelpers
-                .GetOfXTypesData(allPropertyDatas, OfXStatics.OfXAttributeTypes.Value);
+            var attributes = OfXStatics.OfXAttributeTypes.Value;
+            var typeData = ReflectionHelpers.GetOfXTypesData(allPropertyDatas, attributes);
 
             var typesDataGrouped = typeData
                 .GroupBy(a => a.Order)

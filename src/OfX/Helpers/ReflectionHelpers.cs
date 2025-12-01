@@ -24,7 +24,12 @@ internal static class ReflectionHelpers
     private static IEnumerable<MappableDataProperty> GetMappablePropertiesRecursive(object obj, Stack<object> stack)
     {
         if (InvalidObject(obj)) yield break;
-        if (obj is IEnumerable enumerable) EnumerableObject(enumerable, stack);
+        if (obj is IEnumerable enumerable)
+        {
+            EnumerableObject(enumerable, stack);
+            yield break;
+        }
+
         var objType = obj.GetType();
         var objectCached = OfXModelCache.GetModel(objType);
         foreach (var (propertyInfo, accessor) in objectCached.Accessors)
@@ -52,12 +57,7 @@ internal static class ReflectionHelpers
             return;
         }
 
-        foreach (var key in dictionary.Keys)
-        {
-            var value = dictionary[key];
-            ObjectProcessing(key, stack);
-            ObjectProcessing(value, stack);
-        }
+        foreach (var value in dictionary.Values) ObjectProcessing(value, stack);
     }
 
     private static void ObjectProcessing(object obj, Stack<object> stack)
