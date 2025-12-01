@@ -43,7 +43,7 @@ jobs:
 
       - name: Test Full
         run: dotnet test -c Release --filter "FullyQualifiedName~OfXEfCoreTests"
-        working-directory: src/OfX.Tests
+        working-directory: test/OfX.Tests
   
   testing-mongodb:
     needs: build
@@ -68,7 +68,7 @@ jobs:
 
       - name: Test Full
         run: dotnet test -c Release --filter "FullyQualifiedName~OfMongoDbTests"
-        working-directory: src/OfX.Tests
+        working-directory: test/OfX.Tests
   
   calc-version:
     name: Calculate Version
