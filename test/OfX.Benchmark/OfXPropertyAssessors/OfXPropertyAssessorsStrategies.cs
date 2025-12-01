@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using OfX.Accessors;
-using OfX.Benchmark.Reflections;
 
 namespace OfX.Benchmark.OfXPropertyAssessors;
 
@@ -116,7 +115,6 @@ public sealed class FactoryCompiledModel
 public class OfXPropertyAccessorBenchmark
 {
     private readonly DirectModel _direct = new(typeof(Dummy));
-    private readonly FastIlModel _fastIlModel = new(typeof(Dummy));
     private readonly LazyModel _lazy = new(typeof(Dummy));
     private readonly LazyLambdaModel _lazyLambda = new(typeof(Dummy));
     private readonly FactoryCompiledModel _factory = new(typeof(Dummy));
@@ -132,7 +130,4 @@ public class OfXPropertyAccessorBenchmark
 
     [Benchmark]
     public void FactoryCompiledModel_Get() => _factory.Get("P0").Set(new Dummy(), "SemeValue");
-    
-    [Benchmark]
-    public void FastModel_Get() => _fastIlModel.Get("P0").Set(new Dummy(), "SemeValue");
 }

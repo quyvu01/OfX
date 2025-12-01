@@ -51,6 +51,23 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetObjectsAsDictionary([FromServices] IDataMappableService dataMappableService,
+        string userAlias, CancellationToken token = default)
+    {
+        var response = new ComplexObjectAsDictionary
+        {
+            Responses = new Dictionary<SimpleMemberResponse, MemberResponse>
+            {
+                { new SimpleMemberResponse { UserId = "1" }, new MemberResponse { UserId = "1" } },
+                { new SimpleMemberResponse { UserId = "2" }, new MemberResponse { UserId = "2" } }
+            }
+        };
+
+        await dataMappableService.MapDataAsync(response, new { userAlias }, token);
+        return Ok(response.Responses.Values);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetMemberSocialDynamic()
     {
         var client = new MongoClient("mongodb://localhost:27017");

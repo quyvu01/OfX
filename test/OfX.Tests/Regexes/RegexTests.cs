@@ -1,7 +1,7 @@
 using OfX.Helpers;
 using Xunit;
 
-namespace OfX.Tests;
+namespace OfX.Tests.Regexes;
 
 public sealed class RegexTests
 {
