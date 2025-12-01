@@ -64,7 +64,7 @@ public static class OfXException
 
     public sealed class InvalidParameter(string expression)
         : Exception(
-            $"Expression:  '{expression}' is must be look like this: '${{parameter|default}}'(i.e: '${{index|0}}')");
+            $"Expression: '{expression}' is must be look like this: '${{parameter|default}}'(i.e: '${{index|0}}')");
 
     public sealed class AmbiguousHandlers(Type interfaceType) :
         Exception($"Ambiguous handlers for interface '{interfaceType.FullName}'.");

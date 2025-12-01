@@ -9,4 +9,6 @@ public static class OfXModelCache
 
     public static OfXTypeModel GetModel(Type type)
         => _models.GetOrAdd(type, t => new OfXTypeModel(t));
+
+    public static bool ContainsModel(Type type) => _models.ContainsKey(type);
 }

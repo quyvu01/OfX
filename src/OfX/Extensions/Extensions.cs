@@ -12,7 +12,7 @@ public static class Extensions
 
     public static void Evaluate<T>(this IEnumerable<T> src) => src.ForEach(_ => { });
 
-    public static int GetPropertyOrder(this Dictionary<PropertyInfo, PropertyContext[]> graph, PropertyInfo property)
+    public static int GetPropertyOrder(this IReadOnlyDictionary<PropertyInfo, PropertyContext[]> graph, PropertyInfo property)
     {
         if (property is null || !graph.TryGetValue(property, out var dependencies)) return 0;
         // You know, if the dependencies counting is 1, it means the dependency is not depended on anything.

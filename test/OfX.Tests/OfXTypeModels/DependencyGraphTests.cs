@@ -32,7 +32,7 @@ public class DependencyGraphTests
     public void DependencyGraph_Should_Contain_All_Dependencies()
     {
         var model = new OfXTypeModel(typeof(MemberResponse));
-        var graph = model.DependencyGraph;
+        var graph = model.DependencyGraphs;
 
         graph.Count.ShouldBe(5);
         // 5 properties have dependencies: UserName, UserEmail, UserCustomExpression, ProvinceId, ProvinceName
@@ -96,7 +96,7 @@ public class DependencyGraphTests
     public void ProvinceName_Should_Depends_On_ProvinceId_And_UserId()
     {
         var model = new OfXTypeModel(typeof(MemberResponse));
-        var graph = model.DependencyGraph;
+        var graph = model.DependencyGraphs;
 
         var prop = typeof(MemberResponse).GetProperty(nameof(MemberResponse.ProvinceName));
 
@@ -135,7 +135,7 @@ public class DependencyGraphTests
     private PropertyContext GetContext(string propertyName)
     {
         var model = new OfXTypeModel(typeof(MemberResponse));
-        var graph = model.DependencyGraph;
+        var graph = model.DependencyGraphs;
 
         var prop = typeof(MemberResponse).GetProperty(propertyName);
         graph.ContainsKey(prop).ShouldBeTrue();

@@ -9,7 +9,7 @@ public class OfXTypeModel
 {
     public Type ClrType { get; }
     public IReadOnlyDictionary<PropertyInfo, IOfXPropertyAccessor> Accessors { get; }
-    public IReadOnlyDictionary<PropertyInfo, PropertyContext[]> DependencyGraph { get; }
+    public IReadOnlyDictionary<PropertyInfo, PropertyContext[]> DependencyGraphs { get; }
 
     public OfXTypeModel(Type clrType)
     {
@@ -34,7 +34,7 @@ public class OfXTypeModel
             .Concat(propertiesIsNotPrimitive)
             .ToDictionary(p => p, p => CreateAccessor(clrType, p));
 
-        DependencyGraph = BuildDependencyGraph(properties);
+        DependencyGraphs = BuildDependencyGraph(properties);
     }
 
     private static IOfXPropertyAccessor CreateAccessor(Type type, PropertyInfo p)
@@ -86,7 +86,7 @@ public class OfXTypeModel
 
     public PropertyInformation GetInformation(PropertyInfo propertyInfo)
     {
-        if (!DependencyGraph.TryGetValue(propertyInfo, out var dependencies))
+        if (!DependencyGraphs.TryGetValue(propertyInfo, out var dependencies))
             return new PropertyInformation(0, null, null, null);
         var dependency = dependencies.First();
         var requiredAccessor = GetAccessor(dependency.RequiredPropertyInfo);

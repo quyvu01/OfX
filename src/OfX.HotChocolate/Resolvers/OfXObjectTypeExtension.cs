@@ -1,9 +1,9 @@
 using System.Reflection;
 using OfX.Attributes;
+using OfX.Cached;
 using OfX.Extensions;
 using OfX.HotChocolate.Constants;
 using OfX.HotChocolate.GraphQlContext;
-using OfX.HotChocolate.Statics;
 
 namespace OfX.HotChocolate.Resolvers;
 
@@ -26,7 +26,9 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
             .Use(next => async context =>
             {
                 var methodPath = context.Path.ToList().FirstOrDefault()?.ToString();
-                if (!OfXHotChocolateStatics.DependencyGraphs.TryGetValue(typeof(T), out var dependencyGraphs))
+                var modelCached = OfXModelCache
+                    .ContainsModel(typeof(T));
+                if (!modelCached)
                 {
                     await next(context);
                     return;
@@ -53,6 +55,10 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                     };
 
                 var attribute = data.Attribute;
+                
+                var dependencyGraphs = OfXModelCache
+                    .GetModel(typeof(T))
+                    .DependencyGraphs;
 
                 var ctx = new FieldContext
                 {
