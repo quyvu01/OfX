@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Numerics;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Exceptions;
@@ -14,36 +16,50 @@ internal class IdConverter<TId>(IServiceProvider serviceProvider)
         if (idType == typeof(string)) return ParseStringIds(selectorIds);
 
         if (idType == typeof(Guid)) return ParseGuidIds(selectorIds);
-
         if (idType == typeof(Guid?)) return ParseNullableGuidIds(selectorIds);
 
-        if (idType == typeof(int)) return ParseIntegerIds(selectorIds);
 
-        if (idType == typeof(int?)) return ParseNullableIntegerIds(selectorIds);
+        if (idType == typeof(int)) return ParseNumberIds<int>(selectorIds);
+        if (idType == typeof(int?)) return ParseNullableNumberIds<int>(selectorIds);
 
-        if (idType == typeof(long)) return ParseLongIds(selectorIds);
+        if (idType == typeof(long)) return ParseNumberIds<long>(selectorIds);
+        if (idType == typeof(long?)) return ParseNullableNumberIds<long>(selectorIds);
 
-        if (idType == typeof(long?)) return ParseNullableLongIds(selectorIds);
+        if (idType == typeof(short)) return ParseNumberIds<short>(selectorIds);
+        if (idType == typeof(short?)) return ParseNullableNumberIds<short>(selectorIds);
 
-        if (idType == typeof(short)) return ParseShortIds(selectorIds);
+        if (idType == typeof(int)) return ParseNumberIds<int>(selectorIds);
+        if (idType == typeof(int?)) return ParseNullableNumberIds<int>(selectorIds);
 
-        if (idType == typeof(short?)) return ParseNullableShortIds(selectorIds);
+        if (idType == typeof(long)) return ParseNumberIds<long>(selectorIds);
+        if (idType == typeof(long?)) return ParseNullableNumberIds<long>(selectorIds);
 
-        if (idType == typeof(ulong)) return ParseULongIds(selectorIds);
+        if (idType == typeof(short)) return ParseNumberIds<short>(selectorIds);
+        if (idType == typeof(short?)) return ParseNullableNumberIds<short>(selectorIds);
 
-        if (idType == typeof(ulong?)) return ParseNullableULongIds(selectorIds);
+        if (idType == typeof(sbyte)) return ParseNumberIds<sbyte>(selectorIds);
+        if (idType == typeof(sbyte?)) return ParseNullableNumberIds<sbyte>(selectorIds);
 
-        if (idType == typeof(ushort)) return ParseUShortIds(selectorIds);
+        if (idType == typeof(uint)) return ParseNumberIds<uint>(selectorIds);
+        if (idType == typeof(uint?)) return ParseNullableNumberIds<uint>(selectorIds);
 
-        if (idType == typeof(ushort?)) return ParseNullableUShortIds(selectorIds);
+        if (idType == typeof(ulong)) return ParseNumberIds<ulong>(selectorIds);
+        if (idType == typeof(ulong?)) return ParseNullableNumberIds<ulong>(selectorIds);
 
-        if (idType == typeof(byte)) return ParseByteIds(selectorIds);
+        if (idType == typeof(ushort)) return ParseNumberIds<ushort>(selectorIds);
+        if (idType == typeof(ushort?)) return ParseNullableNumberIds<ushort>(selectorIds);
 
-        if (idType == typeof(byte?)) return ParseNullableByteIds(selectorIds);
+        if (idType == typeof(byte)) return ParseNumberIds<byte>(selectorIds);
+        if (idType == typeof(byte?)) return ParseNullableNumberIds<byte>(selectorIds);
 
-        if (idType == typeof(sbyte)) return ParseSByteIds(selectorIds);
+        if (idType == typeof(float)) return ParseNumberIds<float>(selectorIds);
+        if (idType == typeof(float?)) return ParseNullableNumberIds<float>(selectorIds);
 
-        if (idType == typeof(sbyte?)) return ParseNullableSByteIds(selectorIds);
+        if (idType == typeof(double)) return ParseNumberIds<double>(selectorIds);
+        if (idType == typeof(double?)) return ParseNullableNumberIds<double>(selectorIds);
+
+        if (idType == typeof(decimal)) return ParseNumberIds<decimal>(selectorIds);
+        if (idType == typeof(decimal?)) return ParseNullableNumberIds<decimal>(selectorIds);
 
         // If all the ID type does not match with provided types. We will try to resolve it from IdConverter Service.
         return ParseStronglyTypeIds(serviceProvider, selectorIds);
@@ -58,81 +74,21 @@ internal class IdConverter<TId>(IServiceProvider serviceProvider)
         .Select(Guid.Parse)
         .ToList();
 
-    private static List<int> ParseIntegerIds(List<string> selectorIds) => selectorIds
-        .Where(a => int.TryParse(a, out _))
-        .Select(int.Parse)
-        .ToList();
-
-    private static List<long> ParseLongIds(List<string> selectorIds) => selectorIds
-        .Where(a => long.TryParse(a, out _))
-        .Select(long.Parse)
-        .ToList();
-
-    private static List<short> ParseShortIds(List<string> selectorIds) => selectorIds
-        .Where(a => short.TryParse(a, out _))
-        .Select(short.Parse)
-        .ToList();
-
-    private static List<ulong> ParseULongIds(List<string> selectorIds) => selectorIds
-        .Where(a => ulong.TryParse(a, out _))
-        .Select(ulong.Parse)
-        .ToList();
-
-    private static List<ushort> ParseUShortIds(List<string> selectorIds) =>
-        selectorIds
-            .Where(a => ushort.TryParse(a, out _))
-            .Select(ushort.Parse)
-            .ToList();
-
-    private static List<byte> ParseByteIds(List<string> selectorIds) => selectorIds
-        .Where(a => byte.TryParse(a, out _))
-        .Select(byte.Parse)
-        .ToList();
-
-    private static List<sbyte> ParseSByteIds(List<string> selectorIds) => selectorIds
-        .Where(a => sbyte.TryParse(a, out _))
-        .Select(sbyte.Parse)
-        .ToList();
-
-    // Parsing methods for nullable types
     private static List<Guid?> ParseNullableGuidIds(List<string> selectorIds) => selectorIds
         .Where(a => Guid.TryParse(a, out _))
         .Select(a => (Guid?)Guid.Parse(a))
         .ToList();
 
-    private static List<int?> ParseNullableIntegerIds(List<string> selectorIds) => selectorIds
-        .Where(a => int.TryParse(a, out _))
-        .Select(a => (int?)int.Parse(a))
+    private static List<T> ParseNumberIds<T>(List<string> selectorIds)
+        where T : INumber<T> => selectorIds
+        .Where(a => T.TryParse(a, CultureInfo.InvariantCulture, out _))
+        .Select(a => T.Parse(a, CultureInfo.InvariantCulture))
         .ToList();
 
-    private static List<long?> ParseNullableLongIds(List<string> selectorIds) => selectorIds
-        .Where(a => long.TryParse(a, out _))
-        .Select(a => (long?)long.Parse(a))
-        .ToList();
-
-    private static List<short?> ParseNullableShortIds(List<string> selectorIds) => selectorIds
-        .Where(a => short.TryParse(a, out _))
-        .Select(a => (short?)short.Parse(a))
-        .ToList();
-
-    private static List<ulong?> ParseNullableULongIds(List<string> selectorIds) => selectorIds
-        .Where(a => ulong.TryParse(a, out _))
-        .Select(a => (ulong?)ulong.Parse(a))
-        .ToList();
-
-    private static List<ushort?> ParseNullableUShortIds(List<string> selectorIds) => selectorIds
-        .Where(a => ushort.TryParse(a, out _))
-        .Select(a => (ushort?)ushort.Parse(a))
-        .ToList();
-
-    private static List<byte?> ParseNullableByteIds(List<string> selectorIds) => selectorIds
-        .Where(a => byte.TryParse(a, out _))
-        .Select(a => (byte?)byte.Parse(a))
-        .ToList();
-
-    private static List<sbyte?> ParseNullableSByteIds(List<string> selectorIds) => selectorIds
-        .Where(a => sbyte.TryParse(a, out _))
-        .Select(a => (sbyte?)sbyte.Parse(a))
+    private static List<T?> ParseNullableNumberIds<T>(List<string> selectorIds)
+        where T : struct, INumber<T> => selectorIds
+        .Where(a => T.TryParse(a, CultureInfo.InvariantCulture, out _))
+        .Select(a => (T?)T.Parse(a, CultureInfo.InvariantCulture))
         .ToList();
 
     private static List<TId> ParseStronglyTypeIds(IServiceProvider serviceProvider, List<string> selectorIds)
