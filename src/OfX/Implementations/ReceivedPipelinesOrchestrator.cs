@@ -62,20 +62,21 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         await Task.WhenAll([resultTask, ..customResults.Select(a => a.ResultTask)]);
         var result = await resultTask;
 
-        var customResultsMerged =
-            customResults.Select(a => a.ResultTask.Result.Select(k => (k.Key, k.Value, a.Expression)))
-                .SelectMany(a => a)
-                .GroupBy(x => x.Key);
+        var customResultsMerged = customResults
+            .Select(a => a.ResultTask.Result
+                .Select(k => (k.Key, k.Value, a.Expression)))
+            .SelectMany(a => a)
+            .GroupBy(x => x.Key);
 
         // Merge custom results with original results
         result.Items.ForEach(it =>
         {
-            var customResult = customResultsMerged.FirstOrDefault(a => a.Key == it.Id);
+            var customResult = customResultsMerged
+                .FirstOrDefault(a => a.Key == it.Id);
             if (customResult is null) return;
-            var fi = it.OfXValues.ToList();
-            fi.AddRange(customResult.Select(k => new OfXValueResponse
-                { Expression = k.Expression, Value = JsonSerializer.Serialize(k.Value) }));
-            it.OfXValues = [..fi];
+            var customValues = customResult.Select(k => new OfXValueResponse
+                { Expression = k.Expression, Value = JsonSerializer.Serialize(k.Value) });
+            it.OfXValues = [..it.OfXValues, ..customValues];
         });
         return result;
     }

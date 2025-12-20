@@ -64,7 +64,6 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     {
         await Task.Yield();
         _consumer.Subscribe(_requestTopic);
-
         while (true)
         {
             try

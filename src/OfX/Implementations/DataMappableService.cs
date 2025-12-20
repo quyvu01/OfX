@@ -53,9 +53,9 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
                         .Select(c => c.PropertyInformation?.RequiredAccessor?.Get(c.Model)?.ToString())
                         .Where(c => c is not null)
                         .Distinct()
-                        .ToList();
+                        .ToArray();
 
-                    if (selectorIds is not { Count: > 0 }) return emptyResponse;
+                    if (selectorIds is not { Length: > 0 }) return emptyResponse;
 
                     var requestCt = new RequestContext([], ObjectToDictionary(), token);
 
