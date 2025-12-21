@@ -29,7 +29,7 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped(efQueryHandler);
 
-        OfXStatics.OfXConfigureStorage.Value
+        OfXStatics.ModelConfigurations.Value
             .ForEach(m =>
             {
                 var modelType = m.ModelType;

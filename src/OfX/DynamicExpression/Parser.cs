@@ -69,7 +69,7 @@ internal class Parser
 
     private Expression ParseExpressionSegment(Type returnType)
     {
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var expression = ParseExpressionSegment();
 
         if (returnType != typeof(void)) return GenerateConversion(expression, returnType, errorPos);
@@ -96,7 +96,7 @@ internal class Parser
         }
         catch (InvalidOperationException ex)
         {
-            throw WrapWithParseException(_token.pos, "Invalid Operation", ex);
+            throw WrapWithParseException(_token.Position, "Invalid Operation", ex);
         }
     }
 
@@ -104,7 +104,7 @@ internal class Parser
     private Expression ParseLambdaExpression()
     {
         // in case the expression is not a lambda, we have to restart parsing
-        var originalPos = _token.pos;
+        var originalPos = _token.Position;
         var isLambda = false;
         try
         {
@@ -120,15 +120,15 @@ internal class Parser
             while (inLambdaBody)
             {
                 NextToken();
-                if (_token.id == TokenId.End)
+                if (_token.Id == TokenId.End)
                     inLambdaBody = false;
-                if (_token.id is TokenId.OpenParen or TokenId.OpenCurlyBracket)
+                if (_token.Id is TokenId.OpenParen or TokenId.OpenCurlyBracket)
                     parenCount++;
-                if (_token.id is TokenId.CloseParen or TokenId.CloseCurlyBracket)
+                if (_token.Id is TokenId.CloseParen or TokenId.CloseCurlyBracket)
                     parenCount--;
 
                 // lambda is a function parameter
-                if (parenCount == 0 && _token.id == TokenId.Comma)
+                if (parenCount == 0 && _token.Id == TokenId.Comma)
                     inLambdaBody = false;
 
                 // body closure
@@ -136,7 +136,7 @@ internal class Parser
                     inLambdaBody = false;
             }
 
-            var lambdaBodyExp = _expressionText.Substring(startExpr, _token.pos - startExpr);
+            var lambdaBodyExp = _expressionText.Substring(startExpr, _token.Position - startExpr);
             isLambda = true;
             return new InterpreterExpression(_arguments, lambdaBodyExp, parameters);
         }
@@ -157,11 +157,11 @@ internal class Parser
 
     private ParameterWithPosition[] ParseLambdaParameterList()
     {
-        var hasOpenParen = _token.id == TokenId.OpenParen;
+        var hasOpenParen = _token.Id == TokenId.OpenParen;
         if (hasOpenParen)
             NextToken();
 
-        var parameters = _token.id != TokenId.CloseParen ? ParseLambdaParameters() : [];
+        var parameters = _token.Id != TokenId.CloseParen ? ParseLambdaParameters() : [];
         if (hasOpenParen)
         {
             ValidateToken(TokenId.CloseParen, "')' or ',' expected");
@@ -181,7 +181,7 @@ internal class Parser
         while (true)
         {
             argList.Add(ParseLambdaParameter());
-            if (_token.id != TokenId.Comma) break;
+            if (_token.Id != TokenId.Comma) break;
             NextToken();
         }
 
@@ -191,13 +191,13 @@ internal class Parser
     private ParameterWithPosition ParseLambdaParameter()
     {
         ValidateToken(TokenId.Identifier);
-        var name = _token.text;
+        var name = _token.Text;
 
-        var pos = _token.pos;
+        var pos = _token.Position;
         if (TryParseKnownType(name, out var type))
         {
             ValidateToken(TokenId.Identifier);
-            name = _token.text;
+            name = _token.Text;
         }
         else
         {
@@ -212,21 +212,21 @@ internal class Parser
     private Expression ParseAssignment()
     {
         var left = ParseConditional();
-        if (_token.id == TokenId.Equal)
+        if (_token.Id == TokenId.Equal)
         {
             if (!_arguments.Settings.AssignmentOperators.HasFlag(AssignmentOperators.AssignmentEqual))
-                throw new AssignmentOperatorDisabledException("=", _token.pos);
+                throw new AssignmentOperatorDisabledException("=", _token.Position);
 
             Func<Expression, Expression> assignLeftDynamic = null;
             if (!IsWritable(left) && !IsDynamicWritable(left, out assignLeftDynamic))
-                throw ParseException.Create(_token.pos, "Expression must be writable");
+                throw ParseException.Create(_token.Position, "Expression must be writable");
 
             NextToken();
             var right = ParseAssignment();
 
             var promoted = ExpressionUtils.PromoteExpression(right, left.Type);
             if (promoted == null)
-                throw ParseException.Create(_token.pos, "A value of type '{0}' cannot be converted to type '{1}'",
+                throw ParseException.Create(_token.Position, "A value of type '{0}' cannot be converted to type '{1}'",
                     TypeUtils.GetTypeName(right.Type), TypeUtils.GetTypeName(left.Type));
 
             left = assignLeftDynamic == null
@@ -240,16 +240,16 @@ internal class Parser
     // ?: operator
     private Expression ParseConditional()
     {
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var expr = ParseConditionalOr();
-        if (_token.id == TokenId.QuestionQuestion)
+        if (_token.Id == TokenId.QuestionQuestion)
         {
             NextToken();
             var exprRight = ParseExpressionSegment();
             expr = GenerateConditional(GenerateEqual(expr, ParserConstants.NullLiteralExpression), exprRight, expr,
                 errorPos);
         }
-        else if (_token.id == TokenId.Question)
+        else if (_token.Id == TokenId.Question)
         {
             NextToken();
             var expr1 = ParseExpressionSegment();
@@ -266,7 +266,7 @@ internal class Parser
     private Expression ParseConditionalOr()
     {
         var left = ParseConditionalAnd();
-        while (_token.id == TokenId.DoubleBar)
+        while (_token.Id == TokenId.DoubleBar)
         {
             NextToken();
             var right = ParseConditionalAnd();
@@ -281,7 +281,7 @@ internal class Parser
     private Expression ParseConditionalAnd()
     {
         var left = ParseLogicalOr();
-        while (_token.id == TokenId.DoubleAmpersand)
+        while (_token.Id == TokenId.DoubleAmpersand)
         {
             NextToken();
             var right = ParseLogicalOr();
@@ -296,7 +296,7 @@ internal class Parser
     private Expression ParseLogicalOr()
     {
         var left = ParseLogicalXor();
-        while (_token.id == TokenId.Bar)
+        while (_token.Id == TokenId.Bar)
         {
             NextToken();
             var right = ParseLogicalXor();
@@ -311,7 +311,7 @@ internal class Parser
     private Expression ParseLogicalXor()
     {
         var left = ParseLogicalAnd();
-        while (_token.id == TokenId.Caret)
+        while (_token.Id == TokenId.Caret)
         {
             NextToken();
             var right = ParseLogicalAnd();
@@ -326,7 +326,7 @@ internal class Parser
     private Expression ParseLogicalAnd()
     {
         var left = ParseComparison();
-        while (_token.id == TokenId.Ampersand)
+        while (_token.Id == TokenId.Ampersand)
         {
             NextToken();
             var right = ParseComparison();
@@ -341,20 +341,20 @@ internal class Parser
     private Expression ParseComparison()
     {
         var left = ParseTypeTesting();
-        while (_token.id is TokenId.DoubleEqual or TokenId.ExclamationEqual or TokenId.GreaterThan
+        while (_token.Id is TokenId.DoubleEqual or TokenId.ExclamationEqual or TokenId.GreaterThan
                or TokenId.GreaterThanEqual or TokenId.LessThan or TokenId.LessThanEqual)
         {
             var op = _token;
             NextToken();
             var right = ParseShift();
-            var isEquality = op.id is TokenId.DoubleEqual or TokenId.ExclamationEqual;
+            var isEquality = op.Id is TokenId.DoubleEqual or TokenId.ExclamationEqual;
 
             CheckAndPromoteOperands(
                 isEquality ? ParseSignatures.EqualitySignatures : ParseSignatures.RelationalSignatures,
                 ref left,
                 ref right);
 
-            switch (op.id)
+            switch (op.Id)
             {
                 case TokenId.DoubleEqual:
                     left = GenerateEqual(left, right);
@@ -384,7 +384,7 @@ internal class Parser
     private Expression ParseTypeTesting()
     {
         var left = ParseShift();
-        while (_token.text is ParserConstants.KeywordIs or ParserConstants.KeywordAs) NextToken();
+        while (_token.Text is ParserConstants.KeywordIs or ParserConstants.KeywordAs) NextToken();
         return left;
     }
 
@@ -392,12 +392,12 @@ internal class Parser
     private Expression ParseAdditive()
     {
         var left = ParseMultiplicative();
-        while (_token.id is TokenId.Plus or TokenId.Minus)
+        while (_token.Id is TokenId.Plus or TokenId.Minus)
         {
             var op = _token;
             NextToken();
             var right = ParseMultiplicative();
-            switch (op.id)
+            switch (op.Id)
             {
                 case TokenId.Plus:
                     if (left.Type == typeof(string) || right.Type == typeof(string))
@@ -444,7 +444,7 @@ internal class Parser
     public bool IsShiftOperator(out ExpressionType shiftType)
     {
         // >> is not a token, because it conflicts with generics such as List<List<int>>
-        if (_token.id == TokenId.GreaterThan && _parseChar == '>')
+        if (_token.Id == TokenId.GreaterThan && _parseChar == '>')
         {
             NextToken(); // consume next >
             shiftType = ExpressionType.RightShift;
@@ -452,7 +452,7 @@ internal class Parser
         }
         // << could be a token, but is not for symmetry
 
-        if (_token.id == TokenId.LessThan && _parseChar == '<')
+        if (_token.Id == TokenId.LessThan && _parseChar == '<')
         {
             NextToken(); // consume next <
             shiftType = ExpressionType.LeftShift;
@@ -468,7 +468,7 @@ internal class Parser
     private Expression ParseMultiplicative()
     {
         var left = ParseUnary();
-        while (_token.id is TokenId.Asterisk or TokenId.Slash or TokenId.Percent)
+        while (_token.Id is TokenId.Asterisk or TokenId.Slash or TokenId.Percent)
         {
             var op = _token;
             NextToken();
@@ -476,7 +476,7 @@ internal class Parser
 
             CheckAndPromoteOperands(ParseSignatures.ArithmeticSignatures, ref left, ref right);
 
-            switch (op.id)
+            switch (op.Id)
             {
                 case TokenId.Asterisk:
                     left = GenerateBinary(ExpressionType.Multiply, left, right);
@@ -496,42 +496,42 @@ internal class Parser
     // +,-, ! unary operators
     private Expression ParseUnary()
     {
-        if (_token.id is TokenId.Minus or TokenId.Plus or TokenId.Exclamation or TokenId.Tilde)
+        if (_token.Id is TokenId.Minus or TokenId.Plus or TokenId.Exclamation or TokenId.Tilde)
         {
             var op = _token;
             NextToken();
-            if (_token.id is TokenId.IntegerLiteral or TokenId.RealLiteral)
+            if (_token.Id is TokenId.IntegerLiteral or TokenId.RealLiteral)
             {
-                if (op.id == TokenId.Minus)
+                if (op.Id == TokenId.Minus)
                 {
-                    _token.text = "-" + _token.text;
-                    _token.pos = op.pos;
+                    _token.Text = "-" + _token.Text;
+                    _token.Position = op.Position;
                     return ParsePrimary();
                 }
 
-                if (op.id == TokenId.Plus)
+                if (op.Id == TokenId.Plus)
                 {
-                    _token.text = "+" + _token.text;
-                    _token.pos = op.pos;
+                    _token.Text = "+" + _token.Text;
+                    _token.Position = op.Position;
                     return ParsePrimary();
                 }
             }
 
             var expr = ParseUnary();
-            if (op.id == TokenId.Minus)
+            if (op.Id == TokenId.Minus)
             {
                 CheckAndPromoteOperand(ParseSignatures.NegationSignatures, ref expr);
                 expr = GenerateUnary(ExpressionType.Negate, expr);
             }
-            else if (op.id == TokenId.Plus)
+            else if (op.Id == TokenId.Plus)
             {
             }
-            else if (op.id == TokenId.Exclamation)
+            else if (op.Id == TokenId.Exclamation)
             {
                 CheckAndPromoteOperand(ParseSignatures.NotSignatures, ref expr);
                 expr = GenerateUnary(ExpressionType.Not, expr);
             }
-            else if (op.id == TokenId.Tilde)
+            else if (op.Id == TokenId.Tilde)
             {
                 CheckAndPromoteOperand(ParseSignatures.BitwiseComplementSignatures, ref expr);
                 expr = GenerateUnary(ExpressionType.OnesComplement, expr);
@@ -601,7 +601,7 @@ internal class Parser
         if (operatorName == null)
             return null;
 
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var type = expr.Type;
         var args = new[] { expr };
 
@@ -621,21 +621,21 @@ internal class Parser
 
     private Expression ParsePrimary()
     {
-        var tokenPos = _token.pos;
+        var tokenPos = _token.Position;
         var expr = ParsePrimaryStart();
         while (true)
         {
-            if (_token.id == TokenId.Dot)
+            if (_token.Id == TokenId.Dot)
             {
                 NextToken();
                 expr = ParseMemberAccess(expr);
             }
             // special case for ?. and ?[ operators
-            else if (_token.id == TokenId.Question && _parseChar is '.' or '[')
+            else if (_token.Id == TokenId.Question && _parseChar is '.' or '[')
             {
                 NextToken();
 
-                if (_token.id == TokenId.Dot)
+                if (_token.Id == TokenId.Dot)
                 {
                     NextToken();
 
@@ -646,9 +646,9 @@ internal class Parser
                     var nullExpr = ParserConstants.NullLiteralExpression;
                     CheckAndPromoteOperands(ParseSignatures.EqualitySignatures, ref expr, ref nullExpr);
                     expr = GenerateConditional(GenerateEqual(expr, nullExpr), ParserConstants.NullLiteralExpression,
-                        memberAccess, _token.pos);
+                        memberAccess, _token.Position);
                 }
-                else if (_token.id == TokenId.OpenBracket)
+                else if (_token.Id == TokenId.OpenBracket)
                 {
                     // ?[ operator changes value types to nullable types
                     // the member access should be resolved on the underlying type
@@ -657,14 +657,14 @@ internal class Parser
                     var nullExpr = ParserConstants.NullLiteralExpression;
                     CheckAndPromoteOperands(ParseSignatures.EqualitySignatures, ref expr, ref nullExpr);
                     expr = GenerateConditional(GenerateEqual(expr, nullExpr), ParserConstants.NullLiteralExpression,
-                        elementAccess, _token.pos);
+                        elementAccess, _token.Position);
                 }
             }
-            else if (_token.id == TokenId.OpenBracket)
+            else if (_token.Id == TokenId.OpenBracket)
             {
                 expr = ParseElementAccess(expr);
             }
-            else if (_token.id == TokenId.OpenParen)
+            else if (_token.Id == TokenId.OpenParen)
             {
                 if (expr is LambdaExpression lambda)
                     return ParseLambdaInvocation(lambda, tokenPos);
@@ -690,12 +690,12 @@ internal class Parser
     {
         if (!TypeUtils.IsNullableType(expr.Type))
             return expr;
-        return GeneratePropertyOrFieldExpression(expr.Type, expr, _token.pos, "Value");
+        return GeneratePropertyOrFieldExpression(expr.Type, expr, _token.Position, "Value");
     }
 
     private Expression ParsePrimaryStart()
     {
-        switch (_token.id)
+        switch (_token.Id)
         {
             case TokenId.Identifier:
                 return ParseIdentifier();
@@ -712,19 +712,19 @@ internal class Parser
             case TokenId.End:
                 return Expression.Empty();
             default:
-                throw ParseException.Create(_token.pos, "Expression expected");
+                throw ParseException.Create(_token.Position, "Expression expected");
         }
     }
 
     private Expression ParseCharLiteral()
     {
         ValidateToken(TokenId.CharLiteral);
-        var s = _token.text.Substring(1, _token.text.Length - 2);
+        var s = _token.Text.Substring(1, _token.Text.Length - 2);
 
         s = EvalEscapeStringLiteral(s);
 
         if (s.Length != 1)
-            throw ParseException.Create(_token.pos, "Character literal must contain exactly one character");
+            throw ParseException.Create(_token.Position, "Character literal must contain exactly one character");
 
         NextToken();
         return CreateLiteral(s[0]);
@@ -733,7 +733,7 @@ internal class Parser
     private Expression ParseStringLiteral()
     {
         ValidateToken(TokenId.StringLiteral);
-        var s = _token.text.Substring(1, _token.text.Length - 2);
+        var s = _token.Text.Substring(1, _token.Text.Length - 2);
 
         s = EvalEscapeStringLiteral(s);
 
@@ -754,7 +754,7 @@ internal class Parser
             if (c == '\\')
             {
                 if (i + 1 == source.Length)
-                    throw ParseException.Create(_token.pos, "Invalid character escape sequence");
+                    throw ParseException.Create(_token.Position, "Invalid character escape sequence");
 
                 builder.Append(EvalEscapeChar(source[++i]));
             }
@@ -790,14 +790,14 @@ internal class Parser
             case 'v':
                 return '\v';
             default:
-                throw ParseException.Create(_token.pos, "Invalid character escape sequence");
+                throw ParseException.Create(_token.Position, "Invalid character escape sequence");
         }
     }
 
     private Expression ParseIntegerLiteral()
     {
         ValidateToken(TokenId.IntegerLiteral);
-        var text = _token.text;
+        var text = _token.Text;
 
         var isUnsigned = false;
         var isLong = false;
@@ -825,13 +825,13 @@ internal class Parser
             {
                 var hex = text[2..];
                 if (!ulong.TryParse(hex, ParseLiteralHexNumberStyle, ParseCulture, out value))
-                    throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
+                    throw ParseException.Create(_token.Position, "Invalid integer literal '{0}'", text);
             }
             else if (text.StartsWith("0b") || text.StartsWith("0B"))
             {
                 var binary = text[2..];
                 if (string.IsNullOrEmpty(binary))
-                    throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
+                    throw ParseException.Create(_token.Position, "Invalid integer literal '{0}'", text);
 
                 try
                 {
@@ -839,11 +839,11 @@ internal class Parser
                 }
                 catch (FormatException ex)
                 {
-                    throw WrapWithParseException(_token.pos, "Invalid integer literal '{0}'", ex, text);
+                    throw WrapWithParseException(_token.Position, "Invalid integer literal '{0}'", ex, text);
                 }
             }
             else if (!ulong.TryParse(text, ParseLiteralUnsignedNumberStyle, ParseCulture, out value))
-                throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
+                throw ParseException.Create(_token.Position, "Invalid integer literal '{0}'", text);
 
             NextToken();
 
@@ -859,7 +859,7 @@ internal class Parser
         else
         {
             if (!long.TryParse(text, ParseLiteralNumberStyle, ParseCulture, out var value))
-                throw ParseException.Create(_token.pos, "Invalid integer literal '{0}'", text);
+                throw ParseException.Create(_token.Position, "Invalid integer literal '{0}'", text);
 
             NextToken();
 
@@ -873,7 +873,7 @@ internal class Parser
     private Expression ParseRealLiteral()
     {
         ValidateToken(TokenId.RealLiteral);
-        var text = _token.text;
+        var text = _token.Text;
         object value = null;
         var last = text[^1];
 
@@ -916,7 +916,7 @@ internal class Parser
         }
 
         if (value == null)
-            throw ParseException.Create(_token.pos, "Invalid real literal '{0}'", text);
+            throw ParseException.Create(_token.Position, "Invalid real literal '{0}'", text);
 
         NextToken();
 
@@ -959,26 +959,26 @@ internal class Parser
         //if (token.text == ParserConstants.keywordIt)
         //    return ParseIt();
 
-        if (_token.text == ParserConstants.KeywordNew)
+        if (_token.Text == ParserConstants.KeywordNew)
             return ParseNew();
-        if (_token.text == ParserConstants.KeywordTypeof)
+        if (_token.Text == ParserConstants.KeywordTypeof)
             return ParseTypeof();
-        if (_token.text == ParserConstants.KeywordDefault)
+        if (_token.Text == ParserConstants.KeywordDefault)
             return ParseDefaultOperator();
 
-        if (_arguments.TryGetIdentifier(_token.text, out var keywordExpression))
+        if (_arguments.TryGetIdentifier(_token.Text, out var keywordExpression))
         {
             NextToken();
             return keywordExpression;
         }
 
-        if (_arguments.TryGetParameters(_token.text, out var parameterExpression))
+        if (_arguments.TryGetParameters(_token.Text, out var parameterExpression))
         {
             NextToken();
             return parameterExpression;
         }
 
-        if (TryParseKnownType(_token.text, out var knownType))
+        if (TryParseKnownType(_token.Text, out var knownType))
         {
             return ParseTypeKeyword(knownType);
         }
@@ -1002,12 +1002,12 @@ internal class Parser
             // ignore
         }
 
-        throw new UnknownIdentifierException(token.text, token.pos);
+        throw new UnknownIdentifierException(token.Text, token.Position);
     }
 
     private Expression ParseTypeof()
     {
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         NextToken();
         var args = ParseArgumentList();
         if (args.Length != 1)
@@ -1090,13 +1090,13 @@ internal class Parser
         if (newType.IsArray)
         {
             if (newType.GetArrayRank() != 1)
-                throw ParseException.Create(_token.pos, "Multidimensional arrays are not supported", newType);
+                throw ParseException.Create(_token.Position, "Multidimensional arrays are not supported", newType);
 
             args = ParseArrayInitializerList();
             return Expression.NewArrayInit(newType.GetElementType()!, args);
         }
 
-        if (_token.id == TokenId.OpenParen)
+        if (_token.Id == TokenId.OpenParen)
             args = ParseArgumentList();
         else
         {
@@ -1106,15 +1106,15 @@ internal class Parser
 
         var applicableConstructors = MethodResolution.FindBestMethod(newType.GetConstructors(), args);
         if (applicableConstructors.Count == 0)
-            throw ParseException.Create(_token.pos, "No applicable constructor exists in type '{0}'", newType);
+            throw ParseException.Create(_token.Position, "No applicable constructor exists in type '{0}'", newType);
 
         if (applicableConstructors.Count > 1)
-            throw ParseException.Create(_token.pos, "Ambiguous invocation of constructor in type '{0}'", newType);
+            throw ParseException.Create(_token.Position, "Ambiguous invocation of constructor in type '{0}'", newType);
 
         var constructor = applicableConstructors[0];
         var newExpr = Expression.New((ConstructorInfo)constructor.MethodBase, constructor.PromotedParameters);
 
-        if (_token.id == TokenId.OpenCurlyBracket)
+        if (_token.Id == TokenId.OpenCurlyBracket)
             return ParseWithObjectInitializer(newExpr, newType);
 
         return newExpr;
@@ -1139,15 +1139,15 @@ internal class Parser
 
     private Expression ParseMemberAndInitializerList(NewExpression newExpr, Type newType)
     {
-        var originalPos = _token.pos;
+        var originalPos = _token.Position;
         var bindingList = new List<MemberBinding>();
         var actions = new List<Expression>();
         var instance = Expression.Variable(newType);
         var allowCollectionInit = typeof(IEnumerable).IsAssignableFrom(newType);
         while (true)
         {
-            if (_token.id == TokenId.CloseCurlyBracket) break;
-            if (_token.id != TokenId.Identifier)
+            if (_token.Id == TokenId.CloseCurlyBracket) break;
+            if (_token.Id != TokenId.Identifier)
             {
                 ParseCollectionInitializer(newType, originalPos, bindingList, actions, instance, allowCollectionInit);
             }
@@ -1156,7 +1156,7 @@ internal class Parser
                 ParsePossibleMemberBinding(newType, bindingList, actions, instance, allowCollectionInit);
             }
 
-            if (_token.id != TokenId.Comma) break;
+            if (_token.Id != TokenId.Comma) break;
             NextToken();
         }
 
@@ -1175,20 +1175,20 @@ internal class Parser
     {
         ValidateToken(TokenId.Identifier, "Identifier expected");
 
-        var propertyOrFieldName = _token.text;
+        var propertyOrFieldName = _token.Text;
         var member = _memberFinder.FindPropertyOrField(newType, propertyOrFieldName, false);
-        var pos = _token.pos;
+        var pos = _token.Position;
         if (allowCollectionInit)
         {
             NextToken();
-            if (_token.id == TokenId.Equal && member != null)
+            if (_token.Id == TokenId.Equal && member != null)
             {
                 if (actions.Count > 0)
                 {
                     throw ParseException.Create(pos, "Invalid initializer member declarator");
                 }
             }
-            else if (_token.id != TokenId.Equal || _arguments.TryGetIdentifier(propertyOrFieldName, out _) ||
+            else if (_token.Id != TokenId.Equal || _arguments.TryGetIdentifier(propertyOrFieldName, out _) ||
                      _arguments.TryGetParameters(propertyOrFieldName, out _))
             {
                 SetTextPos(pos);
@@ -1220,26 +1220,26 @@ internal class Parser
         List<Expression> actions, ParameterExpression instance, bool allowCollectionInit)
     {
         if (!allowCollectionInit)
-            throw ParseException.Create(_token.pos,
+            throw ParseException.Create(_token.Position,
                 "Cannot initialize type '{0}' with a collection initializer because it does not implement '{1}'",
                 newType, typeof(IEnumerable));
 
         if (bindingList.Count > 0)
             throw ParseException.Create(originalPos, "Invalid initializer member declarator");
 
-        if (_token.id == TokenId.OpenCurlyBracket)
+        if (_token.Id == TokenId.OpenCurlyBracket)
         {
-            var pos = _token.pos;
+            var pos = _token.Position;
             NextToken();
 
-            if (_token.id == TokenId.Identifier)
+            if (_token.Id == TokenId.Identifier)
             {
-                var identifierName = _token.text;
+                var identifierName = _token.Text;
                 NextToken();
-                if (_token.id == TokenId.Equal && !_arguments.TryGetIdentifier(identifierName, out _) &&
+                if (_token.Id == TokenId.Equal && !_arguments.TryGetIdentifier(identifierName, out _) &&
                     !_arguments.TryGetParameters(identifierName, out _))
                 {
-                    throw ParseException.Create(_token.pos, "Invalid initializer member declarator");
+                    throw ParseException.Create(_token.Position, "Invalid initializer member declarator");
                 }
                 else
                 {
@@ -1253,16 +1253,16 @@ internal class Parser
                 ParseExpressionSegment();
             }
 
-            actions.Add(ParseMethodInvocation(newType, instance, _token.pos, "Add", TokenId.OpenCurlyBracket,
+            actions.Add(ParseMethodInvocation(newType, instance, _token.Position, "Add", TokenId.OpenCurlyBracket,
                 "'{{' expected", TokenId.CloseCurlyBracket, "'}}' expected"));
         }
         else
         {
             var args = new[] { ParseExpressionSegment() };
-            var addMethod = ParseNormalMethodInvocation(newType, instance, _token.pos, "Add", args);
+            var addMethod = ParseNormalMethodInvocation(newType, instance, _token.Position, "Add", args);
             if (addMethod == null)
             {
-                throw ParseException.Create(_token.pos,
+                throw ParseException.Create(_token.Position,
                     "The best overloaded Add method '{0}.Add' for the collection initializer has some invalid arguments",
                     TypeUtils.GetTypeName(newType));
             }
@@ -1334,8 +1334,8 @@ internal class Parser
 
     private Type ParseKnownType()
     {
-        var name = _token.text;
-        var errorPos = _token.pos;
+        var name = _token.Text;
+        var errorPos = _token.Position;
         if (!TryParseKnownType(name, out var type)) throw new UnknownIdentifierException(name, errorPos);
 
         return type;
@@ -1344,7 +1344,7 @@ internal class Parser
     private bool TryParseKnownType(string name, out Type type)
     {
         // if the type is unknown, we need to restart parsing
-        var originalPos = _token.pos;
+        var originalPos = _token.Position;
 
         // the name might reference a generic type, with an aliased name (e.g., List<T> = MyList instead of List`1)
         // it can also reference a generic type for which we don't know the arity yet (and therefore the name doesn't contain the `n suffix)
@@ -1367,7 +1367,7 @@ internal class Parser
     private Type ParseKnownGenericType(string name, Type type)
     {
         NextToken();
-        if (_token.id != TokenId.LessThan) return type;
+        if (_token.Id != TokenId.LessThan) return type;
         var typeArguments = ParseTypeArgumentList();
         var rank = typeArguments.Count;
 
@@ -1395,8 +1395,8 @@ internal class Parser
         if (type == null)
             return null;
 
-        var errorPos = _token.pos;
-        switch (_token.id)
+        var errorPos = _token.Position;
+        switch (_token.Id)
         {
             case TokenId.Question when !type.IsValueType || TypeUtils.IsNullableType(type):
                 throw ParseException.Create(errorPos, "Type '{0}' has no nullable form", TypeUtils.GetTypeName(type));
@@ -1421,11 +1421,11 @@ internal class Parser
         // An array type of the form T[R][R1]...[Rn] is an array with rank R and an element type T[R1]...[Rn]
         // => we need to parse all rank specifiers in one pass, and create the array from right to left
         var ranks = new Stack<int>();
-        while (_token.id == TokenId.OpenBracket)
+        while (_token.Id == TokenId.OpenBracket)
         {
             NextToken();
             var rank = 1;
-            while (_token.id == TokenId.Comma)
+            while (_token.Id == TokenId.Comma)
             {
                 rank++;
                 NextToken();
@@ -1451,7 +1451,7 @@ internal class Parser
         NextToken();
 
         List<Type> args;
-        if (_token.id == TokenId.Identifier)
+        if (_token.Id == TokenId.Identifier)
             args = ParseTypeArguments();
         else
         {
@@ -1470,7 +1470,7 @@ internal class Parser
         {
             ValidateToken(TokenId.Identifier);
             genericArguments.Add(ParseKnownType());
-            if (_token.id != TokenId.Comma) break;
+            if (_token.Id != TokenId.Comma) break;
             NextToken();
         }
 
@@ -1480,7 +1480,7 @@ internal class Parser
     private int ParseUnboundTypeArity()
     {
         var rank = 1;
-        while (_token.id == TokenId.Comma)
+        while (_token.Id == TokenId.Comma)
         {
             rank++;
             NextToken();
@@ -1491,7 +1491,7 @@ internal class Parser
 
     private Expression ParseTypeKeyword(Type type)
     {
-        if (_token.id == TokenId.CloseParen) return Expression.Constant(type);
+        if (_token.Id == TokenId.CloseParen) return Expression.Constant(type);
 
         ValidateToken(TokenId.Dot, "'.' or '(' expected");
         NextToken();
@@ -1539,10 +1539,10 @@ internal class Parser
     private Expression ParseMemberAccess(Type type, Expression instance)
     {
         if (instance != null) type = instance.Type;
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var id = GetIdentifier();
         NextToken();
-        if (_token.id == TokenId.OpenParen)
+        if (_token.Id == TokenId.OpenParen)
             return ParseMethodInvocation(type, instance, errorPos, id);
 
         return GeneratePropertyOrFieldExpression(type, instance, errorPos, id);
@@ -1660,13 +1660,13 @@ internal class Parser
         ValidateToken(openToken, missingOpenTokenMsg);
         NextToken();
         var argList = new List<Expression>();
-        while (_token.id != closeToken)
+        while (_token.Id != closeToken)
         {
             argList.Add(ParseExpressionSegment());
-            if (_token.id != TokenId.Comma) break;
+            if (_token.Id != TokenId.Comma) break;
             NextToken();
-            if (!allowTrailingComma && _token.id == closeToken)
-                throw ParseException.Create(_token.pos, missingCloseTokenMsg);
+            if (!allowTrailingComma && _token.Id == closeToken)
+                throw ParseException.Create(_token.Position, missingCloseTokenMsg);
         }
 
         ValidateToken(closeToken, missingCloseTokenMsg);
@@ -1679,7 +1679,7 @@ internal class Parser
 
     private Expression ParseElementAccess(Expression expr)
     {
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var args = ParseArgumentList(TokenId.OpenBracket, "'.' or '(' expected",
             TokenId.CloseBracket, "']' or ',' expected");
         if (expr.Type.IsArray)
@@ -1921,7 +1921,7 @@ internal class Parser
     {
         if (operatorName == null) return null;
 
-        var errorPos = _token.pos;
+        var errorPos = _token.Position;
         var leftType = left.Type;
         var rightType = right.Type;
 
@@ -2359,7 +2359,7 @@ internal class Parser
 
                 if (_parsePosition == _expressionTextLength)
                 {
-                    if (_token.id == TokenId.End)
+                    if (_token.Id == TokenId.End)
                         throw new InvalidOperationException(
                             "NextToken called when already at the end of the expression");
 
@@ -2370,15 +2370,15 @@ internal class Parser
                 throw ParseException.Create(_parsePosition, "Syntax error '{0}'", _parseChar);
         }
 
-        _token.id = t;
-        _token.text = _expressionText.Substring(tokenPos, _parsePosition - tokenPos);
-        _token.pos = tokenPos;
+        _token.Id = t;
+        _token.Text = _expressionText.Substring(tokenPos, _parsePosition - tokenPos);
+        _token.Position = tokenPos;
     }
 
     private string GetIdentifier()
     {
         ValidateToken(TokenId.Identifier, "Identifier expected");
-        var id = _token.text;
+        var id = _token.Text;
         if (id.Length > 1 && id[0] == '@') id = id[1..];
         return id;
     }
@@ -2392,15 +2392,15 @@ internal class Parser
     // ReSharper disable once UnusedParameter.Local
     private void ValidateToken(TokenId t, string errorMessage)
     {
-        if (_token.id != t)
-            throw ParseException.Create(_token.pos, errorMessage);
+        if (_token.Id != t)
+            throw ParseException.Create(_token.Position, errorMessage);
     }
 
     // ReSharper disable once UnusedParameter.Local
     private void ValidateToken(TokenId t)
     {
-        if (_token.id != t)
-            throw ParseException.Create(_token.pos, "Syntax error");
+        if (_token.Id != t)
+            throw ParseException.Create(_token.Position, "Syntax error");
     }
 
     private static Exception WrapWithParseException(int pos, string format, Exception ex, params object[] args) 

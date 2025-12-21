@@ -25,7 +25,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     private const string ModelName = "x";
     private const string IdsNaming = "ids";
     private static Type _idConverterType;
-    private static MemberAssignment IdToStringMemberAssignment;
+    private static MemberAssignment _idToStringMemberAssignment;
 
     protected readonly IOfXConfigAttribute OfXConfigAttribute = serviceProvider
         .GetRequiredService<GetOfXConfiguration>()
@@ -63,7 +63,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
         var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
-        IdToStringMemberAssignment ??= Expression.Bind(OfXStatics.OfXIdProp, IdToStringCall());
+        _idToStringMemberAssignment ??= Expression.Bind(OfXStatics.OfXIdProp, IdToStringCall());
         var valueExpression = expressions
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
             {
@@ -120,7 +120,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
             valueExpression.Where(x => x is not null).Select(expr => expr.Body));
 
         var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)),
-            IdToStringMemberAssignment, Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray));
+            _idToStringMemberAssignment, Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray));
 
         return Expression.Lambda<Func<TModel, OfXDataResponse>>(responseExpression, ModelParameterExpression);
     }

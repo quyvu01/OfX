@@ -14,48 +14,25 @@ internal static class MethodResolution
 
     public static IList<MethodData> FindBestMethod(IEnumerable<MethodData> methods, Expression[] args)
     {
-        var applicable = new List<MethodData>();
-        foreach (var method in methods)
-        {
-            if (CheckIfMethodIsApplicableAndPrepareIt(method, args))
-                applicable.Add(method);
-        }
+        var applicable = methods.Where(method => CheckIfMethodIsApplicableAndPrepareIt(method, args)).ToList();
 
-        if (applicable.Count > 1)
-        {
-            var bestCandidates = new List<MethodData>(applicable.Count);
-            foreach (var candidate in applicable)
-            {
-                if (IsBetterThanAllCandidates(candidate, applicable, args))
-                    bestCandidates.Add(candidate);
-            }
+        if (applicable.Count <= 1) return applicable;
+        var bestCandidates = new List<MethodData>(applicable.Count);
+        bestCandidates.AddRange(applicable.Where(candidate => IsBetterThanAllCandidates(candidate, applicable, args)));
 
-            // bestCandidates.Count == 0 means that no applicable method has priority
-            // we don't return bestCandidates to prevent callers from thinking no method was found
-            if (bestCandidates.Count > 0)
-                return bestCandidates;
-        }
-
-        return applicable;
+        // bestCandidates.Count == 0 means that no applicable method has priority
+        // we don't return bestCandidates to prevent callers from thinking no method was found
+        return bestCandidates.Count > 0 ? bestCandidates : applicable;
     }
 
     private static bool IsBetterThanAllCandidates(MethodData candidate, IList<MethodData> otherCandidates,
-        Expression[] args)
-    {
-        foreach (var other in otherCandidates)
-        {
-            if (candidate != other && !MethodHasPriority(args, candidate, other))
-                return false;
-        }
-
-        return true;
-    }
+        Expression[] args) => otherCandidates
+        .All(other => candidate == other || MethodHasPriority(args, candidate, other));
 
     public static bool CheckIfMethodIsApplicableAndPrepareIt(MethodData method, Expression[] args)
     {
         if (method.Parameters.Count(y => !y.HasDefaultValue && !ReflectionExtensions.HasParamsArrayType(y)) >
-            args.Length)
-            return false;
+            args.Length) return false;
 
         var promotedArgs = new List<Expression>(method.Parameters.Count);
         var declaredWorkingParameters = 0;

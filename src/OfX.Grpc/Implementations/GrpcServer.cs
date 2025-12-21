@@ -64,7 +64,7 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 
     public override Task<AttributeTypeResponse> GetAttributes(GetAttributesQuery request, ServerCallContext context)
     {
-        var ofXConfigureStorage = OfXStatics.OfXConfigureStorage;
+        var ofXConfigureStorage = OfXStatics.ModelConfigurations;
         var response = new AttributeTypeResponse();
         var attributeTypes = ofXConfigureStorage.Value
             .Select(a => a.OfXAttributeType.GetAssemblyName());

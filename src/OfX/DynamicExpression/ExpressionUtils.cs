@@ -9,17 +9,20 @@ internal static class ExpressionUtils
     {
         if (expr.Type == type) return expr;
 
-        if (expr is ConstantExpression ce && ce == ParserConstants.NullLiteralExpression)
+        switch (expr)
         {
-            if (type.ContainsGenericParameters) return null;
-            if (!type.IsValueType || TypeUtils.IsNullableType(type)) return Expression.Constant(null, type);
-        }
-
-        if (expr is InterpreterExpression ie)
-        {
-            if (!ie.IsCompatibleWithDelegate(type)) return null;
-            if (!type.ContainsGenericParameters) return ie.EvalAs(type);
-            return expr;
+            case ConstantExpression ce when ce == ParserConstants.NullLiteralExpression:
+            {
+                if (type.ContainsGenericParameters) return null;
+                if (!type.IsValueType || TypeUtils.IsNullableType(type)) return Expression.Constant(null, type);
+                break;
+            }
+            case InterpreterExpression ie when !ie.IsCompatibleWithDelegate(type):
+                return null;
+            case InterpreterExpression ie when !type.ContainsGenericParameters:
+                return ie.EvalAs(type);
+            case InterpreterExpression:
+                return expr;
         }
 
         if (type.IsAssignableFrom(expr.Type)) return Expression.Convert(expr, type);
@@ -31,8 +34,6 @@ internal static class ExpressionUtils
                 return Expression.Convert(expr, genericType);
         }
 
-        if (TypeUtils.IsCompatibleWith(expr.Type, type)) return Expression.Convert(expr, type);
-
-        return null;
+        return TypeUtils.IsCompatibleWith(expr.Type, type) ? Expression.Convert(expr, type) : null;
     }
 }

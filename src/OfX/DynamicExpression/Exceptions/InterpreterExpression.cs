@@ -47,20 +47,17 @@ internal class InterpreterExpression : Expression
 
     internal LambdaExpression EvalAs(Type delegateType)
     {
-        if (!IsCompatibleWithDelegate(delegateType))
-            return null;
+        if (!IsCompatibleWithDelegate(delegateType)) return null;
 
-        var lambdaExpr =
-            _interpreter.ParseAsExpression(delegateType, _expressionText, _parameters.Select(p => p.Name).ToArray());
+        var lambdaExpr = _interpreter
+            .ParseAsExpression(delegateType, _expressionText, [.._parameters.Select(p => p.Name)]);
         _type = lambdaExpr.Type;
         return lambdaExpr;
     }
 
     internal bool IsCompatibleWithDelegate(Type target)
     {
-        if (!target.IsGenericType || target.BaseType != typeof(MulticastDelegate))
-            return false;
-
+        if (!target.IsGenericType || target.BaseType != typeof(MulticastDelegate)) return false;
         var genericTypeDefinition = target.GetGenericTypeDefinition();
         return genericTypeDefinition == ReflectionExtensions.GetFuncType(_parameters.Count)
                || genericTypeDefinition == ReflectionExtensions.GetActionType(_parameters.Count);

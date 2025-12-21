@@ -19,7 +19,7 @@ public static class MongoDbExtensions
         registrarAction.Invoke(registrar);
         var mongoModelTypes = registrar.MongoModelTypes;
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
-        OfXStatics.OfXConfigureStorage.Value
+        OfXStatics.ModelConfigurations.Value
             .Where(m => mongoModelTypes.Contains(m.ModelType))
             .ForEach(m =>
             {

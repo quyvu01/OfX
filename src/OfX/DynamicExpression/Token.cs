@@ -2,7 +2,7 @@
 
 internal struct Token
 {
-	public TokenId id;
-	public string text;
-	public int pos;
+	public TokenId Id;
+	public string Text;
+	public int Position;
 }

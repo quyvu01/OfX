@@ -9,19 +9,19 @@ namespace OfX.Statics;
 
 public static class OfXStatics
 {
-    private const int maxObjectSpawnTimes = 128;
+    private const int ObjectSpawnTimes = 128;
 
     internal static void Clear()
     {
         AttributesRegister = [];
-        MaxObjectSpawnTimes = maxObjectSpawnTimes;
+        MaxObjectSpawnTimes = ObjectSpawnTimes;
         ThrowIfExceptions = false;
         RetryPolicy = null;
         ModelConfigurationAssembly = null;
     }
 
     internal static List<Assembly> AttributesRegister { get; set; } = [];
-    internal static int MaxObjectSpawnTimes { get; set; } = maxObjectSpawnTimes;
+    internal static int MaxObjectSpawnTimes { get; set; } = ObjectSpawnTimes;
     public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
 
@@ -44,7 +44,7 @@ public static class OfXStatics
     internal static readonly PropertyInfo OfXValuesProp =
         typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.OfXValues))!;
 
-    public static readonly Lazy<IReadOnlyCollection<OfXModelData>> OfXConfigureStorage = new(() =>
+    public static readonly Lazy<IReadOnlyCollection<OfXModelData>> ModelConfigurations = new(() =>
     {
         var ofxConfigForAttributeType = typeof(OfXConfigForAttribute<>);
         return
