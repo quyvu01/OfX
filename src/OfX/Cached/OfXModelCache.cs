@@ -5,10 +5,10 @@ namespace OfX.Cached;
 
 public static class OfXModelCache
 {
-    private static readonly ConcurrentDictionary<Type, OfXTypeModel> _models = new();
+    private static readonly ConcurrentDictionary<Type, OfXTypeModel> Models = new();
 
     public static OfXTypeModel GetModel(Type type)
-        => _models.GetOrAdd(type, t => new OfXTypeModel(t));
+        => Models.GetOrAdd(type, static t => new OfXTypeModel(t));
 
-    public static bool ContainsModel(Type type) => _models.ContainsKey(type);
+    public static bool ContainsModel(Type type) => Models.ContainsKey(type);
 }

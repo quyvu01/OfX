@@ -104,7 +104,7 @@ internal sealed class DataMappableService(IServiceProvider serviceProvider) : ID
         IContext context = null)
     {
         var sendPipelineType = SendOrchestratorTypes
-            .GetOrAdd(runtimeType, type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
+            .GetOrAdd(runtimeType, static type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
             .ExecuteAsync(new OfXRequest(query.SelectorIds,

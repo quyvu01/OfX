@@ -15,19 +15,18 @@ namespace OfX.Grpc.Implementations;
 
 public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
-    private static readonly Lazy<ConcurrentDictionary<string, Type>> _receivedPipelineTypes = new(() => []);
+    private static readonly Lazy<ConcurrentDictionary<string, Type>> ReceivedPipelineTypes = new(() => []);
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
         try
         {
-            var receivedPipelinesType = _receivedPipelineTypes.Value
-                .GetOrAdd(request.AttributeAssemblyType, ofXAttributeType =>
+            var receivedPipelinesType = ReceivedPipelineTypes.Value
+                .GetOrAdd(request.AttributeAssemblyType, static typeAssembly =>
                 {
-                    var attributeType = Type.GetType(ofXAttributeType);
-
+                    var attributeType = Type.GetType(typeAssembly);
                     if (attributeType is null)
-                        throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(ofXAttributeType);
+                        throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(typeAssembly);
 
                     if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
                         throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);

@@ -20,7 +20,7 @@ public static class EntityFrameworkExtensions
         var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
         var newOfXEfCoreRegistrar = new OfXEfCoreRegistrar(serviceCollection);
         registrarAction.Invoke(newOfXEfCoreRegistrar);
-        
+
         var modelCacheLookup = new ConcurrentDictionary<Type, bool>();
 
         serviceCollection.AddScoped(typeof(IDbContextResolver<>), typeof(DbContextResolverInternal<>));

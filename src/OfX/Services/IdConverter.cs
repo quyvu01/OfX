@@ -1,3 +1,4 @@
+#nullable enable
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Exceptions;
