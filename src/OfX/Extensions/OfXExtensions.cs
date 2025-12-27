@@ -28,7 +28,7 @@ public static class OfXExtensions
             new ConcurrentDictionary<(Type ModelType, Type OfXAttributeType), IOfXConfigAttribute>();
 
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
-        var defaultMappableRequestHandlerType = OfXStatics.DefaultQueryOfHandlerType;
+        var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
 
         var modelConfigurations = OfXStatics.ModelConfigurations.Value;
         var attributeTypes = OfXStatics.OfXAttributeTypes.Value;

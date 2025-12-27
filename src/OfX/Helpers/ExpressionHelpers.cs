@@ -12,7 +12,7 @@ public static partial class ExpressionHelpers
     private static readonly string[] OrderDirections = [Asc, Desc];
     private static readonly Regex ArrayPattern = CollectionRegex();
 
-    internal static ExpressionQueryableData GetCollectionQueryableData(Expression currentExpression, string segment)
+    public static ExpressionQueryableData GetCollectionQueryableData(Expression currentExpression, string segment)
     {
         var match = ArrayPattern.Match(segment);
         if (!match.Success) throw new OfXException.CollectionFormatNotCorrected(segment);
@@ -37,7 +37,7 @@ public static partial class ExpressionHelpers
     /// <param name="orderBy">The property to order by within the collection.</param>
     /// <param name="index">The index of the desired item (0 for first, -1 for last).</param>
     /// <returns>An expression to retrieve the desired item.</returns>
-    private static ExpressionQueryableData GetOneExpression(Expression currentExpression, string navigator,
+    public static ExpressionQueryableData GetOneExpression(Expression currentExpression, string navigator,
         string orderDirection, string orderBy, int index)
     {
         var orderDirectionNormalized = orderDirection.ToLower();
@@ -70,7 +70,7 @@ public static partial class ExpressionHelpers
         return new ExpressionQueryableData(itemType, elementCall);
     }
 
-    private static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
+    public static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
         string orderDirection, string orderBy, int? skip = null, int? take = null)
     {
         var orderDirectionNormalized = orderDirection.ToLower();
@@ -109,7 +109,7 @@ public static partial class ExpressionHelpers
     /// <param name="parameter">The parameter expression for the source object.</param>
     /// <param name="propertyName">The name of the property to access.</param>
     /// <returns>The property access expression.</returns>
-    private static Expression BuildPropertyAccessExpression(Expression parameter, string propertyName)
+    public static Expression BuildPropertyAccessExpression(Expression parameter, string propertyName)
     {
         var properties = propertyName.Split('.');
         return properties.Aggregate(parameter, Expression.Property);
