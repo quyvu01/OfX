@@ -18,11 +18,11 @@ namespace OfX.Tests.IntegrationTests.EfCore;
 [Collection("EfCore Sequential")]
 public class BasicMappingTests : TestDbContextBase<BasicMappingTestDbContext>
 {
-    private readonly IDataMappableService _dataMappableService;
+    private readonly IOfXMapper _ofXMapper;
 
     public BasicMappingTests()
     {
-        _dataMappableService = GetService<IDataMappableService>();
+        _ofXMapper = GetService<IOfXMapper>();
     }
 
     protected override void ConfigureServices(IServiceCollection services)
@@ -67,7 +67,7 @@ public class BasicMappingTests : TestDbContextBase<BasicMappingTestDbContext>
         };
 
         // Act
-        await _dataMappableService.MapDataAsync(response);
+        await _ofXMapper.MapDataAsync(response);
 
         // Assert
         response.UserName.ShouldBe("John Doe");
@@ -84,7 +84,7 @@ public class BasicMappingTests : TestDbContextBase<BasicMappingTestDbContext>
         };
 
         // Act
-        await _dataMappableService.MapDataAsync(response);
+        await _ofXMapper.MapDataAsync(response);
 
         // Assert
         response.UserEmail.ShouldBe("john.doe@example.com");

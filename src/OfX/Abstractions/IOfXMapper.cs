@@ -14,7 +14,7 @@ namespace OfX.Abstractions;
 /// or <see cref="FetchDataAsync{TAttribute}(DataFetchQuery, IContext)"/> / 
 /// <see cref="FetchDataAsync(Type, DataFetchQuery, IContext)"/> to retrieve strongly-typed data.
 /// </remarks>
-public interface IDataMappableService
+public interface IOfXMapper
 {
     /// <summary>
     /// Maps the specified object to its corresponding model using the OfX mapping engine.

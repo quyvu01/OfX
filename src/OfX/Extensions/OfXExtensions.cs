@@ -46,7 +46,7 @@ public static class OfXExtensions
         modelConfigurations.ForEach(m =>
             modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
 
-        serviceCollection.AddTransient<IDataMappableService, DataMappableService>();
+        serviceCollection.AddTransient<IOfXMapper, OfXMapper>();
 
         serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 

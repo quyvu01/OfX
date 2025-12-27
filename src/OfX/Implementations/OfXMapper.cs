@@ -13,7 +13,7 @@ using OfX.Statics;
 
 namespace OfX.Implementations;
 
-internal sealed class DataMappableService(IServiceProvider serviceProvider) : IDataMappableService
+internal sealed class OfXMapper(IServiceProvider serviceProvider) : IOfXMapper
 {
     private int _currentObjectSpawnTimes;
 
