@@ -4,7 +4,7 @@ namespace OfX.Abstractions;
 
 /// <summary>
 /// Represents a request context, which is created for each request.
-/// When invoking <see cref="IOfXMapper.MapDataAsync"/>, you may pass an instance of <c>IContext</c>.
+/// When invoking <see cref="IDistributedMapper.MapDataAsync"/>, you may pass an instance of <c>IContext</c>.
 /// This parameter is optional.
 /// </summary>
 /// <remarks>

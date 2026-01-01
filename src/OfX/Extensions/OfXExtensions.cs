@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Security.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Abstractions.Agents;
 using OfX.Attributes;
 using OfX.Cached;
 using OfX.Delegates;
@@ -46,7 +48,7 @@ public static class OfXExtensions
         modelConfigurations.ForEach(m =>
             modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
 
-        serviceCollection.AddTransient<IOfXMapper, OfXMapper>();
+        serviceCollection.AddTransient<IDistributedMapper, DistributedMapper>();
 
         serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 
@@ -73,6 +75,12 @@ public static class OfXExtensions
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
             OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
+
+        // Agent/ Supervisor pattern
+        serviceCollection.AddSingleton<IRetryPolicy>(_ => new ExponentialRetryPolicy());
+        serviceCollection.AddSingleton<ConnectionContextSupervisor>();
+        serviceCollection.AddHostedService<OfXHostedService>();
+        serviceCollection.Configure<OfXHostOptions>(o => o.WaitUntilStarted = true);
 
         return new OfXRegisterWrapped(newOfRegister);
     }

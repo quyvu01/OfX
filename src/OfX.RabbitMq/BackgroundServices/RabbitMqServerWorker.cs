@@ -13,7 +13,7 @@ internal sealed class RabbitMqServerWorker(IRabbitMqServer rabbitMqServer, ILogg
         {
             try
             {
-                await rabbitMqServer.ConsumeAsync();
+                await rabbitMqServer.StartAsync();
             }
             catch (Exception e)
             {

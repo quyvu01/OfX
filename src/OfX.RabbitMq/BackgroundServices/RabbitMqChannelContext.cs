@@ -3,46 +3,30 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OfX.Abstractions.Agents;
 using OfX.ApplicationModels;
 using OfX.Cached;
 using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Implementations;
-using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
-using OfX.RabbitMq.Statics;
+using OfX.RabbitMq.Implementations;
 using OfX.Responses;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace OfX.RabbitMq.Implementations;
+namespace OfX.RabbitMq.BackgroundServices;
 
-internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
+public class RabbitMqChannelContext(IChannel channel, IServiceProvider serviceProvider) : IChannelContext
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>>
         AttributeAssemblyCached = new(() => []);
 
-    private IConnection _connection;
-    private IChannel _channel;
-
-    public async Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task ConsumeAsync<T>(string queue, Func<T, Task> handler, CancellationToken cancellationToken)
     {
-        var queueName = $"{OfXRabbitMqConstants.QueueNamePrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
         const string routingKey = OfXRabbitMqConstants.RoutingKey;
-
-        var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
-        var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
-        var connectionFactory = new ConnectionFactory
-        {
-            HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
-            UserName = userName, Password = password
-        };
-
-        _connection = await connectionFactory.CreateConnectionAsync(cancellationToken);
-        _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
-        await _channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
+        await channel.QueueDeclareAsync(queue: queue, durable: false, exclusive: false,
             autoDelete: false, arguments: null, cancellationToken: cancellationToken);
 
         var attributeTypes = OfXCached.AttributeMapHandlers.Keys.ToList();
@@ -50,13 +34,13 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
         foreach (var exchangeName in attributeTypes.Select(attributeType => attributeType.GetExchangeName()))
         {
-            await _channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct,
+            await channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct,
                 cancellationToken: cancellationToken);
-            await _channel.QueueBindAsync(queue: queueName, exchangeName, routingKey,
+            await channel.QueueBindAsync(queue, exchangeName, routingKey,
                 cancellationToken: cancellationToken);
         }
 
-        var consumer = new AsyncEventingBasicConsumer(_channel);
+        var consumer = new AsyncEventingBasicConsumer(channel);
 
         consumer.ReceivedAsync += async (sender, ea) =>
         {
@@ -110,13 +94,16 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             }
         };
 
-        await _channel.BasicConsumeAsync(queueName, false, consumer, cancellationToken: cancellationToken);
+        await channel.BasicConsumeAsync(queue, false, consumer, cancellationToken: cancellationToken);
+        await new TaskCompletionSource<object>().Task;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken = default)
+    public Task PublishAsync<T>(string exchange, T message, CancellationToken cancellationToken) =>
+        throw new NotImplementedException();
+
+    public ValueTask DisposeAsync()
     {
-        _channel.Dispose();
-        _connection.Dispose();
-        return Task.CompletedTask;
+        channel.Dispose();
+        return ValueTask.CompletedTask;
     }
 }

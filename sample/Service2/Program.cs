@@ -3,24 +3,20 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
+using OfX.RabbitMq.Extensions;
 using Service2;
 using Service2.Contexts;
 using Service2.Models;
-using Service2.Pipelines;
 using Shared;
-using Shared.Attributes;
 using Shared.RunSqlMigration;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddHandlersFromNamespaceContaining<IKernelAssemblyMarker>();
         // cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        cfg.AddCustomExpressionPipelines(c => c.OfType<TestCustomUseData>());
-        cfg.AddSendPipelines(c => c.OfType(typeof(TestSendPipeline<UserOfAttribute>)));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
@@ -66,5 +62,5 @@ var app = builder.Build();
 
 await MigrationDatabase.MigrationDatabaseAsync<Service2Context>(app);
 
-app.MapOfXGrpcService();
+// app.MapOfXGrpcService();
 app.Run();

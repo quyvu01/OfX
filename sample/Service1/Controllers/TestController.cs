@@ -19,7 +19,7 @@ namespace Service1.Controllers;
 public sealed class TestController : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetMembers([FromServices] IOfXMapper ofXMapper)
+    public async Task<IActionResult> GetMembers([FromServices] IDistributedMapper distributedMapper)
     {
         List<MemberResponse> members =
         [
@@ -31,12 +31,12 @@ public sealed class TestController : ControllerBase
                 MemberSocialId = a.ToString(),
             })
         ];
-        await ofXMapper.MapDataAsync(members);
+        await distributedMapper.MapDataAsync(members);
         return Ok(members);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetSimpleMembers([FromServices] IOfXMapper ofXMapper,
+    public async Task<IActionResult> GetSimpleMembers([FromServices] IDistributedMapper distributedMapper,
         string userAlias, CancellationToken token = default)
     {
         List<SimpleMemberResponse> members =
@@ -46,12 +46,12 @@ public sealed class TestController : ControllerBase
                 UserId = a.ToString()
             })
         ];
-        await ofXMapper.MapDataAsync(members, new { userAlias }, token);
+        await distributedMapper.MapDataAsync(members, new { userAlias }, token);
         return Ok(members);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetObjectsAsDictionary([FromServices] IOfXMapper ofXMapper,
+    public async Task<IActionResult> GetObjectsAsDictionary([FromServices] IDistributedMapper distributedMapper,
         string userAlias, CancellationToken token = default)
     {
         var response = new ComplexObjectAsDictionary
@@ -63,7 +63,7 @@ public sealed class TestController : ControllerBase
             }
         };
 
-        await ofXMapper.MapDataAsync(response, new { userAlias }, token);
+        await distributedMapper.MapDataAsync(response, new { userAlias }, token);
         return Ok(response.Responses.Values);
     }
 
@@ -111,9 +111,9 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> FetchUsers([FromServices] IOfXMapper ofXMapper)
+    public async Task<IActionResult> FetchUsers([FromServices] IDistributedMapper distributedMapper)
     {
-        var result = await ofXMapper
+        var result = await distributedMapper
             .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1", "2", "3"], [null, "Name", "Email"]));
         return Ok(result);
     }

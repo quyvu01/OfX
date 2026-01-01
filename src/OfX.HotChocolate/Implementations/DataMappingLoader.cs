@@ -10,7 +10,7 @@ namespace OfX.HotChocolate.Implementations;
 internal class DataMappingLoader(
     IBatchScheduler batchScheduler,
     DataLoaderOptions options,
-    IOfXMapper ofXMapper)
+    IDistributedMapper distributedMapper)
     : BatchDataLoader<FieldBearing, string>(batchScheduler, options)
 {
     protected override async Task<IReadOnlyDictionary<FieldBearing, string>> LoadBatchAsync(
@@ -50,7 +50,7 @@ internal class DataMappingLoader(
 
                     var context = new RequestContext([], expressionParameters, cancellationToken);
 
-                    var result = await ofXMapper
+                    var result = await distributedMapper
                         .FetchDataAsync(gr.Key.AttributeType, new DataFetchQuery([..ids], [..expressions]), context);
 
                     var res = result.Items.Join(gr, a => a.Id, k => k.SelectorId, (a, k) => (a, k))
