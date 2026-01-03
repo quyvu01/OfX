@@ -2,5 +2,6 @@ namespace OfX.RabbitMq.Abstractions;
 
 internal interface IRabbitMqServer
 {
-    Task ConsumeAsync();
+    Task StartAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
 }

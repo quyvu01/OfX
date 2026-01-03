@@ -15,9 +15,10 @@ public static class RabbitMqExtensions
     {
         var config = new RabbitMqConfigurator();
         options.Invoke(config);
-        ofXRegister.ServiceCollection.AddSingleton<IRabbitMqServer, RabbitMqServer>();
-        ofXRegister.ServiceCollection.AddSingleton<IRabbitMqClient, RabbitMqClient>();
-        ofXRegister.ServiceCollection.AddHostedService<RabbitMqServerWorker>();
+        var services = ofXRegister.ServiceCollection;
+        services.AddSingleton<IRabbitMqServer, RabbitMqServer>();
+        services.AddSingleton<IRabbitMqClient, RabbitMqClient>();
+        services.AddHostedService<RabbitMqServerHostedService>();
         OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(RabbitMqRequestHandler<>));
     }
 }

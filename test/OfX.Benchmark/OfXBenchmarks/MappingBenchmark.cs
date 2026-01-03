@@ -14,7 +14,7 @@ namespace OfX.Benchmark.OfXBenchmarks;
 [MemoryDiagnoser]
 public class MappingBenchmark
 {
-    private IDataMappableService _dataMappableService;
+    private IDistributedMapper _distributedMapper;
     private IMapper _mapper;
     private ISender _sender;
 
@@ -32,7 +32,7 @@ public class MappingBenchmark
         serviceCollections.AddMediatR(c => c.RegisterServicesFromAssemblyContaining<IBenchmarkAssemblyMarker>());
 
         var serviceProvider = serviceCollections.BuildServiceProvider();
-        _dataMappableService = serviceProvider.GetRequiredService<IDataMappableService>();
+        _distributedMapper = serviceProvider.GetRequiredService<IDistributedMapper>();
         _mapper = serviceProvider.GetRequiredService<IMapper>();
         _sender = serviceProvider.GetRequiredService<ISender>();
     }
@@ -41,7 +41,7 @@ public class MappingBenchmark
     public async Task MapWithOfX()
     {
         var user = new User { Id = "1" };
-        await _dataMappableService.MapDataAsync(user);
+        await _distributedMapper.MapDataAsync(user);
     }
     //
     // [Benchmark]

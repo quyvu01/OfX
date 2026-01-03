@@ -23,7 +23,10 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
     private static readonly Lazy<ConcurrentDictionary<string, Type>>
         AttributeAssemblyCached = new(() => []);
 
-    public async Task ConsumeAsync()
+    private IConnection _connection;
+    private IChannel _channel;
+
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
         var queueName = $"{OfXRabbitMqConstants.QueueNamePrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
         const string routingKey = OfXRabbitMqConstants.RoutingKey;
@@ -37,21 +40,23 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             UserName = userName, Password = password
         };
 
-        await using var connection = await connectionFactory.CreateConnectionAsync();
-        await using var channel = await connection.CreateChannelAsync();
-        await channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
-            autoDelete: false, arguments: null);
+        _connection = await connectionFactory.CreateConnectionAsync(cancellationToken);
+        _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        await _channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
+            autoDelete: false, arguments: null, cancellationToken: cancellationToken);
 
         var attributeTypes = OfXCached.AttributeMapHandlers.Keys.ToList();
         if (attributeTypes is not { Count: > 0 }) return;
 
         foreach (var exchangeName in attributeTypes.Select(attributeType => attributeType.GetExchangeName()))
         {
-            await channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct);
-            await channel.QueueBindAsync(queue: queueName, exchangeName, routingKey);
+            await _channel.ExchangeDeclareAsync(exchangeName, type: ExchangeType.Direct,
+                cancellationToken: cancellationToken);
+            await _channel.QueueBindAsync(queue: queueName, exchangeName, routingKey,
+                cancellationToken: cancellationToken);
         }
 
-        var consumer = new AsyncEventingBasicConsumer(channel);
+        var consumer = new AsyncEventingBasicConsumer(_channel);
 
         consumer.ReceivedAsync += async (sender, ea) =>
         {
@@ -83,7 +88,8 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
                 var responseAsString = JsonSerializer.Serialize(response);
                 var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
-                    mandatory: true, basicProperties: replyProps, body: responseBytes);
+                    mandatory: true, basicProperties: replyProps, body: responseBytes,
+                    cancellationToken: ea.CancellationToken);
             }
             catch (Exception e)
             {
@@ -94,15 +100,23 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
                 replyProps.Headers ??= new Dictionary<string, object>();
                 replyProps.Headers.Add(OfXConstants.ErrorDetail, e.Message);
                 await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
-                    mandatory: true, basicProperties: replyProps, body: responseBytes);
+                    mandatory: true, basicProperties: replyProps, body: responseBytes,
+                    cancellationToken: ea.CancellationToken);
             }
             finally
             {
-                await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false);
+                await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false,
+                    cancellationToken: ea.CancellationToken);
             }
         };
 
-        await channel.BasicConsumeAsync(queueName, false, consumer);
-        await new TaskCompletionSource().Task;
+        await _channel.BasicConsumeAsync(queueName, false, consumer, cancellationToken: cancellationToken);
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        _channel.Dispose();
+        _connection.Dispose();
+        return Task.CompletedTask;
     }
 }

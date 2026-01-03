@@ -6,25 +6,25 @@ namespace OfX.Benchmark.MiniMapper;
 
 public static class MiniMapper
 {
-    private static readonly ConcurrentDictionary<(Type, Type), Delegate> _cache 
+    private static readonly ConcurrentDictionary<(Type, Type), Delegate> Cache 
         = new();
 
     public static TDestination Map<TSource, TDestination>(TSource source, TDestination destination)
     {
         var key = (typeof(TSource), typeof(TDestination));
 
-        var del = (Action<TSource, TDestination>)_cache.GetOrAdd(key, _ => BuildIL<TSource, TDestination>());
+        var del = (Action<TSource, TDestination>)Cache.GetOrAdd(key, static _ => BuildIl<TSource, TDestination>());
 
         del(source, destination);
         return destination;
     }
 
-    private static Action<TSource, TDestination> BuildIL<TSource, TDestination>()
+    private static Action<TSource, TDestination> BuildIl<TSource, TDestination>()
     {
         var method = new DynamicMethod(
             name: "MiniMapperInvoker",
             returnType: null,
-            parameterTypes: new[] { typeof(TSource), typeof(TDestination) },
+            parameterTypes: [typeof(TSource), typeof(TDestination)],
             m: typeof(MiniMapper).Module,
             skipVisibility: true
         );

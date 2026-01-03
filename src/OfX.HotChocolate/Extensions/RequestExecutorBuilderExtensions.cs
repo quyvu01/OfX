@@ -24,7 +24,7 @@ internal static class RequestExecutorBuilderExtensions
                 return;
             }
 
-            var paramWithAttr = methodInfoLookup.GetOrAdd(method, mt => mt.GetParameters()
+            var paramWithAttr = methodInfoLookup.GetOrAdd(method, static mt => mt.GetParameters()
                 .SingleOrDefault(p => p.GetCustomAttribute<ParametersAttribute>() != null));
 
             if (paramWithAttr == null)

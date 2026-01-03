@@ -26,4 +26,4 @@ namespace OfX.Abstractions;
 /// such as headers and <see cref="CancellationToken"/> for end-to-end request processing.
 /// </para>
 /// </remarks>
-public sealed record RequestOf<TAttribute>(List<string> SelectorIds, string Expression ) where TAttribute : OfXAttribute;
+public sealed record RequestOf<TAttribute>(string[] SelectorIds, string Expression) where TAttribute : OfXAttribute;

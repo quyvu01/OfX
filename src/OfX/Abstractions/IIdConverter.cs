@@ -18,7 +18,7 @@ public interface IIdConverter
     /// An <see cref="object"/> representing the converted ID or collection of IDs,
     /// ready to be used in queries or lookups.
     /// </returns>
-    object ConvertIds(List<string> selectorIds);
+    object ConvertIds(string[] selectorIds);
 }
 
 /// <summary>
@@ -33,4 +33,4 @@ public interface IIdConverter
 /// Use this interface to implement type-specific ID conversion logic,
 /// ensuring that the OfX framework can work with strongly-typed identifiers.
 /// </remarks>
-public interface IIdConverter<TId> : IIdConverter;
+public interface IIdConverter<out TId> : IIdConverter;

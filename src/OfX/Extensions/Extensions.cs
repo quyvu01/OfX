@@ -5,12 +5,15 @@ namespace OfX.Extensions;
 
 public static class Extensions
 {
-    public static void ForEach<T>(this IEnumerable<T> src, Action<T> action)
+    extension<T>(IEnumerable<T> src)
     {
-        foreach (var item in src ?? []) action?.Invoke(item);
-    }
+        public void ForEach(Action<T> action)
+        {
+            foreach (var item in src ?? []) action?.Invoke(item);
+        }
 
-    public static void Evaluate<T>(this IEnumerable<T> src) => src.ForEach(_ => { });
+        public void Evaluate() => src.ForEach(_ => { });
+    }
 
     public static int GetPropertyOrder(this IReadOnlyDictionary<PropertyInfo, PropertyContext[]> graph, PropertyInfo property)
     {

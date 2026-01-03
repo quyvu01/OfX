@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -21,11 +22,12 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
     private readonly ILogger<NatsServer<TModel, TAttribute>> _logger =
         serviceProvider.GetService<ILogger<NatsServer<TModel, TAttribute>>>();
 
-    private readonly NatsClientWrapper _natsClientWrapper = serviceProvider.GetRequiredService<NatsClientWrapper>();
+    private readonly NatsClientWrapper _natsClientWrapped = serviceProvider
+        .GetRequiredService<NatsClientWrapper>();
 
     public async Task StartAsync()
     {
-        var natsScribeAsync = _natsClientWrapper.NatsClient
+        var natsScribeAsync = _natsClientWrapped.NatsClient
             .SubscribeAsync<OfXRequest>(typeof(TAttribute).GetNatsSubject());
         await foreach (var message in natsScribeAsync)
             _ = ProcessMessageAsync(message);
@@ -54,7 +56,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
             _logger?.LogError("Error while responding <{@Attribute}> with message : {@Error}",
                 typeof(TAttribute).Name, e);
             var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, e.Message } };
-            await _natsClientWrapper.NatsClient
+            await _natsClientWrapped.NatsClient
                 .PublishAsync(message.ReplyTo!, new ItemsResponse<OfXDataResponse>([]),
                     new NatsHeaders(errors));
         }

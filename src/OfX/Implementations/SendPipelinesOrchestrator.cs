@@ -4,6 +4,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Constants;
+using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Responses;
 
@@ -55,16 +56,17 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
             var valueLookup = it.OfXValues
                 .ToDictionary(v => new ExpressionWrapper(v.Expression), v => v);
 
-            var values = expressionMap.Select(ex =>
-            {
-                var valueResult = valueLookup.GetValueOrDefault(ex.Key, null);
-                return valueResult is null
-                    ? null
-                    : new OfXValueResponse { Expression = ex.Value, Value = valueResult.Value };
-            }).Where(a => a != null);
+            var values = ValueResponses(valueLookup);
             it.OfXValues = [..values];
         });
         return result;
+
+        IEnumerable<OfXValueResponse> ValueResponses(Dictionary<ExpressionWrapper, OfXValueResponse> valueLookup)
+        {
+            foreach (var value in expressionMap)
+                if (valueLookup.TryGetValue(value.Key, out var valueResult))
+                    yield return new OfXValueResponse { Expression = value.Value, Value = valueResult.Value };
+        }
     }
 }
 

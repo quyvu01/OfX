@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
@@ -31,7 +30,9 @@ public static class OfXExtensions
         var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
         var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
 
-        OfXStatics.OfXAttributeTypes.Value.ForEach(attributeType =>
+        var modelConfigurations = OfXStatics.ModelConfigurations.Value;
+        var attributeTypes = OfXStatics.OfXAttributeTypes.Value;
+        attributeTypes.ForEach(attributeType =>
         {
             // I have to create a default handler, which is typically return an empty collection. Great!
             // So the interface with the default method is the best choice!
@@ -42,10 +43,10 @@ public static class OfXExtensions
             serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
         });
 
-        OfXStatics.OfXConfigureStorage.Value
-            .ForEach(m => modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
+        modelConfigurations.ForEach(m =>
+            modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
 
-        serviceCollection.AddTransient<IDataMappableService, DataMappableService>();
+        serviceCollection.AddTransient<IDistributedMapper, DistributedMapper>();
 
         serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 
@@ -56,9 +57,10 @@ public static class OfXExtensions
         serviceCollection.AddTransient(typeof(DefaultQueryOfHandler<,>));
 
         serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
-            modelMapOfXConfigs.TryGetValue((mt, at), out var config)
-                ? new OfXConfig(config.IdProperty, config.DefaultProperty)
-                : throw new UnreachableException());
+        {
+            var config = modelMapOfXConfigs[(mt, at)];
+            return new OfXConfig(config.IdProperty, config.DefaultProperty);
+        });
 
         newOfRegister.AddSendPipelines(c => c
             .OfType(typeof(RetryPipelineBehavior<>))
@@ -66,7 +68,7 @@ public static class OfXExtensions
             .OfType(typeof(ExceptionPipelineBehavior<>))
         );
 
-        OfXStatics.OfXConfigureStorage.Value.ForEach(m =>
+        modelConfigurations.ForEach(m =>
         {
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
             OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);

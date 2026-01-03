@@ -1,3 +1,3 @@
 namespace OfX.Queries;
 
-public sealed record DataFetchQuery(List<string> SelectorIds, List<string> Expressions);
+public sealed record DataFetchQuery(string[] SelectorIds, List<string> Expressions);
