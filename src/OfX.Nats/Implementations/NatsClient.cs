@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.Attributes;
@@ -11,14 +12,14 @@ using OfX.Responses;
 
 namespace OfX.Nats.Implementations;
 
-internal sealed class NatsClient<TAttribute>(NatsClientWrapper client)
+internal sealed class NatsClient<TAttribute>(NatsClientWrapper natsClientWrapper)
     : INatsClient<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {
         var natsHeaders = new NatsHeaders();
         requestContext?.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
-        var reply = await client.NatsClient
+        var reply = await natsClientWrapper.NatsClient
             .RequestAsync<RequestOf<TAttribute>, ItemsResponse<OfXDataResponse>>(typeof(TAttribute).GetNatsSubject(),
                 requestContext!.Query, natsHeaders,
                 replyOpts: new NatsSubOpts { Timeout = OfXConstants.DefaultRequestTimeout },
