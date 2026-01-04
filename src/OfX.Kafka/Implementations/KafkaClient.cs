@@ -3,10 +3,10 @@ using System.Text.Json;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
-using OfX.Kafka.Abstractions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
 using OfX.Kafka.Statics;
@@ -15,7 +15,7 @@ using OfX.Responses;
 
 namespace OfX.Kafka.Implementations;
 
-internal class KafkaClient : IKafkaClient, IDisposable
+internal class KafkaClient : IRequestClient, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
@@ -99,9 +99,9 @@ internal class KafkaClient : IKafkaClient, IDisposable
 
             // Wait for response with timeout
             var kafkaMessage = await tcs.Task.WaitAsync(requestContext.CancellationToken);
-            if (kafkaMessage.IsSucceed)
-                return kafkaMessage.Response;
-            throw new OfXException.ReceivedException(kafkaMessage.ErrorDetail);
+            return kafkaMessage.IsSucceed
+                ? kafkaMessage.Response
+                : throw new OfXException.ReceivedException(kafkaMessage.ErrorDetail);
         }
         finally
         {

@@ -1,11 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Extensions;
+using OfX.Abstractions.Transporting;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.BackgroundServices;
 using OfX.Kafka.Implementations;
 using OfX.Registries;
-using OfX.Wrappers;
 
 namespace OfX.Kafka.Extensions;
 
@@ -16,8 +15,7 @@ public static class KafkaExtensions
         var config = new KafkaConfigurator();
         options.Invoke(config);
         ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
-        ofXRegister.ServiceCollection.AddSingleton<IKafkaClient, KafkaClient>();
+        ofXRegister.ServiceCollection.AddSingleton<IRequestClient, KafkaClient>();
         ofXRegister.ServiceCollection.AddHostedService<KafkaServerWorker>();
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(KafkaRequestHandler<>));
     }
 }

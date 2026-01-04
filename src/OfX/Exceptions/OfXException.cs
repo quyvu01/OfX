@@ -68,4 +68,6 @@ public static class OfXException
 
     public sealed class AmbiguousHandlers(Type interfaceType) :
         Exception($"Ambiguous handlers for interface '{interfaceType.FullName}'.");
+
+    public sealed class NoHandlerForAttribute(Type type) : Exception($"There is no handler for '{type.FullName}'!");
 }

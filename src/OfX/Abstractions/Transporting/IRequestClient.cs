@@ -1,10 +1,9 @@
-using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Responses;
 
-namespace OfX.RabbitMq.Abstractions;
+namespace OfX.Abstractions.Transporting;
 
-internal interface IRabbitMqClient
+public interface IRequestClient
 {
     Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(RequestContext<TAttribute> requestContext)
         where TAttribute : OfXAttribute;

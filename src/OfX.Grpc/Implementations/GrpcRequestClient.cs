@@ -1,4 +1,5 @@
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Grpc.Delegates;
@@ -7,11 +8,10 @@ using OfX.Responses;
 
 namespace OfX.Grpc.Implementations;
 
-internal class GrpcClient<TAttribute>(GetOfXResponseFunc ofXResponseFunc)
-    : IMappableRequestHandler<TAttribute>
-    where TAttribute : OfXAttribute
+public sealed class GrpcRequestClient(GetOfXResponseFunc ofXResponseFunc) : IRequestClient
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
+    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+        RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var func = ofXResponseFunc.Invoke(typeof(TAttribute));
         return await func.Invoke(

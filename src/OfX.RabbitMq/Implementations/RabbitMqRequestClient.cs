@@ -2,12 +2,12 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.Attributes;
 using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
-using OfX.RabbitMq.Abstractions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
@@ -17,7 +17,7 @@ using RabbitMQ.Client.Events;
 
 namespace OfX.RabbitMq.Implementations;
 
-internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
+internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>> _eventArgsMapper = new();
     private IConnection _connection;
@@ -27,7 +27,7 @@ internal class RabbitMqClient : IRabbitMqClient, IAsyncDisposable
     private const string RoutingKey = OfXRabbitMqConstants.RoutingKey;
 
     // We have to wait this one and ensure that everything is initialized
-    public RabbitMqClient() => StartAsync().Wait();
+    public RabbitMqRequestClient() => StartAsync().Wait();
 
     private async Task StartAsync()
     {

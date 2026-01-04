@@ -1,10 +1,12 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
+using OfX.Azure.ServiceBus.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
+using OfX.Kafka.Extensions;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
@@ -42,6 +44,7 @@ builder.Services.AddOfX(cfg =>
         //     c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        // cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

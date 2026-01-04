@@ -1,21 +1,20 @@
-using System.Text.Json;
 using NATS.Client.Core;
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.Attributes;
 using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.Nats.Abstractions;
 using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 
 namespace OfX.Nats.Implementations;
 
-internal sealed class NatsClient<TAttribute>(NatsClientWrapper natsClientWrapper)
-    : INatsClient<TAttribute> where TAttribute : OfXAttribute
+internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : IRequestClient
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
+    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+        RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var natsHeaders = new NatsHeaders();
         requestContext?.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));

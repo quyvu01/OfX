@@ -6,6 +6,7 @@ using OfX.Attributes;
 using OfX.Cached;
 using OfX.Delegates;
 using OfX.Exceptions;
+using OfX.Handlers;
 using OfX.Implementations;
 using OfX.InternalPipelines;
 using OfX.Registries;
@@ -17,10 +18,10 @@ namespace OfX.Extensions;
 
 public static class OfXExtensions
 {
-    public static OfXRegisterWrapped AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> options)
+    public static OfXRegisterWrapped AddOfX(this IServiceCollection services, Action<OfXRegister> options)
     {
         OfXStatics.Clear();
-        var newOfRegister = new OfXRegister(serviceCollection);
+        var newOfRegister = new OfXRegister(services);
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
@@ -40,23 +41,23 @@ public static class OfXExtensions
             var defaultImplementedType = defaultMappableRequestHandlerType.MakeGenericType(attributeType);
             // Using TryAddScoped is pretty cool. We don't need to check if the service is registered or not!
             // So we have to replace the default service if it existed -> Good!
-            serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
+            services.TryAddScoped(serviceType, defaultImplementedType);
         });
 
         modelConfigurations.ForEach(m =>
             modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
 
-        serviceCollection.AddTransient<IDistributedMapper, DistributedMapper>();
+        services.AddTransient<IDistributedMapper, DistributedMapper>();
 
-        serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
+        services.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
 
-        serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
+        services.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
 
-        serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
+        services.AddTransient(typeof(SendPipelinesOrchestrator<>));
 
-        serviceCollection.AddTransient(typeof(DefaultQueryOfHandler<,>));
+        services.AddTransient(typeof(DefaultQueryOfHandler<,>));
 
-        serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
+        services.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
         {
             var config = modelMapOfXConfigs[(mt, at)];
             return new OfXConfig(config.IdProperty, config.DefaultProperty);
@@ -73,6 +74,8 @@ public static class OfXExtensions
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
             OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
+
+        services.InstallRequestClientHandlers(typeof(RequestClientHandler<>));
 
         return new OfXRegisterWrapped(newOfRegister);
     }

@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using BenchmarkDotNet.Running;
-using OfX.Benchmark.OfXBenchmarks;
 using OfX.Benchmark.OfXBenchmarks.Reflections;
 
 // BenchmarkRunner.Run<OfXPropertyAccessorBenchmark>();

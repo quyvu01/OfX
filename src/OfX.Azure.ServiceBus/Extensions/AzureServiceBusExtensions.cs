@@ -1,14 +1,13 @@
 using Azure.Messaging.ServiceBus;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.DependencyInjection;
+using OfX.Abstractions.Transporting;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.ApplicationModels;
 using OfX.Azure.ServiceBus.BackgroundServices;
 using OfX.Azure.ServiceBus.Implementations;
 using OfX.Azure.ServiceBus.Wrappers;
-using OfX.Extensions;
 using OfX.Registries;
-using OfX.Wrappers;
 
 namespace OfX.Azure.ServiceBus.Extensions;
 
@@ -20,15 +19,18 @@ public static class AzureServiceBusExtensions
         options.Invoke(setting);
         var connectionString = setting.ConnectionString;
         var serviceBusClientOptions = setting.ServiceBusClientOptions;
-        var client = new ServiceBusClient(connectionString, serviceBusClientOptions);
-        var adminClient = new ServiceBusAdministrationClient(connectionString);
-        var clientWrapper = new AzureServiceBusClientWrapper(client, adminClient);
-        ofXRegister.ServiceCollection.AddSingleton(clientWrapper);
+        var services = ofXRegister.ServiceCollection;
+        services.AddSingleton(_ =>
+        {
+            var client = new ServiceBusClient(connectionString, serviceBusClientOptions);
+            var adminClient = new ServiceBusAdministrationClient(connectionString);
+            var clientWrapper = new AzureServiceBusClientWrapper(client, adminClient);
+            return clientWrapper;
+        });
 
-        ofXRegister.ServiceCollection.AddSingleton(typeof(IAzureServiceBusServer<,>), typeof(AzureServiceBusServer<,>));
-        ofXRegister.ServiceCollection.AddHostedService<AzureServiceBusServerWorker>();
-        ofXRegister.ServiceCollection.AddSingleton(typeof(IAzureServiceBusClient<>), typeof(AzureServiceBusClient<>));
-
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(AzureServiceBusHandler<>));
+        services.AddSingleton(typeof(IAzureServiceBusServer<,>), typeof(AzureServiceBusServer<,>));
+        services.AddSingleton(typeof(OpenAzureServiceBusClient<>));
+        services.AddSingleton<IRequestClient, AzureServiceBusClient>();
+        services.AddHostedService<AzureServiceBusServerWorker>();
     }
 }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
@@ -14,13 +15,12 @@ using OfX.Helpers;
 using OfX.Registries;
 using OfX.Responses;
 using OfX.Statics;
-using OfX.Wrappers;
 
 namespace OfX.Grpc.Extensions;
 
 public static class GrpcExtensions
 {
-    private static readonly TimeSpan defaultRequestTimeout = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(3);
 
     public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
@@ -31,55 +31,55 @@ public static class GrpcExtensions
         ConcurrentDictionary<HostProbe, Type[]> hostMapAttributes = [];
         serviceHosts.Distinct().ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
         var semaphore = new SemaphoreSlim(1, 1);
-
-        ofXRegister.ServiceCollection
-            .TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
+        var services = ofXRegister.ServiceCollection;
+        services.TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
+        {
+            if (!hostMapAttributes.Any(a => a.Value.Contains(attributeType)))
             {
-                if (!hostMapAttributes.Any(a => a.Value.Contains(attributeType)))
+                await semaphore.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    await semaphore.WaitAsync().ConfigureAwait(false);
-                    try
-                    {
-                        if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                        var probeHosts = hostMapAttributes
-                            .Where(a => !a.Key.IsProbed)
-                            .Select(a => a.Key.ServiceHost);
-                        var missingTypes = await GetHostMapAttributesAsync(probeHosts, context);
-                        missingTypes.Where(a => a.Key.IsProbed)
-                            .ForEach(x =>
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    var probeHosts = hostMapAttributes
+                        .Where(a => !a.Key.IsProbed)
+                        .Select(a => a.Key.ServiceHost);
+                    var missingTypes = await GetHostMapAttributesAsync(probeHosts, context);
+                    missingTypes.Where(a => a.Key.IsProbed)
+                        .ForEach(x =>
+                        {
+                            if (hostMapAttributes.Any(a => a.Key.ServiceHost == x.Key.ServiceHost))
                             {
-                                if (hostMapAttributes.Any(a => a.Key.ServiceHost == x.Key.ServiceHost))
-                                {
-                                    var hostProbeKey = hostMapAttributes
-                                        .First(a => a.Key.ServiceHost == x.Key.ServiceHost);
-                                    hostMapAttributes.TryRemove(hostProbeKey);
-                                }
+                                var hostProbeKey = hostMapAttributes
+                                    .First(a => a.Key.ServiceHost == x.Key.ServiceHost);
+                                hostMapAttributes.TryRemove(hostProbeKey);
+                            }
 
-                                hostMapAttributes.TryAdd(x.Key, x.Value);
-                            });
-                        if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                        return new ItemsResponse<OfXDataResponse>([]);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
+                            hostMapAttributes.TryAdd(x.Key, x.Value);
+                        });
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    return new ItemsResponse<OfXDataResponse>([]);
                 }
-
-                resolveData:
-                var host = hostMapAttributes
-                    .FirstOrDefault(a => a.Value.Contains(attributeType))
-                    .Key;
-                var result = await GetOfXItemsAsync(host.ServiceHost, context, query, attributeType);
-                var dataResponse = result.Items.Select(x =>
+                finally
                 {
-                    var values = x.OfxValues
-                        .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
-                    return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
-                });
-                return new ItemsResponse<OfXDataResponse>([..dataResponse]);
+                    semaphore.Release();
+                }
+            }
+
+            resolveData:
+            var host = hostMapAttributes
+                .FirstOrDefault(a => a.Value.Contains(attributeType))
+                .Key;
+            var result = await GetOfXItemsAsync(host.ServiceHost, context, query, attributeType);
+            var dataResponse = result.Items.Select(x =>
+            {
+                var values = x.OfxValues
+                    .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
+                return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
             });
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(GrpcClient<>));
+            return new ItemsResponse<OfXDataResponse>([..dataResponse]);
+        });
+
+        services.TryAddTransient<IRequestClient, GrpcRequestClient>();
     }
 
     private static async Task<Dictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
@@ -108,7 +108,7 @@ public static class GrpcExtensions
         var grpcQuery = new GetOfXGrpcQuery();
         using var cancellationTokenSource = CancellationTokenSource
             .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
-        cancellationTokenSource.CancelAfter(defaultRequestTimeout);
+        cancellationTokenSource.CancelAfter(DefaultRequestTimeout);
         grpcQuery.SelectorIds.AddRange(query.SelectorIds ?? []);
         grpcQuery.Expression = query.Expression;
         grpcQuery.AttributeAssemblyType = attributeType.GetAssemblyName();
@@ -124,7 +124,7 @@ public static class GrpcExtensions
             var query = new GetAttributesQuery();
             using var cancellationTokenSource = CancellationTokenSource
                 .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
-            cancellationTokenSource.CancelAfter(defaultRequestTimeout);
+            cancellationTokenSource.CancelAfter(DefaultRequestTimeout);
             var response = await client.GetAttributesAsync(query, cancellationToken: cancellationTokenSource.Token);
             return new AttributesProbe(true, [..response.AttributeTypes.Select(Type.GetType)]);
         }
