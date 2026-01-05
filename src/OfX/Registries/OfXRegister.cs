@@ -17,7 +17,7 @@ public class OfXRegister(IServiceCollection serviceCollection)
 
     public void AddHandlersFromNamespaceContaining<TAssemblyMarker>()
     {
-        var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
+        var mappableRequestHandlerType = typeof(IClientRequestHandler<>);
         var deepestClassesWithInterface = GenericDeepestImplementationFinder
             .GetDeepestClassesWithInterface(typeof(TAssemblyMarker).Assembly, mappableRequestHandlerType);
 

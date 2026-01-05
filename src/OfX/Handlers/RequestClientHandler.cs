@@ -8,7 +8,7 @@ using OfX.Responses;
 namespace OfX.Handlers;
 
 internal sealed class RequestClientHandler<TAttribute>(IServiceProvider serviceProvider)
-    : IMappableRequestHandler<TAttribute> where TAttribute : OfXAttribute
+    : IClientRequestHandler<TAttribute> where TAttribute : OfXAttribute
 {
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {

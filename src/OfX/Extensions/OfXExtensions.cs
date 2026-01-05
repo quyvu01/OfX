@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
@@ -25,27 +24,30 @@ public static class OfXExtensions
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
-        var modelMapOfXConfigs =
-            new ConcurrentDictionary<(Type ModelType, Type OfXAttributeType), IOfXConfigAttribute>();
-
-        var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
-        var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
+        var defaultMappableRequestHandlerType = typeof(DefaultClientRequestHandler<>);
 
         var modelConfigurations = OfXStatics.ModelConfigurations.Value;
         var attributeTypes = OfXStatics.OfXAttributeTypes.Value;
-        attributeTypes.ForEach(attributeType =>
-        {
-            // I have to create a default handler, which is typically return an empty collection. Great!
-            // So the interface with the default method is the best choice!
-            var serviceType = mappableRequestHandlerType.MakeGenericType(attributeType);
-            var defaultImplementedType = defaultMappableRequestHandlerType.MakeGenericType(attributeType);
-            // Using TryAddScoped is pretty cool. We don't need to check if the service is registered or not!
-            // So we have to replace the default service if it existed -> Good!
-            services.TryAddScoped(serviceType, defaultImplementedType);
-        });
 
-        modelConfigurations.ForEach(m =>
-            modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
+        var clientHandlerGenericType = typeof(RequestClientHandler<>);
+        attributeTypes
+            .Select(a => (AttributeType: a, HandlerType: clientHandlerGenericType.MakeGenericType(a),
+                ServiceType: typeof(IClientRequestHandler<>).MakeGenericType(a)))
+            .ForEach(x =>
+            {
+                var existedService = services.FirstOrDefault(a => a.ServiceType == x.ServiceType);
+                if (existedService is not null)
+                {
+                    if (existedService.ImplementationType !=
+                        defaultMappableRequestHandlerType.MakeGenericType(x.AttributeType))
+                        return;
+                    services.Replace(new ServiceDescriptor(x.ServiceType, x.HandlerType, ServiceLifetime.Transient));
+                    return;
+                }
+
+                services.AddTransient(x.ServiceType, x.HandlerType);
+            });
+
 
         services.AddTransient<IDistributedMapper, DistributedMapper>();
 
@@ -59,7 +61,9 @@ public static class OfXExtensions
 
         services.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
         {
-            var config = modelMapOfXConfigs[(mt, at)];
+            var config = modelConfigurations
+                .First(a => a.ModelType == mt && a.OfXAttributeType == at)
+                .OfXConfigAttribute;
             return new OfXConfig(config.IdProperty, config.DefaultProperty);
         });
 
@@ -74,8 +78,6 @@ public static class OfXExtensions
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
             OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
-
-        services.InstallRequestClientHandlers(typeof(RequestClientHandler<>));
 
         return new OfXRegisterWrapped(newOfRegister);
     }

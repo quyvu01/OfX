@@ -19,7 +19,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
 {
     internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context)
     {
-        var handler = serviceProvider.GetRequiredService<IMappableRequestHandler<TAttribute>>();
+        var handler = serviceProvider.GetRequiredService<IClientRequestHandler<TAttribute>>();
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
