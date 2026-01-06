@@ -3,20 +3,31 @@ using System.Runtime.CompilerServices;
 
 namespace OfX.Extensions;
 
+/// <summary>
+/// Provides extension methods for working with Tasks, including cancellation and timeout support.
+/// </summary>
+/// <remarks>
+/// These utilities provide robust async operation handling with proper exception management,
+/// timeout support with detailed error messages, and cancellation token integration.
+/// </remarks>
 public static class TaskExtensions
 {
     private static readonly TimeSpan DefaultTimeout = new(0, 0, 0, 5, 0);
 
+    /// <summary>
+    /// Returns a task that completes when the original task completes or throws if cancelled.
+    /// </summary>
+    /// <param name="task">The task to wrap.</param>
+    /// <param name="cancellationToken">The cancellation token to observe.</param>
+    /// <returns>A task that completes when the original completes or throws OperationCanceledException.</returns>
     public static Task OrCanceled(this Task task, CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled || task.IsCompleted)
             return task;
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            task.IgnoreUnobservedExceptions();
-            throw new OperationCanceledException(cancellationToken);
-        }
+        if (!cancellationToken.IsCancellationRequested) return WaitAsync();
+        task.IgnoreUnobservedExceptions();
+        throw new OperationCanceledException(cancellationToken);
 
         async Task WaitAsync()
         {
@@ -32,20 +43,23 @@ public static class TaskExtensions
 
             task.GetAwaiter().GetResult();
         }
-
-        return WaitAsync();
     }
 
+    /// <summary>
+    /// Returns a task that completes when the original task completes or throws if cancelled.
+    /// </summary>
+    /// <typeparam name="T">The result type of the task.</typeparam>
+    /// <param name="task">The task to wrap.</param>
+    /// <param name="cancellationToken">The cancellation token to observe.</param>
+    /// <returns>A task that completes when the original completes or throws OperationCanceledException.</returns>
     public static Task<T> OrCanceled<T>(this Task<T> task, CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled || task.IsCompleted)
             return task;
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            task.IgnoreUnobservedExceptions();
-            throw new OperationCanceledException(cancellationToken);
-        }
+        if (!cancellationToken.IsCancellationRequested) return WaitAsync();
+        task.IgnoreUnobservedExceptions();
+        throw new OperationCanceledException(cancellationToken);
 
         async Task<T> WaitAsync()
         {
@@ -54,16 +68,11 @@ public static class TaskExtensions
 
 
             var completed = await Task.WhenAny(task, cancelTask).ConfigureAwait(false);
-            if (completed != task)
-            {
-                task.IgnoreUnobservedExceptions();
-                throw new OperationCanceledException(cancellationToken);
-            }
+            if (completed == task) return task.GetAwaiter().GetResult();
+            task.IgnoreUnobservedExceptions();
+            throw new OperationCanceledException(cancellationToken);
 
-            return task.GetAwaiter().GetResult();
         }
-
-        return WaitAsync();
     }
 
     extension(Task task)
@@ -118,66 +127,87 @@ public static class TaskExtensions
         }
     }
 
-    public static Task<T> OrTimeout<T>(this Task<T> task, int ms = 0, int s = 0, int m = 0, int h = 0, int d = 0,
-        CancellationToken cancellationToken = default,
-        [CallerMemberName] string memberName = null, [CallerFilePath] string filePath = null,
-        [CallerLineNumber] int? lineNumber = null)
+    /// <param name="task">The task to wrap.</param>
+    /// <typeparam name="T">The result type of the task.</typeparam>
+    extension<T>(Task<T> task)
     {
-        var timeout = new TimeSpan(d, h, m, s, ms);
-        if (timeout == TimeSpan.Zero)
-            timeout = DefaultTimeout;
-
-        return OrTimeoutInternal(task, timeout, cancellationToken, memberName, filePath, lineNumber);
-    }
-
-    public static Task<T> OrTimeout<T>(this Task<T> task, TimeSpan timeout,
-        CancellationToken cancellationToken = default,
-        [CallerMemberName] string memberName = null, [CallerFilePath] string filePath = null,
-        [CallerLineNumber] int? lineNumber = null)
-    {
-        return OrTimeoutInternal(task, timeout, cancellationToken, memberName, filePath, lineNumber);
-    }
-
-    static Task<T> OrTimeoutInternal<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken,
-        string memberName, string filePath,
-        int? lineNumber)
-    {
-        if (task.IsCompleted)
-            return task;
-
-        if (cancellationToken.IsCancellationRequested)
+        /// <summary>
+        /// Returns a task that completes when the original task completes or throws TimeoutException if timed out.
+        /// </summary>
+        /// <param name="ms">Milliseconds component of the timeout.</param>
+        /// <param name="s">Seconds component of the timeout.</param>
+        /// <param name="m">Minutes component of the timeout.</param>
+        /// <param name="h">Hours component of the timeout.</param>
+        /// <param name="d">Days component of the timeout.</param>
+        /// <param name="cancellationToken">Optional cancellation token.</param>
+        /// <param name="memberName">Caller member name (auto-populated).</param>
+        /// <param name="filePath">Caller file path (auto-populated).</param>
+        /// <param name="lineNumber">Caller line number (auto-populated).</param>
+        /// <returns>A task that completes when the original completes or throws TimeoutException.</returns>
+        public Task<T> OrTimeout(int ms = 0, int s = 0, int m = 0, int h = 0, int d = 0,
+            CancellationToken cancellationToken = default,
+            [CallerMemberName] string memberName = null, [CallerFilePath] string filePath = null,
+            [CallerLineNumber] int? lineNumber = null)
         {
+            var timeout = new TimeSpan(d, h, m, s, ms);
+            if (timeout == TimeSpan.Zero)
+                timeout = DefaultTimeout;
+
+            return task.OrTimeoutInternal(timeout, cancellationToken, memberName, filePath, lineNumber);
+        }
+
+        /// <summary>
+        /// Returns a task that completes when the original task completes or throws TimeoutException if timed out.
+        /// </summary>
+        /// <param name="timeout">The timeout duration.</param>
+        /// <param name="cancellationToken">Optional cancellation token.</param>
+        /// <param name="memberName">Caller member name (auto-populated).</param>
+        /// <param name="filePath">Caller file path (auto-populated).</param>
+        /// <param name="lineNumber">Caller line number (auto-populated).</param>
+        /// <returns>A task that completes when the original completes or throws TimeoutException.</returns>
+        public Task<T> OrTimeout(TimeSpan timeout,
+            CancellationToken cancellationToken = default,
+            [CallerMemberName] string memberName = null, [CallerFilePath] string filePath = null,
+            [CallerLineNumber] int? lineNumber = null)
+        {
+            return task.OrTimeoutInternal(timeout, cancellationToken, memberName, filePath, lineNumber);
+        }
+
+        private Task<T> OrTimeoutInternal(TimeSpan timeout, CancellationToken cancellationToken,
+            string memberName, string filePath,
+            int? lineNumber)
+        {
+            if (task.IsCompleted)
+                return task;
+
+            if (!cancellationToken.IsCancellationRequested) return WaitAsync();
             task.IgnoreUnobservedExceptions();
             throw new TimeoutException(FormatTimeoutMessage(memberName, filePath, lineNumber));
-        }
 
-        async Task<T> WaitAsync()
-        {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            var delayTask = Task.Delay(Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout, cts.Token);
-            var completed = await Task.WhenAny(task, delayTask).ConfigureAwait(false);
-
-            if (completed == delayTask)
+            async Task<T> WaitAsync()
             {
-                task.IgnoreUnobservedExceptions();
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var delayTask = Task.Delay(Debugger.IsAttached ? Timeout.InfiniteTimeSpan : timeout, cts.Token);
+                var completed = await Task.WhenAny(task, delayTask).ConfigureAwait(false);
 
-                throw new TimeoutException(FormatTimeoutMessage(memberName, filePath, lineNumber));
+                if (completed == delayTask)
+                {
+                    task.IgnoreUnobservedExceptions();
+
+                    throw new TimeoutException(FormatTimeoutMessage(memberName, filePath, lineNumber));
+                }
+
+                await cts.CancelAsync();
+
+                return task.GetAwaiter().GetResult();
             }
-
-            cts.Cancel();
-
-            return task.GetAwaiter().GetResult();
         }
-
-        return WaitAsync();
     }
 
-    static string FormatTimeoutMessage(string memberName, string filePath, int? lineNumber)
-    {
-        return !string.IsNullOrEmpty(memberName)
+    static string FormatTimeoutMessage(string memberName, string filePath, int? lineNumber) =>
+        !string.IsNullOrEmpty(memberName)
             ? $"Operation in {memberName} timed out at {filePath}:{lineNumber}"
             : "Operation timed out";
-    }
 
     /// <param name="task"></param>
     extension(Task task)
@@ -186,10 +216,7 @@ public static class TaskExtensions
         /// Returns true if a Task was ran to completion (without being cancelled or faulted)
         /// </summary>
         /// <returns></returns>
-        public bool IsCompletedSuccessfully()
-        {
-            return task.Status == TaskStatus.RanToCompletion;
-        }
+        public bool IsCompletedSuccessfully() => task.Status == TaskStatus.RanToCompletion;
 
         private void IgnoreUnobservedExceptions()
         {

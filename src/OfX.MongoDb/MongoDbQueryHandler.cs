@@ -11,6 +11,21 @@ using OfX.Responses;
 
 namespace OfX.MongoDb;
 
+/// <summary>
+/// MongoDB implementation of the OfX query handler.
+/// </summary>
+/// <typeparam name="TModel">The document type.</typeparam>
+/// <typeparam name="TAttribute">The OfX attribute type associated with this handler.</typeparam>
+/// <param name="serviceProvider">The service provider for resolving dependencies.</param>
+/// <remarks>
+/// This handler uses the MongoDB .NET Driver to execute queries.
+/// It automatically:
+/// <list type="bullet">
+///   <item><description>Builds filter expressions from selector IDs</description></item>
+///   <item><description>Converts OfX expressions to MongoDB BSON projections</description></item>
+///   <item><description>Handles array operations using MongoDB aggregation pipeline</description></item>
+/// </list>
+/// </remarks>
 internal class MongoDbQueryHandler<TModel, TAttribute>(
     IServiceProvider serviceProvider)
     : QueryHandlerBuilder<TModel, TAttribute>(serviceProvider), IQueryOfHandler<TModel, TAttribute>

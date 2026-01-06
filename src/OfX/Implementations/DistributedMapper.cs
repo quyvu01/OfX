@@ -13,6 +13,20 @@ using OfX.Statics;
 
 namespace OfX.Implementations;
 
+/// <summary>
+/// Core implementation of <see cref="IDistributedMapper"/> that performs distributed data mapping.
+/// </summary>
+/// <remarks>
+/// The DistributedMapper is the heart of the OfX framework. It:
+/// <list type="bullet">
+///   <item><description>Scans objects for properties decorated with OfX attributes</description></item>
+///   <item><description>Groups properties by their dependency order for efficient batching</description></item>
+///   <item><description>Sends requests through the configured transport to fetch remote data</description></item>
+///   <item><description>Maps the returned data back to the original object properties</description></item>
+///   <item><description>Recursively processes nested objects up to a configurable depth limit</description></item>
+/// </list>
+/// </remarks>
+/// <param name="serviceProvider">The service provider for resolving transport handlers and pipelines.</param>
 internal sealed class DistributedMapper(IServiceProvider serviceProvider)
     : IDistributedMapper
 {
@@ -31,7 +45,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
                 return;
             }
 
-            var allPropertyDatas = ReflectionHelpers.GetMappableProperties(value).ToArray();
+            var allPropertyDatas = ReflectionHelpers.DiscoverResolvableProperties(value).ToArray();
 
             var attributes = OfXStatics.OfXAttributeTypes.Value;
             var typeData = ReflectionHelpers.GetOfXTypesData(allPropertyDatas, attributes);

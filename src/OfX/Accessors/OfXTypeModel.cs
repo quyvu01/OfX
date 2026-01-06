@@ -5,12 +5,47 @@ using OfX.ObjectContexts;
 
 namespace OfX.Accessors;
 
+/// <summary>
+/// Represents the metadata model for a CLR type, including its property accessors and dependency graphs
+/// for OfX attribute-based mapping.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This class analyzes a given CLR type at construction time to:
+/// </para>
+/// <list type="bullet">
+/// <item>Build compiled property accessors for efficient runtime access.</item>
+/// <item>Construct a dependency graph based on <see cref="OfXAttribute"/> annotations.</item>
+/// <item>Identify properties that require mapping based on their attribute decorations.</item>
+/// </list>
+/// <para>
+/// The dependency graph is used by the mapping engine to determine the correct order
+/// of property resolution when properties depend on values from other properties.
+/// </para>
+/// </remarks>
 public class OfXTypeModel
 {
+    /// <summary>
+    /// Gets the CLR type that this model represents.
+    /// </summary>
     public Type ClrType { get; }
+
+    /// <summary>
+    /// Gets the dictionary of compiled property accessors, keyed by their <see cref="PropertyInfo"/>.
+    /// </summary>
     public IReadOnlyDictionary<PropertyInfo, IOfXPropertyAccessor> Accessors { get; }
+
+    /// <summary>
+    /// Gets the dependency graph for properties decorated with <see cref="OfXAttribute"/>.
+    /// Each key is a property that depends on other properties, and the value is an array
+    /// of <see cref="PropertyContext"/> representing its dependencies in resolution order.
+    /// </summary>
     public IReadOnlyDictionary<PropertyInfo, PropertyContext[]> DependencyGraphs { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OfXTypeModel"/> class for the specified CLR type.
+    /// </summary>
+    /// <param name="clrType">The CLR type to analyze and build accessors for.</param>
     public OfXTypeModel(Type clrType)
     {
         ClrType = clrType;
@@ -82,8 +117,24 @@ public class OfXTypeModel
         }
     }
 
+    /// <summary>
+    /// Gets the compiled property accessor for the specified property.
+    /// </summary>
+    /// <param name="propertyInfo">The property for which to retrieve the accessor.</param>
+    /// <returns>
+    /// The <see cref="IOfXPropertyAccessor"/> for the property, or <c>null</c> if no accessor exists.
+    /// </returns>
     public IOfXPropertyAccessor GetAccessor(PropertyInfo propertyInfo) => Accessors.GetValueOrDefault(propertyInfo);
 
+    /// <summary>
+    /// Gets the mapping information for the specified property, including its dependency order,
+    /// expression, attribute type, and required accessor.
+    /// </summary>
+    /// <param name="propertyInfo">The property for which to retrieve mapping information.</param>
+    /// <returns>
+    /// A <see cref="PropertyInformation"/> record containing the property's mapping metadata.
+    /// If the property has no dependencies, returns default information with order 0.
+    /// </returns>
     public PropertyInformation GetInformation(PropertyInfo propertyInfo)
     {
         if (!DependencyGraphs.TryGetValue(propertyInfo, out var dependencies))

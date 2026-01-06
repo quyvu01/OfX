@@ -5,6 +5,18 @@ using OfX.Internals;
 
 namespace OfX.Helpers;
 
+/// <summary>
+/// Provides helper methods for building and manipulating LINQ expressions for collection navigation.
+/// </summary>
+/// <remarks>
+/// This class supports the OfX expression syntax for navigating into collections with ordering and pagination.
+/// Expression format: <c>CollectionName[skip take orderDirection orderBy]</c>
+/// <list type="bullet">
+///   <item><description><c>Orders[0 asc CreatedAt]</c> - First order sorted by CreatedAt ascending</description></item>
+///   <item><description><c>Orders[-1 desc Amount]</c> - Last order sorted by Amount descending</description></item>
+///   <item><description><c>Orders[0 10 asc CreatedAt]</c> - First 10 orders sorted by CreatedAt</description></item>
+/// </list>
+/// </remarks>
 public static partial class ExpressionHelpers
 {
     private const string Asc = "asc";
@@ -12,6 +24,13 @@ public static partial class ExpressionHelpers
     private static readonly string[] OrderDirections = [Asc, Desc];
     private static readonly Regex ArrayPattern = CollectionRegex();
 
+    /// <summary>
+    /// Parses a collection segment expression and builds the corresponding LINQ expression.
+    /// </summary>
+    /// <param name="currentExpression">The current expression representing the source object.</param>
+    /// <param name="segment">The collection segment expression (e.g., "Orders[0 asc CreatedAt]").</param>
+    /// <returns>Data containing the target type and built expression.</returns>
+    /// <exception cref="OfXException.CollectionFormatNotCorrected">Thrown when the segment format is invalid.</exception>
     public static ExpressionQueryableData GetCollectionQueryableData(Expression currentExpression, string segment)
     {
         var match = ArrayPattern.Match(segment);
@@ -70,6 +89,16 @@ public static partial class ExpressionHelpers
         return new ExpressionQueryableData(itemType, elementCall);
     }
 
+    /// <summary>
+    /// Builds an expression to navigate and select multiple items from a collection with ordering and pagination.
+    /// </summary>
+    /// <param name="currentExpr">The current expression representing the source object.</param>
+    /// <param name="navigator">The name of the collection property to navigate to.</param>
+    /// <param name="orderDirection">The direction of the order ("ASC" or "DESC").</param>
+    /// <param name="orderBy">The property to order by within the collection.</param>
+    /// <param name="skip">Optional number of items to skip.</param>
+    /// <param name="take">Optional number of items to take.</param>
+    /// <returns>An expression to retrieve the ordered and paginated collection.</returns>
     public static ExpressionQueryableData GetManyExpression(Expression currentExpr, string navigator,
         string orderDirection, string orderBy, int? skip = null, int? take = null)
     {

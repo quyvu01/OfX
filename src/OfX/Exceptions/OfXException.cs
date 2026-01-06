@@ -3,6 +3,13 @@ using OfX.Statics;
 
 namespace OfX.Exceptions;
 
+/// <summary>
+/// Contains all custom exception types used by the OfX framework.
+/// </summary>
+/// <remarks>
+/// These exceptions provide detailed error messages for common configuration
+/// and runtime issues encountered when using the OfX framework.
+/// </remarks>
 public static class OfXException
 {
     public sealed class OfXAttributesMustBeSet()

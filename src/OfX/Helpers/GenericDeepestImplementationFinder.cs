@@ -2,10 +2,34 @@ using System.Reflection;
 
 namespace OfX.Helpers;
 
+/// <summary>
+/// Represents the result of finding a class that implements a generic interface.
+/// </summary>
+/// <param name="ClassType">The concrete class type that implements the interface.</param>
+/// <param name="ImplementedClosedInterface">The closed generic interface type as implemented by the class.</param>
 public record ImplementedResult(Type ClassType, Type ImplementedClosedInterface);
 
+/// <summary>
+/// Provides methods for finding the most derived (deepest) classes implementing a generic interface.
+/// </summary>
+/// <remarks>
+/// This helper is used during registration to discover handler implementations while avoiding
+/// duplicate registrations when inheritance hierarchies exist. It ensures only the most derived
+/// (leaf) implementations are registered.
+/// </remarks>
 public static class GenericDeepestImplementationFinder
 {
+    /// <summary>
+    /// Finds all "leaf" classes in an assembly that implement a specified open generic interface.
+    /// </summary>
+    /// <param name="assembly">The assembly to scan for implementations.</param>
+    /// <param name="openGenericInterface">The open generic interface definition (e.g., IQueryOfHandler&lt;,&gt;).</param>
+    /// <param name="interfaceContainsGenericParameters">Whether to include implementations with unresolved generic parameters.</param>
+    /// <returns>An array of results containing the class type and its closed interface implementation.</returns>
+    /// <remarks>
+    /// A "leaf" class is one that has no other candidate class deriving from it.
+    /// This prevents registering both a base handler and its derived handlers.
+    /// </remarks>
     public static ImplementedResult[] GetDeepestClassesWithInterface(Assembly assembly, Type openGenericInterface,
         bool interfaceContainsGenericParameters = false)
     {

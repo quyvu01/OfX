@@ -7,12 +7,43 @@ using OfX.Responses;
 
 namespace OfX.Implementations;
 
+/// <summary>
+/// Abstract base class for server-side pipeline orchestration in the OfX framework.
+/// </summary>
+/// <remarks>
+/// This class provides the abstract contract for executing received requests on the server side.
+/// Concrete implementations handle the deserialization, pipeline execution, and response building.
+/// </remarks>
 public abstract class ReceivedPipelinesOrchestrator
 {
+    /// <summary>
+    /// Executes the received request and returns the data response.
+    /// </summary>
+    /// <param name="message">The OfX request containing selector IDs and expressions.</param>
+    /// <param name="headers">Request headers that may contain context information.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The items response containing the fetched data.</returns>
     public abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Server-side pipeline orchestrator that executes received pipeline behaviors and query handlers.
+/// </summary>
+/// <typeparam name="TModel">The entity model type being queried.</typeparam>
+/// <typeparam name="TAttribute">The OfX attribute type associated with this handler.</typeparam>
+/// <param name="behaviors">The collection of received pipeline behaviors to execute.</param>
+/// <param name="handlers">The query handlers that fetch data from the data source.</param>
+/// <param name="customExpressionHandlers">Handlers for custom expression evaluation.</param>
+/// <remarks>
+/// This orchestrator:
+/// <list type="bullet">
+///   <item><description>Deserializes incoming expressions from the request</description></item>
+///   <item><description>Separates custom expressions from standard expressions</description></item>
+///   <item><description>Executes pipeline behaviors in reverse order (middleware pattern)</description></item>
+///   <item><description>Merges results from custom expression handlers with standard results</description></item>
+/// </list>
+/// </remarks>
 public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     IEnumerable<IReceivedPipelineBehavior<TAttribute>> behaviors,
     IEnumerable<IQueryOfHandler<TModel, TAttribute>> handlers,

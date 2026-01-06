@@ -17,6 +17,31 @@ using OfX.Statics;
 
 namespace OfX.Builders;
 
+/// <summary>
+/// Abstract base class for building query handlers that translate OfX requests into data provider queries.
+/// </summary>
+/// <typeparam name="TModel">
+/// The entity model type being queried (e.g., <c>User</c>, <c>Order</c>).
+/// </typeparam>
+/// <typeparam name="TAttribute">
+/// The <see cref="OfXAttribute"/> type associated with this query handler.
+/// </typeparam>
+/// <remarks>
+/// <para>
+/// This class provides the core expression-building logic used by data providers
+/// (such as Entity Framework Core, MongoDB) to translate OfX requests into efficient queries.
+/// </para>
+/// <para>
+/// Key responsibilities:
+/// </para>
+/// <list type="bullet">
+/// <item>Building filter expressions to select entities by their IDs.</item>
+/// <item>Building projection expressions to extract requested properties.</item>
+/// <item>Handling complex expressions including navigation paths and array operations.</item>
+/// <item>Caching compiled expressions for performance.</item>
+/// </list>
+/// </remarks>
+/// <param name="serviceProvider">The service provider for resolving dependencies.</param>
 public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     IServiceProvider serviceProvider)
     where TModel : class

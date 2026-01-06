@@ -7,6 +7,18 @@ using OfX.Responses;
 
 namespace OfX.Statics;
 
+/// <summary>
+/// Provides static configuration and cached metadata for the OfX framework.
+/// </summary>
+/// <remarks>
+/// This class serves as the central repository for:
+/// <list type="bullet">
+///   <item><description>Registered OfX attribute assemblies</description></item>
+///   <item><description>Model configuration metadata</description></item>
+///   <item><description>Cached property information for response types</description></item>
+///   <item><description>Global settings like retry policies and exception handling</description></item>
+/// </list>
+/// </remarks>
 public static class OfXStatics
 {
     private const int ObjectSpawnTimes = 128;

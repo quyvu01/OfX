@@ -18,10 +18,37 @@ using OfX.Statics;
 
 namespace OfX.Grpc.Extensions;
 
+/// <summary>
+/// Provides extension methods for integrating gRPC transport with the OfX framework.
+/// </summary>
 public static class GrpcExtensions
 {
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// Adds gRPC client configuration for OfX distributed data fetching.
+    /// </summary>
+    /// <param name="ofXRegister">The OfX registration instance.</param>
+    /// <param name="options">Configuration action for specifying gRPC server hosts.</param>
+    /// <remarks>
+    /// This method configures the client side of gRPC transport. The client will:
+    /// <list type="bullet">
+    ///   <item><description>Probe configured hosts to discover which attributes each server handles</description></item>
+    ///   <item><description>Route requests to the appropriate server based on attribute type</description></item>
+    ///   <item><description>Handle failover and retry logic through the pipeline behaviors</description></item>
+    /// </list>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.AddGrpcClients(grpc =>
+    ///     {
+    ///         grpc.AddGrpcHosts("https://users-service:5001", "https://products-service:5002");
+    ///     });
+    /// });
+    /// </code>
+    /// </example>
     public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -135,5 +162,18 @@ public static class GrpcExtensions
         }
     }
 
+    /// <summary>
+    /// Maps the OfX gRPC service endpoint for handling incoming OfX requests.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder.</param>
+    /// <remarks>
+    /// This method should be called in the server application's startup to enable
+    /// handling of incoming OfX gRPC requests.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// app.MapOfXGrpcService();
+    /// </code>
+    /// </example>
     public static void MapOfXGrpcService(this IEndpointRouteBuilder builder) => builder.MapGrpcService<GrpcServer>();
 }

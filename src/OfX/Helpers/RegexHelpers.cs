@@ -3,8 +3,25 @@ using OfX.Exceptions;
 
 namespace OfX.Helpers;
 
+/// <summary>
+/// Provides regex-based helper methods for expression processing in the OfX framework.
+/// </summary>
 public static partial class RegexHelpers
 {
+    /// <summary>
+    /// Resolves parameter placeholders in an expression string.
+    /// </summary>
+    /// <param name="expression">The expression containing placeholders (e.g., "${param|default}").</param>
+    /// <param name="parameters">Dictionary of parameter values to substitute.</param>
+    /// <returns>The expression with placeholders replaced by parameter values or defaults.</returns>
+    /// <exception cref="OfXException.InvalidParameter">Thrown when a placeholder has no default value and parameter is missing.</exception>
+    /// <remarks>
+    /// Placeholder format: <c>${parameterName|defaultValue}</c>
+    /// <list type="bullet">
+    ///   <item><description><c>${userId|0}</c> - Uses "0" if "userId" parameter is not provided</description></item>
+    ///   <item><description><c>${status|active}</c> - Uses "active" if "status" parameter is not provided</description></item>
+    /// </list>
+    /// </remarks>
     public static string ResolvePlaceholders(string expression, IDictionary<string, string> parameters)
     {
         if (expression is null) return null;

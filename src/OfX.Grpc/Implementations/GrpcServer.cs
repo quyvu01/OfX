@@ -13,6 +13,17 @@ using OfX.Statics;
 
 namespace OfX.Grpc.Implementations;
 
+/// <summary>
+/// gRPC server implementation that handles incoming OfX data requests.
+/// </summary>
+/// <param name="serviceProvider">The service provider for resolving handlers and pipelines.</param>
+/// <remarks>
+/// This server exposes two gRPC endpoints:
+/// <list type="bullet">
+///   <item><description><c>GetItems</c> - Fetches data for a specific attribute type and selector IDs</description></item>
+///   <item><description><c>GetAttributes</c> - Returns the list of attribute types this server can handle (for discovery)</description></item>
+/// </list>
+/// </remarks>
 public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>> ReceivedPipelineTypes = new(() => []);

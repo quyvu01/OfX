@@ -11,10 +11,37 @@ using OfX.Statics;
 
 namespace OfX.Registries;
 
+/// <summary>
+/// Provides the main configuration API for registering and configuring the OfX framework.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This class is the entry point for configuring OfX in your application's startup.
+/// Use the fluent API to register attributes, handlers, model configurations, and other settings.
+/// </para>
+/// <example>
+/// <code>
+/// services.AddOfX(cfg =>
+/// {
+///     cfg.AddAttributesContainNamespaces(typeof(UserOfAttribute).Assembly);
+///     cfg.AddModelConfigurationsFromNamespaceContaining&lt;User&gt;();
+///     cfg.SetRequestTimeOut(TimeSpan.FromSeconds(60));
+/// });
+/// </code>
+/// </example>
+/// </remarks>
+/// <param name="serviceCollection">The service collection to register services into.</param>
 public class OfXRegister(IServiceCollection serviceCollection)
 {
+    /// <summary>
+    /// Gets the underlying service collection for advanced registration scenarios.
+    /// </summary>
     public IServiceCollection ServiceCollection { get; } = serviceCollection;
 
+    /// <summary>
+    /// Registers custom client request handlers from the specified assembly.
+    /// </summary>
+    /// <typeparam name="TAssemblyMarker">A type in the assembly to scan for handlers.</typeparam>
     public void AddHandlersFromNamespaceContaining<TAssemblyMarker>()
     {
         var mappableRequestHandlerType = typeof(IClientRequestHandler<>);
@@ -41,29 +68,55 @@ public class OfXRegister(IServiceCollection serviceCollection)
             });
     }
 
+    /// <summary>
+    /// Registers the assemblies containing OfX attribute definitions.
+    /// </summary>
+    /// <param name="attributeAssembly">The primary assembly containing OfX attributes.</param>
+    /// <param name="otherAssemblies">Additional assemblies to scan for attributes.</param>
     public void AddAttributesContainNamespaces(Assembly attributeAssembly, params Assembly[] otherAssemblies)
     {
         ArgumentNullException.ThrowIfNull(attributeAssembly);
         OfXStatics.AttributesRegister = [attributeAssembly, ..otherAssemblies ?? []];
     }
 
+    /// <summary>
+    /// Registers the assembly containing model configurations decorated with <see cref="Attributes.OfXConfigForAttribute{TAttribute}"/>.
+    /// </summary>
+    /// <typeparam name="TAssembly">A type in the assembly containing model configurations.</typeparam>
     public void AddModelConfigurationsFromNamespaceContaining<TAssembly>() =>
         OfXStatics.ModelConfigurationAssembly = typeof(TAssembly).Assembly;
 
+    /// <summary>
+    /// Enables throwing exceptions during mapping operations instead of silently failing.
+    /// </summary>
     public void ThrowIfException() => OfXStatics.ThrowIfExceptions = true;
 
+    /// <summary>
+    /// Sets the maximum depth for nested object mapping to prevent infinite recursion.
+    /// </summary>
+    /// <param name="maxObjectSpawnTimes">The maximum nesting depth. Must be non-negative.</param>
     public void SetMaxObjectSpawnTimes(int maxObjectSpawnTimes)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(maxObjectSpawnTimes);
         OfXStatics.MaxObjectSpawnTimes = maxObjectSpawnTimes;
     }
 
+    /// <summary>
+    /// Sets the default timeout for OfX requests.
+    /// </summary>
+    /// <param name="timeout">The timeout duration. Must be non-negative.</param>
     public void SetRequestTimeOut(TimeSpan timeout)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
         OfXConstants.DefaultRequestTimeout = timeout;
     }
 
+    /// <summary>
+    /// Configures the retry policy for failed requests.
+    /// </summary>
+    /// <param name="retryCount">The maximum number of retry attempts.</param>
+    /// <param name="sleepDurationProvider">A function to calculate delay between retries.</param>
+    /// <param name="onRetry">A callback invoked on each retry attempt.</param>
     public void SetRetryPolicy(int retryCount = 3, Func<int, TimeSpan> sleepDurationProvider = null,
         Action<Exception, TimeSpan> onRetry = null)
     {

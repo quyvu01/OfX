@@ -15,8 +15,30 @@ using OfX.Wrappers;
 
 namespace OfX.Extensions;
 
+/// <summary>
+/// Provides the main extension method for adding OfX services to the dependency injection container.
+/// </summary>
 public static class OfXExtensions
 {
+    /// <summary>
+    /// Adds the OfX distributed mapping framework to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="options">Configuration action for setting up OfX.</param>
+    /// <returns>A wrapped registration object for chaining transport extensions.</returns>
+    /// <exception cref="OfXException.OfXAttributesMustBeSet">
+    /// Thrown when no OfX attributes are registered.
+    /// </exception>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.AddAttributesContainNamespaces(typeof(UserOfAttribute).Assembly);
+    ///     cfg.AddModelConfigurationsFromNamespaceContaining&lt;User&gt;();
+    /// })
+    /// .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context)));
+    /// </code>
+    /// </example>
     public static OfXRegisterWrapped AddOfX(this IServiceCollection services, Action<OfXRegister> options)
     {
         OfXStatics.Clear();

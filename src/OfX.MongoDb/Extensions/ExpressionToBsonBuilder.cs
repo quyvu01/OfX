@@ -3,12 +3,29 @@ namespace OfX.MongoDb.Extensions;
 using MongoDB.Bson;
 using System.Text.RegularExpressions;
 
+/// <summary>
+/// Builds MongoDB BSON projection documents from OfX expression strings.
+/// </summary>
+/// <remarks>
+/// This builder translates OfX expression syntax into MongoDB aggregation pipeline stages,
+/// supporting:
+/// <list type="bullet">
+///   <item><description>Simple property access (e.g., "Name")</description></item>
+///   <item><description>Nested property access (e.g., "Address.City")</description></item>
+///   <item><description>Array operations with sorting and slicing (e.g., "Orders[0 asc CreatedAt]")</description></item>
+/// </list>
+/// </remarks>
 public static class ExpressionToBsonBuilder
 {
     private static readonly Regex ArrayPattern = new(
         @"^(?<name>\w+)\[(?:(?<offset>-?\d+)(?:\s+(?<limit>\d+))?\s+)?(?<order>asc|desc)\s+(?<sortField>\w+)\]$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>
+    /// Builds a BSON projection document from a dictionary of expressions.
+    /// </summary>
+    /// <param name="expressions">Dictionary mapping field names to expression paths.</param>
+    /// <returns>A BSON document suitable for MongoDB projection.</returns>
     public static BsonDocument BuildProjectionDocument(Dictionary<string, string> expressions)
     {
         var doc = new BsonDocument();

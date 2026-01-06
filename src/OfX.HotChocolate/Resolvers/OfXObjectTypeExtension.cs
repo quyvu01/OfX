@@ -7,6 +7,18 @@ using OfX.HotChocolate.GraphQlContext;
 
 namespace OfX.HotChocolate.Resolvers;
 
+/// <summary>
+/// HotChocolate type extension that configures OfX-decorated fields for automatic resolution.
+/// </summary>
+/// <typeparam name="T">The GraphQL object type being extended.</typeparam>
+/// <remarks>
+/// This extension automatically:
+/// <list type="bullet">
+///   <item><description>Discovers properties with OfX attributes</description></item>
+///   <item><description>Adds middleware to extract expression parameters</description></item>
+///   <item><description>Configures resolvers to use the <see cref="DataResolvers{TResponse}"/></description></item>
+/// </list>
+/// </remarks>
 internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : class
 {
     protected override void Configure(IObjectTypeDescriptor<T> descriptor) => typeof(T)
