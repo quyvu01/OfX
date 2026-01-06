@@ -23,7 +23,7 @@ internal static class ReflectionHelpers
 {
     internal static IEnumerable<PropertyDescriptor> DiscoverResolvableProperties(object rootObject)
     {
-        if (InvalidObject(rootObject)) yield break;
+        if (rootObject.IsNullOrPrimitive()) yield break;
         Stack<object> stack = [];
         ObjectProcessing(rootObject, stack);
 
@@ -34,7 +34,7 @@ internal static class ReflectionHelpers
 
     private static IEnumerable<PropertyDescriptor> GetResolvablePropertiesRecursive(object obj, Stack<object> stack)
     {
-        if (InvalidObject(obj)) yield break;
+        if (obj.IsNullOrPrimitive()) yield break;
         if (obj is IEnumerable enumerable)
         {
             EnumerableObject(enumerable, stack);
@@ -53,12 +53,12 @@ internal static class ReflectionHelpers
             }
 
             var propValue = accessor.Get(obj);
-            if (InvalidObject(propValue)) continue;
+            if (propValue.IsNullOrPrimitive()) continue;
             foreach (var value in GetResolvablePropertiesRecursive(propValue, stack)) yield return value;
         }
     }
 
-    private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
+    // private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
 
     private static void EnumerableObject(IEnumerable enumerableObject, Stack<object> stack)
     {
@@ -73,7 +73,7 @@ internal static class ReflectionHelpers
 
     private static void ObjectProcessing(object obj, Stack<object> stack)
     {
-        if (InvalidObject(obj)) return;
+        if (obj.IsNullOrPrimitive()) return;
         switch (obj)
         {
             case IEnumerable enumerable:

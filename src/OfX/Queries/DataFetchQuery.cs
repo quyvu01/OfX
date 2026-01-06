@@ -9,4 +9,4 @@ namespace OfX.Queries;
 /// <param name="Expressions">
 /// A list of expression strings defining which properties to retrieve and how to project them.
 /// </param>
-public sealed record DataFetchQuery(string[] SelectorIds, List<string> Expressions);
+public sealed record DataFetchQuery(string[] SelectorIds, string[] Expressions);

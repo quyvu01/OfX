@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Attributes;
+using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Implementations;
 

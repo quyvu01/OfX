@@ -1,7 +1,8 @@
+using OfX.Helpers;
+
 namespace OfX.MongoDb.Extensions;
 
 using MongoDB.Bson;
-using System.Text.RegularExpressions;
 
 /// <summary>
 /// Builds MongoDB BSON projection documents from OfX expression strings.
@@ -17,10 +18,6 @@ using System.Text.RegularExpressions;
 /// </remarks>
 public static class ExpressionToBsonBuilder
 {
-    private static readonly Regex ArrayPattern = new(
-        @"^(?<name>\w+)\[(?:(?<offset>-?\d+)(?:\s+(?<limit>\d+))?\s+)?(?<order>asc|desc)\s+(?<sortField>\w+)\]$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     /// <summary>
     /// Builds a BSON projection document from a dictionary of expressions.
     /// </summary>
@@ -40,14 +37,14 @@ public static class ExpressionToBsonBuilder
 
         foreach (var segment in segments)
         {
-            var match = ArrayPattern.Match(segment);
+            var match = ExpressionHelpers.ArrayPattern.Match(segment);
             if (match.Success)
             {
                 var arrayName = match.Groups["name"].Value;
-                var sortField = match.Groups["sortField"].Value;
-                var order = match.Groups["order"].Value.ToLower() == "desc" ? -1 : 1;
-                var offset = match.Groups["offset"].Success ? int.Parse(match.Groups["offset"].Value) : (int?)null;
-                var limit = match.Groups["limit"].Success ? int.Parse(match.Groups["limit"].Value) : (int?)null;
+                var sortField = match.Groups["orderBy"].Value;
+                var order = match.Groups["orderDirection"].Value.ToLower() == "desc" ? -1 : 1;
+                var offset = match.Groups["skip"].Success ? int.Parse(match.Groups["skip"].Value) : (int?)null;
+                var limit = match.Groups["take"].Success ? int.Parse(match.Groups["take"].Value) : (int?)null;
 
                 var sortStage = new BsonDocument("$sortArray", new BsonDocument
                 {
@@ -56,7 +53,7 @@ public static class ExpressionToBsonBuilder
                 });
 
                 BsonValue arrayValue = sortStage;
-                
+
                 arrayValue = (offset.HasValue && limit.HasValue) switch
                 {
                     true => new BsonDocument("$slice", new BsonArray { arrayValue, offset.Value, limit.Value }),

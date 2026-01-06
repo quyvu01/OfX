@@ -1,4 +1,5 @@
 using System.Reflection;
+using OfX.Helpers;
 using OfX.ObjectContexts;
 
 namespace OfX.Extensions;
@@ -28,13 +29,24 @@ public static class Extensions
         public void Evaluate() => src.ForEach(_ => { });
     }
 
+    extension(object obj)
+    {
+        public bool IsNullOrPrimitive()
+        {
+            if (obj == null) return false;
+            var type = obj.GetType();
+            return GeneralHelpers.IsPrimitiveType(type);
+        }
+    }
+
     /// <summary>
     /// Gets the dependency order for a property based on the property dependency graph.
     /// </summary>
     /// <param name="graph">The property dependency graph.</param>
     /// <param name="property">The property to get the order for.</param>
     /// <returns>The order value (0 for no dependencies, higher values for deeper dependency chains).</returns>
-    public static int GetPropertyOrder(this IReadOnlyDictionary<PropertyInfo, PropertyContext[]> graph, PropertyInfo property)
+    public static int GetPropertyOrder(this IReadOnlyDictionary<PropertyInfo, PropertyContext[]> graph,
+        PropertyInfo property)
     {
         if (property is null || !graph.TryGetValue(property, out var dependencies)) return 0;
         // You know, if the dependencies counting is 1, it means the dependency is not depended on anything.

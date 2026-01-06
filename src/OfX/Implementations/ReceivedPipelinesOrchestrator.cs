@@ -3,6 +3,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
+using OfX.Extensions;
 using OfX.Responses;
 
 namespace OfX.Implementations;

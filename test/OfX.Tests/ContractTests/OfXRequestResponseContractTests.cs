@@ -66,7 +66,7 @@ public class OfXRequestResponseContractTests
             new() { Id = "1", OfXValues = [] },
             new() { Id = "2", OfXValues = [] }
         };
-        var response = new ItemsResponse<OfXDataResponse>(items);
+        var response = new ItemsResponse<OfXDataResponse>([..items]);
 
         // Act
         var json = JsonSerializer.Serialize(response);

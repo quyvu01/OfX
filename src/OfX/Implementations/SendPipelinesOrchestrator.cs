@@ -4,6 +4,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Constants;
+using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Responses;
 

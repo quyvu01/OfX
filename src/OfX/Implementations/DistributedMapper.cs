@@ -5,6 +5,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Exceptions;
+using OfX.Extensions;
 using OfX.Externals;
 using OfX.Helpers;
 using OfX.Queries;
@@ -86,7 +87,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
             }
 
             var nextMappableData = allPropertyDatas
-                .Where(a => !GeneralHelpers.IsPrimitiveType(a.PropertyInfo.PropertyType))
+                .Where(a => !a.PropertyInfo.PropertyType.IsPrimitiveType())
                 .Aggregate(new List<object>(), (acc, next) =>
                 {
                     var propertyValue = next.PropertyInfo.GetValue(next.Model);

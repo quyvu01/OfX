@@ -58,7 +58,7 @@ public static class OfXStatics
 
     public static readonly Lazy<IReadOnlyCollection<OfXModelData>> ModelConfigurations = new(() =>
     {
-        var ofxConfigForAttributeType = typeof(OfXConfigForAttribute<>);
+        var configForAttributeType = typeof(OfXConfigForAttribute<>);
         return
         [
             ..ModelConfigurationAssembly?
@@ -68,7 +68,7 @@ public static class OfXStatics
                 {
                     var attributeType = x.GetType();
                     return attributeType.IsGenericType &&
-                           attributeType.GetGenericTypeDefinition() == ofxConfigForAttributeType;
+                           attributeType.GetGenericTypeDefinition() == configForAttributeType;
                 })).Select(modelType =>
                 {
                     var attributes = modelType.GetCustomAttributes();
@@ -76,7 +76,7 @@ public static class OfXStatics
                     {
                         var attributeType = x.GetType();
                         if (!attributeType.IsGenericType ||
-                            attributeType.GetGenericTypeDefinition() != ofxConfigForAttributeType)
+                            attributeType.GetGenericTypeDefinition() != configForAttributeType)
                             return (null, null);
                         return (OfXConfigAttribute: x, OfXAttribute: attributeType.GetGenericArguments()[0]);
                     }).First(x => x is { OfXConfigAttribute: not null, OfXAttribute: not null });

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using OfX.Exceptions;
@@ -22,7 +23,7 @@ public static partial class ExpressionHelpers
     private const string Asc = "asc";
     private const string Desc = "desc";
     private static readonly string[] OrderDirections = [Asc, Desc];
-    private static readonly Regex ArrayPattern = CollectionRegex();
+    public static readonly Regex ArrayPattern = CollectionRegex();
 
     /// <summary>
     /// Parses a collection segment expression and builds the corresponding LINQ expression.
@@ -146,6 +147,6 @@ public static partial class ExpressionHelpers
 
     [GeneratedRegex(
         @"^(?<name>\w+)\[(?:(?<skip>-?\d+)(?:\s+(?<take>\d+))?\s+)?(?<orderDirection>asc|desc)\s+(?<orderBy>\w+)\]$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-VN")]
+        RegexOptions.IgnoreCase | RegexOptions.Compiled)]
     private static partial Regex CollectionRegex();
 }

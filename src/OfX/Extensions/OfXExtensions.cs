@@ -46,12 +46,12 @@ public static class OfXExtensions
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
-        var defaultMappableRequestHandlerType = typeof(DefaultClientRequestHandler<>);
+        var defaultClientRequestHandlerType = typeof(DefaultClientRequestHandler<>);
 
         var modelConfigurations = OfXStatics.ModelConfigurations.Value;
         var attributeTypes = OfXStatics.OfXAttributeTypes.Value;
 
-        var clientHandlerGenericType = typeof(RequestClientHandler<>);
+        var clientHandlerGenericType = typeof(ClientRequestHandler<>);
         attributeTypes
             .Select(a => (AttributeType: a, HandlerType: clientHandlerGenericType.MakeGenericType(a),
                 ServiceType: typeof(IClientRequestHandler<>).MakeGenericType(a)))
@@ -60,9 +60,8 @@ public static class OfXExtensions
                 var existedService = services.FirstOrDefault(a => a.ServiceType == x.ServiceType);
                 if (existedService is not null)
                 {
-                    if (existedService.ImplementationType !=
-                        defaultMappableRequestHandlerType.MakeGenericType(x.AttributeType))
-                        return;
+                    var implType = defaultClientRequestHandlerType.MakeGenericType(x.AttributeType);
+                    if (existedService.ImplementationType != implType) return;
                     services.Replace(new ServiceDescriptor(x.ServiceType, x.HandlerType, ServiceLifetime.Transient));
                     return;
                 }

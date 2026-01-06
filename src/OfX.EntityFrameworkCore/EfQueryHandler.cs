@@ -39,7 +39,7 @@ internal class EfQueryHandler<TModel, TAttribute>(
             .AsNoTracking()
             .Where(filter)
             .Select(BuildResponse(context.Query))
-            .ToListAsync(context.CancellationToken);
+            .ToArrayAsync(context.CancellationToken);
         return new ItemsResponse<OfXDataResponse>(data);
     }
 }
