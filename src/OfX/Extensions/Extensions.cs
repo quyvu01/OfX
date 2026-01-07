@@ -33,7 +33,7 @@ public static class Extensions
     {
         public bool IsNullOrPrimitive()
         {
-            if (obj == null) return false;
+            if (obj == null) return true;
             var type = obj.GetType();
             return GeneralHelpers.IsPrimitiveType(type);
         }
