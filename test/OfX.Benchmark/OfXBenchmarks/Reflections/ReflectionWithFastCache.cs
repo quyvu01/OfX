@@ -1,7 +1,6 @@
 using System.Collections;
 using OfX.Cached;
 using OfX.Extensions;
-using OfX.Helpers;
 
 namespace OfX.Benchmark.OfXBenchmarks.Reflections;
 

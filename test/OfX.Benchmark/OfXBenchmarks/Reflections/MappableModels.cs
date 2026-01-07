@@ -1,5 +1,5 @@
 using System.Reflection;
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 using OfX.Attributes;
 
 namespace OfX.Benchmark.OfXBenchmarks.Reflections;
@@ -29,4 +29,4 @@ internal sealed record MappableDataPropertyCache(
     string Expression,
     int Order);
 
-internal sealed record RuntimePropertyCalling(object Model, IOfXPropertyAccessor PropertyAccessor);
+internal sealed record RuntimePropertyCalling(object Model, IPropertyAccessor PropertyAccessor);

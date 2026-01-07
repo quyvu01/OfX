@@ -3,7 +3,7 @@ using OfX.Attributes;
 using OfX.Extensions;
 using OfX.ObjectContexts;
 
-namespace OfX.Accessors;
+namespace OfX.Accessors.PropertyAccessors;
 
 /// <summary>
 /// Represents the metadata model for a CLR type, including its property accessors and dependency graphs
@@ -23,7 +23,7 @@ namespace OfX.Accessors;
 /// of property resolution when properties depend on values from other properties.
 /// </para>
 /// </remarks>
-public class OfXTypeModel
+public class TypeModelAccessor
 {
     /// <summary>
     /// Gets the CLR type that this model represents.
@@ -33,7 +33,7 @@ public class OfXTypeModel
     /// <summary>
     /// Gets the dictionary of compiled property accessors, keyed by their <see cref="PropertyInfo"/>.
     /// </summary>
-    public IReadOnlyDictionary<PropertyInfo, IOfXPropertyAccessor> Accessors { get; }
+    public IReadOnlyDictionary<PropertyInfo, IPropertyAccessor> Accessors { get; }
 
     /// <summary>
     /// Gets the dependency graph for properties decorated with <see cref="OfXAttribute"/>.
@@ -43,10 +43,10 @@ public class OfXTypeModel
     public IReadOnlyDictionary<PropertyInfo, PropertyContext[]> DependencyGraphs { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OfXTypeModel"/> class for the specified CLR type.
+    /// Initializes a new instance of the <see cref="TypeModelAccessor"/> class for the specified CLR type.
     /// </summary>
     /// <param name="clrType">The CLR type to analyze and build accessors for.</param>
-    public OfXTypeModel(Type clrType)
+    public TypeModelAccessor(Type clrType)
     {
         ClrType = clrType;
         var properties = clrType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -72,10 +72,10 @@ public class OfXTypeModel
         DependencyGraphs = BuildDependencyGraph(properties);
     }
 
-    private static IOfXPropertyAccessor CreateAccessor(Type type, PropertyInfo p)
+    private static IPropertyAccessor CreateAccessor(Type type, PropertyInfo p)
     {
-        var accessorType = typeof(OfXPropertyAccessor<,>).MakeGenericType(type, p.PropertyType);
-        return (IOfXPropertyAccessor)Activator.CreateInstance(accessorType, p)!;
+        var accessorType = typeof(PropertyAccessor<,>).MakeGenericType(type, p.PropertyType);
+        return (IPropertyAccessor)Activator.CreateInstance(accessorType, p)!;
     }
 
     private static Dictionary<PropertyInfo, PropertyContext[]> BuildDependencyGraph(PropertyInfo[] properties)
@@ -122,9 +122,9 @@ public class OfXTypeModel
     /// </summary>
     /// <param name="propertyInfo">The property for which to retrieve the accessor.</param>
     /// <returns>
-    /// The <see cref="IOfXPropertyAccessor"/> for the property, or <c>null</c> if no accessor exists.
+    /// The <see cref="IPropertyAccessor"/> for the property, or <c>null</c> if no accessor exists.
     /// </returns>
-    public IOfXPropertyAccessor GetAccessor(PropertyInfo propertyInfo) => Accessors.GetValueOrDefault(propertyInfo);
+    public IPropertyAccessor GetAccessor(PropertyInfo propertyInfo) => Accessors.GetValueOrDefault(propertyInfo);
 
     /// <summary>
     /// Gets the mapping information for the specified property, including its dependency order,

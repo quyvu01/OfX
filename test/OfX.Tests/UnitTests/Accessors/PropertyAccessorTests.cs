@@ -1,10 +1,10 @@
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 using Shouldly;
 using Xunit;
 
 namespace OfX.Tests.UnitTests.Accessors;
 
-public class OfXPropertyAccessorTests
+public class PropertyAccessorTests
 {
     private class TestPerson
     {
@@ -19,7 +19,7 @@ public class OfXPropertyAccessorTests
         // Arrange
         var person = new TestPerson { Name = "John", Age = 30 };
         var nameProperty = typeof(TestPerson).GetProperty(nameof(TestPerson.Name))!;
-        var accessor = new OfXPropertyAccessor<TestPerson, string>(nameProperty);
+        var accessor = new PropertyAccessor<TestPerson, string>(nameProperty);
 
         // Act
         var value = accessor.Get(person);
@@ -34,7 +34,7 @@ public class OfXPropertyAccessorTests
         // Arrange
         var person = new TestPerson();
         var nameProperty = typeof(TestPerson).GetProperty(nameof(TestPerson.Name))!;
-        var accessor = new OfXPropertyAccessor<TestPerson, string>(nameProperty);
+        var accessor = new PropertyAccessor<TestPerson, string>(nameProperty);
 
         // Act
         accessor.Set(person, "Jane");
@@ -49,7 +49,7 @@ public class OfXPropertyAccessorTests
         // Arrange
         var person = new TestPerson { Age = 25 };
         var ageProperty = typeof(TestPerson).GetProperty(nameof(TestPerson.Age))!;
-        var accessor = new OfXPropertyAccessor<TestPerson, int>(ageProperty);
+        var accessor = new PropertyAccessor<TestPerson, int>(ageProperty);
 
         // Act
         var value = accessor.Get(person);
@@ -67,7 +67,7 @@ public class OfXPropertyAccessorTests
         var birthDate = new DateTime(1990, 5, 15);
         var person = new TestPerson { BirthDate = birthDate };
         var property = typeof(TestPerson).GetProperty(nameof(TestPerson.BirthDate))!;
-        var accessor = new OfXPropertyAccessor<TestPerson, DateTime>(property);
+        var accessor = new PropertyAccessor<TestPerson, DateTime>(property);
 
         // Act
         var value = accessor.Get(person);

@@ -1,4 +1,4 @@
-namespace OfX.Accessors;
+namespace OfX.Accessors.PropertyAccessors;
 
 /// <summary>
 /// Represents the mapping metadata for a property decorated with an OfX attribute.
@@ -22,4 +22,4 @@ public sealed record PropertyInformation(
     int Order,
     string Expression,
     Type RuntimeAttributeType,
-    IOfXPropertyAccessor RequiredAccessor);
+    IPropertyAccessor RequiredAccessor);

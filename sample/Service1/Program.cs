@@ -1,15 +1,11 @@
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
-using OfX.Azure.ServiceBus.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
-using OfX.Kafka.Extensions;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
-using OfX.RabbitMq.Extensions;
 using Serilog;
 using Service1;
 using Service1.Contexts;

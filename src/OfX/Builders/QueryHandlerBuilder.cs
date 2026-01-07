@@ -87,7 +87,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(
     /// <returns></returns>
     protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
     {
-        var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
+        var expressions = JsonSerializer.Deserialize<string[]>(request.Expression);
         _idToStringMemberAssignment ??= Expression.Bind(OfXStatics.OfXIdProp, IdToStringCall());
         var valueExpression = expressions
             .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>

@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 
 namespace OfX.Cached;
 
 /// <summary>
-/// Provides a thread-safe cache for <see cref="OfXTypeModel"/> instances.
+/// Provides a thread-safe cache for <see cref="TypeModelAccessor"/> instances.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,18 +18,18 @@ namespace OfX.Cached;
 /// </remarks>
 public static class OfXModelCache
 {
-    private static readonly ConcurrentDictionary<Type, OfXTypeModel> Models = new();
+    private static readonly ConcurrentDictionary<Type, TypeModelAccessor> Models = new();
 
     /// <summary>
-    /// Gets or creates the <see cref="OfXTypeModel"/> for the specified type.
+    /// Gets or creates the <see cref="TypeModelAccessor"/> for the specified type.
     /// </summary>
     /// <param name="type">The CLR type to get the model for.</param>
     /// <returns>
-    /// The cached or newly created <see cref="OfXTypeModel"/> containing
+    /// The cached or newly created <see cref="TypeModelAccessor"/> containing
     /// property accessors and dependency graphs.
     /// </returns>
-    public static OfXTypeModel GetModel(Type type)
-        => Models.GetOrAdd(type, static t => new OfXTypeModel(t));
+    public static TypeModelAccessor GetModel(Type type)
+        => Models.GetOrAdd(type, static t => new TypeModelAccessor(t));
 
     /// <summary>
     /// Determines whether a model has been cached for the specified type.

@@ -1,4 +1,4 @@
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 
 namespace OfX.ApplicationModels;
 

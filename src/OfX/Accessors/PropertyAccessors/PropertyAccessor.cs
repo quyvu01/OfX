@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace OfX.Accessors;
+namespace OfX.Accessors.PropertyAccessors;
 
 /// <summary>
 /// Provides a high-performance, compiled expression-based property accessor for a specific type and property.
@@ -18,7 +18,7 @@ namespace OfX.Accessors;
 /// <see cref="PropertyInfo.SetValue"/> directly, especially in high-throughput mapping scenarios.
 /// </para>
 /// </remarks>
-public class OfXPropertyAccessor<T, TProp> : IOfXPropertyAccessor
+public class PropertyAccessor<T, TProp> : IPropertyAccessor
 {
     private readonly Action<T, TProp> _setter;
     private readonly Func<T, TProp> _getter;
@@ -27,14 +27,14 @@ public class OfXPropertyAccessor<T, TProp> : IOfXPropertyAccessor
     public PropertyInfo PropertyInfo { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OfXPropertyAccessor{T, TProp}"/> class.
+    /// Initializes a new instance of the <see cref="PropertyAccessor{T,TProp}"/> class.
     /// </summary>
     /// <param name="property">The property metadata for which to create the accessor.</param>
     /// <remarks>
     /// The constructor compiles getter and setter lambda expressions for optimal runtime performance.
     /// If the property lacks a getter or setter, the corresponding delegate will be null.
     /// </remarks>
-    public OfXPropertyAccessor(PropertyInfo property)
+    public PropertyAccessor(PropertyInfo property)
     {
         PropertyInfo = property;
         // compile getter

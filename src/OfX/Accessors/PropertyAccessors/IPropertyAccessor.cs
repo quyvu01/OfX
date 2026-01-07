@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace OfX.Accessors;
+namespace OfX.Accessors.PropertyAccessors;
 
 /// <summary>
 /// Defines a high-performance property accessor for getting and setting property values at runtime.
@@ -15,7 +15,7 @@ namespace OfX.Accessors;
 /// which are cached and reused for optimal performance during data mapping operations.
 /// </para>
 /// </remarks>
-public interface IOfXPropertyAccessor
+public interface IPropertyAccessor
 {
     /// <summary>
     /// Sets the property value on the specified instance.
