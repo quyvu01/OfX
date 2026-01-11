@@ -15,9 +15,9 @@ namespace OfX.Expressions.Tokens;
 ///   <item><description>Functions: :count, :sum, :avg, :min, :max</description></item>
 /// </list>
 /// </remarks>
-public sealed class Tokenizer
+public sealed class Tokenizer(string expression)
 {
-    private readonly string _expression;
+    private readonly string _expression = expression ?? throw new ArgumentNullException(nameof(expression));
     private int _position;
     private readonly List<Token> _tokens = [];
 
@@ -31,15 +31,11 @@ public sealed class Tokenizer
         ["not"] = TokenType.Not,
         ["asc"] = TokenType.Asc,
         ["desc"] = TokenType.Desc,
+        ["as"] = TokenType.As,
         ["contains"] = TokenType.Contains,
         ["startswith"] = TokenType.StartsWith,
         ["endswith"] = TokenType.EndsWith
     };
-
-    public Tokenizer(string expression)
-    {
-        _expression = expression ?? throw new ArgumentNullException(nameof(expression));
-    }
 
     /// <summary>
     /// Tokenizes the expression and returns all tokens.
@@ -159,10 +155,7 @@ public sealed class Tokenizer
         var sb = new StringBuilder();
         sb.Append(firstChar);
 
-        while (!IsAtEnd() && IsIdentifierPart(Peek()))
-        {
-            sb.Append(Advance());
-        }
+        while (!IsAtEnd() && IsIdentifierPart(Peek())) sb.Append(Advance());
 
         var value = sb.ToString();
 
@@ -177,10 +170,7 @@ public sealed class Tokenizer
 
     private void SkipWhitespace()
     {
-        while (!IsAtEnd() && char.IsWhiteSpace(Peek()))
-        {
-            Advance();
-        }
+        while (!IsAtEnd() && char.IsWhiteSpace(Peek())) Advance();
     }
 
     private bool IsAtEnd() => _position >= _expression.Length;
@@ -207,7 +197,4 @@ public sealed class Tokenizer
 /// <summary>
 /// Exception thrown when tokenization fails.
 /// </summary>
-public class ExpressionTokenizeException : Exception
-{
-    public ExpressionTokenizeException(string message) : base(message) { }
-}
+public class ExpressionTokenizeException(string message) : Exception(message);

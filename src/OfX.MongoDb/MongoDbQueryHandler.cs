@@ -102,13 +102,6 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
                 IsDefault: expr == null))
             .ToDictionary(x => x.FieldName, x => x.Expression);
 
-        // Track which expressions are default (for potential special handling)
-        var defaultFlags = expressions
-            .Select((expr, idx) => (FieldName: $"_exp_{idx}", IsDefault: expr == null))
-            .Where(x => x.IsDefault)
-            .Select(x => x.FieldName)
-            .ToHashSet();
-
         // Check cache
         var cacheKey = ComputeCacheKey(expressions);
         if (ProjectionCache.TryGetValue(cacheKey, out var cached))
@@ -120,10 +113,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
         var projection = BsonProjectionBuilder.BuildProjectionDocument(expressionMap);
 
         // Always include _id
-        if (!projection.Contains("_id"))
-        {
-            projection.InsertAt(0, new BsonElement("_id", 1));
-        }
+        if (!projection.Contains("_id")) projection.InsertAt(0, new BsonElement("_id", 1));
 
         // Cache it
         ProjectionCache.TryAdd(cacheKey, projection);
@@ -183,8 +173,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     /// </summary>
     private static string BsonValueToJson(BsonValue bsonValue)
     {
-        if (bsonValue == null || bsonValue.IsBsonNull)
-            return null;
+        if (bsonValue == null || bsonValue.IsBsonNull) return null;
 
         // Convert to JSON using MongoDB's ToJson
         return bsonValue.ToJson();
@@ -193,10 +182,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     private static int ComputeCacheKey(List<string> expressions)
     {
         var hash = new HashCode();
-        foreach (var expr in expressions)
-        {
-            hash.Add(expr);
-        }
+        foreach (var expr in expressions) hash.Add(expr);
 
         return hash.ToHashCode();
     }
@@ -208,9 +194,8 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     {
         private volatile bool _isInitialized;
         private readonly object _initLock = new();
-
-        public PropertyInfo IdPropertyInfo { get; private set; }
-        public Type IdPropertyType { get; private set; }
+        private PropertyInfo IdPropertyInfo { get; set; }
+        private Type IdPropertyType { get; set; }
         public IIdConverter IdConverter { get; private set; }
 
         // Cached delegate for building In filter
@@ -218,7 +203,9 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
 
         public void EnsureInitialized(string idPropertyName, IServiceProvider serviceProvider)
         {
-            if (_isInitialized) return;
+            lock (_initLock)
+                if (_isInitialized)
+                    return;
 
             lock (_initLock)
             {
@@ -246,10 +233,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
         /// <summary>
         /// Builds an In filter for the given converted IDs.
         /// </summary>
-        public FilterDefinition<TModel> BuildInFilter(object idsConverted)
-        {
-            return _buildInFilterDelegate(idsConverted);
-        }
+        public FilterDefinition<TModel> BuildInFilter(object idsConverted) => _buildInFilterDelegate(idsConverted);
 
         /// <summary>
         /// Creates a delegate that builds the In filter using strongly-typed generics.

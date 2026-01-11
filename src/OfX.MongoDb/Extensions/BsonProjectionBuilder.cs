@@ -129,36 +129,50 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             {
                 return new BsonDocument("$first", sortedArray);
             }
-            else if (node.Skip == -1 || node.IsLastItem)
+
+            if (node.Skip == -1 || node.IsLastItem)
             {
                 return new BsonDocument("$last", sortedArray);
             }
-            else
-            {
-                // Use $arrayElemAt for specific index
-                return new BsonDocument("$arrayElemAt", new BsonArray { sortedArray, node.Skip });
-            }
+
+            // Use $arrayElemAt for specific index
+            return new BsonDocument("$arrayElemAt", new BsonArray { sortedArray, node.Skip });
         }
-        else
+
+        // Range access with Skip and Take
+        return new BsonDocument("$slice", new BsonArray
         {
-            // Range access with Skip and Take
-            return new BsonDocument("$slice", new BsonArray
-            {
-                sortedArray,
-                node.Skip,
-                node.Take!.Value
-            });
-        }
+            sortedArray,
+            node.Skip,
+            node.Take!.Value
+        });
     }
 
     public BsonValue VisitProjection(ProjectionNode node, BsonBuildContext context)
     {
-        // Get source array
+        // Get source value (could be array or single object)
         var sourceValue = node.Source.Accept(this, context);
 
-        // Build $map to project specific fields
+        // Check if source is likely a collection (array) or single object
+        // In MongoDB context, we determine this by checking if the source expression
+        // indicates an array operation (like $filter, $sortArray) or a simple field reference
+        if (IsArrayExpression(sourceValue))
+        {
+            // Collection projection: Orders.{Id, Status} -> $map
+            return BuildCollectionProjection(sourceValue, node.Properties);
+        }
+
+        // Single object projection: Country.{Id, Name} -> direct field extraction
+        return BuildSingleObjectProjection(sourceValue, node.Properties);
+    }
+
+    /// <summary>
+    /// Builds a projection for a collection using $map.
+    /// </summary>
+    private static BsonValue BuildCollectionProjection(BsonValue sourceValue, IReadOnlyList<string> properties)
+    {
         var projectionDoc = new BsonDocument();
-        foreach (var prop in node.Properties) projectionDoc.Add(prop, $"$$item.{prop}");
+        foreach (var prop in properties) projectionDoc.Add(prop, $"$$item.{prop}");
 
         return new BsonDocument("$map", new BsonDocument
         {
@@ -166,6 +180,87 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             { "as", "item" },
             { "in", projectionDoc }
         });
+    }
+
+    /// <summary>
+    /// Builds a projection for a single object by extracting specific fields.
+    /// </summary>
+    private static BsonValue BuildSingleObjectProjection(BsonValue sourceValue, IReadOnlyList<string> properties)
+    {
+        // For single object, we create a document that extracts specific fields
+        // If sourceValue is a field reference like "$Country", we build:
+        // { Id: { $getField: { field: "Id", input: "$Country" } }, Name: { $getField: { field: "Name", input: "$Country" } } }
+        var projectionDoc = new BsonDocument();
+
+        foreach (var prop in properties)
+        {
+            projectionDoc.Add(prop, new BsonDocument("$getField", new BsonDocument
+            {
+                { "field", prop },
+                { "input", sourceValue }
+            }));
+        }
+
+        return projectionDoc;
+    }
+
+    /// <summary>
+    /// Determines if a BsonValue represents an array expression.
+    /// </summary>
+    private static bool IsArrayExpression(BsonValue value)
+    {
+        if (value is BsonDocument doc)
+        {
+            // Check for array operators
+            return doc.Contains("$filter") ||
+                   doc.Contains("$map") ||
+                   doc.Contains("$sortArray") ||
+                   doc.Contains("$slice") ||
+                   doc.Contains("$concatArrays") ||
+                   doc.Contains("$setUnion") ||
+                   doc.Contains("$setIntersection");
+        }
+
+        // Simple field references could be either - default to single object
+        // Since navigation like Country.{Id, Name} would be a simple field reference
+        return false;
+    }
+
+    public BsonValue VisitRootProjection(RootProjectionNode node, BsonBuildContext context)
+    {
+        // Build a document with selected properties from the root object
+        // Supports navigation paths and aliases: {Id, Name, Country.Name as CountryName}
+        var projectionDoc = new BsonDocument();
+
+        foreach (var prop in node.Properties)
+        {
+            // Build the field reference for the path
+            var fieldRef = BuildFieldPath(prop.PathSegments);
+
+            // Use OutputKey as the key (alias if provided, otherwise last segment)
+            projectionDoc.Add(prop.OutputKey, fieldRef);
+        }
+
+        return projectionDoc;
+    }
+
+    /// <summary>
+    /// Builds a MongoDB field path reference for navigation paths.
+    /// </summary>
+    /// <param name="pathSegments">The path segments (e.g., ["Country", "Name"]).</param>
+    /// <returns>A BSON field reference expression.</returns>
+    private static BsonValue BuildFieldPath(string[] pathSegments)
+    {
+        if (pathSegments.Length == 1)
+        {
+            // Simple field reference: $Name
+            return $"${pathSegments[0]}";
+        }
+
+        // Navigation path: Country.Name -> nested $getField expressions
+        // Build from inside out: $Country.Name
+        var fullPath = string.Join(".", pathSegments);
+        return $"${fullPath}";
     }
 
     public BsonValue VisitFunction(FunctionNode node, BsonBuildContext context)

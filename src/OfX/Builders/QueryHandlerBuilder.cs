@@ -45,7 +45,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
         .Invoke(typeof(TModel), typeof(TAttribute));
 
     // Static cache per generic type combination - this is correct behavior in C#
-    // Each QueryHandlerBuilderV2<User, UserOfAttribute> gets its own static fields
+    // Each QueryHandlerBuilder<User, UserOfAttribute> gets its own static fields
     private static readonly Lazy<FilterExpressionCache> FilterCache = new(() => new FilterExpressionCache());
     private static readonly ConcurrentDictionary<int, Expression<Func<TModel, object[]>>> ProjectionCache = new();
 

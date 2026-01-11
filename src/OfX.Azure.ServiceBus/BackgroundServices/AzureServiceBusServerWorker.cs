@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Wrappers;
-using OfX.Cached;
+using OfX.Statics;
 
 namespace OfX.Azure.ServiceBus.BackgroundServices;
 
@@ -23,7 +23,7 @@ public class AzureServiceBusServerWorker(IServiceProvider serviceProvider) : Bac
         {
             try
             {
-                var tasks = OfXCached.AttributeMapHandlers.Select(async x =>
+                var tasks = OfXStatics.AttributeMapHandlers.Select(async x =>
                 {
                     // Create reply-queue.
                     var requestQueue = x.Key.GetAzureServiceBusRequestQueue();

@@ -48,6 +48,9 @@ public enum TokenType
     Asc,               // asc
     Desc,              // desc
 
+    // Alias
+    As,                // as (for aliasing: Country.Name as CountryName)
+
     // End of expression
     EndOfExpression
 }

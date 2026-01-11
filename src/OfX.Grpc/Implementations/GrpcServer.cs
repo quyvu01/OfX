@@ -3,7 +3,6 @@ using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.ApplicationModels;
-using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Grpc.Exceptions;
@@ -38,7 +37,7 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
                     if (attributeType is null)
                         throw new OfXGrpcExceptions.CannotDeserializeOfXAttributeType(typeAssembly);
 
-                    if (!OfXCached.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
+                    if (!OfXStatics.AttributeMapHandlers.TryGetValue(attributeType, out var handlerType))
                         throw new OfXException.CannotFindHandlerForOfAttribute(attributeType);
 
                     var modelArg = handlerType.GetGenericArguments()[0];

@@ -19,9 +19,7 @@ public static class ProjectionTransformer
         IReadOnlyList<string> expressions)
     {
         foreach (var row in rawResults)
-        {
             yield return TransformRow(row, expressions);
-        }
     }
 
     /// <summary>
@@ -30,7 +28,7 @@ public static class ProjectionTransformer
     /// <param name="row">The raw result row (object[]).</param>
     /// <param name="expressions">The original expression strings (in order).</param>
     /// <returns>An OfXDataResponse object.</returns>
-    public static OfXDataResponse TransformRow(object[] row, IReadOnlyList<string> expressions)
+    private static OfXDataResponse TransformRow(object[] row, IReadOnlyList<string> expressions)
     {
         // row[0] = Id
         // row[1..n] = Expression values
@@ -105,15 +103,11 @@ public static class ProjectionTransformer
     /// <summary>
     /// Transforms results to an array synchronously.
     /// </summary>
-    public static OfXDataResponse[] TransformToArray(
-        object[][] rawResults,
-        IReadOnlyList<string> expressions)
+    public static OfXDataResponse[] TransformToArray(object[][] rawResults, IReadOnlyList<string> expressions)
     {
         var result = new OfXDataResponse[rawResults.Length];
-        for (var i = 0; i < rawResults.Length; i++)
-        {
-            result[i] = TransformRow(rawResults[i], expressions);
-        }
+        for (var i = 0; i < rawResults.Length; i++) result[i] = TransformRow(rawResults[i], expressions);
+
         return result;
     }
 }

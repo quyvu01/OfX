@@ -215,25 +215,23 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
             return new ExpressionBuildResult(elementType, elementCall);
         }
-        else
-        {
-            // Range access: Skip().Take()
-            var skipCall = Expression.Call(
-                typeof(Enumerable),
-                nameof(Enumerable.Skip),
-                [elementType],
-                orderedCall,
-                Expression.Constant(node.Skip));
 
-            var takeCall = Expression.Call(
-                typeof(Enumerable),
-                nameof(Enumerable.Take),
-                [elementType],
-                skipCall,
-                Expression.Constant(node.Take!.Value));
+        // Range access: Skip().Take()
+        var skipCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Skip),
+            [elementType],
+            orderedCall,
+            Expression.Constant(node.Skip));
 
-            return new ExpressionBuildResult(typeof(IEnumerable<>).MakeGenericType(elementType), takeCall);
-        }
+        var takeCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Take),
+            [elementType],
+            skipCall,
+            Expression.Constant(node.Take!.Value));
+
+        return new ExpressionBuildResult(typeof(IEnumerable<>).MakeGenericType(elementType), takeCall);
     }
 
     public ExpressionBuildResult VisitProjection(ProjectionNode node, ExpressionBuildContext context)
@@ -241,43 +239,157 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         // Get the source
         var sourceResult = node.Source.Accept(this, context);
 
-        if (!TryGetEnumerableElementType(sourceResult.Type, out var elementType))
-            throw new InvalidOperationException(
-                $"Cannot apply projection to non-collection type '{sourceResult.Type.Name}'");
+        // Check if source is a collection or single object
+        if (TryGetEnumerableElementType(sourceResult.Type, out var elementType))
+        {
+            // Collection projection: Orders.{Id, Status} -> IEnumerable<Dictionary<string, object>>
+            return BuildCollectionProjection(node, sourceResult, elementType, context);
+        }
+        else
+        {
+            // Single object projection: Country.{Id, Name} -> Dictionary<string, object>
+            return BuildSingleObjectProjection(node, sourceResult, context);
+        }
+    }
 
+    /// <summary>
+    /// Builds projection for a collection: Orders.{Id, Status} -> Select(o => new Dictionary...)
+    /// </summary>
+    private ExpressionBuildResult BuildCollectionProjection(
+        ProjectionNode node,
+        ExpressionBuildResult sourceResult,
+        Type elementType,
+        ExpressionBuildContext context)
+    {
         // Create parameter for Select lambda
         var selectParameter = Expression.Parameter(elementType, "p");
 
-        // Build anonymous type with selected properties
+        // Build Dictionary<string, object> for each element
+        var dictType = typeof(Dictionary<string, object>);
+        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var newDictExpr = Expression.New(dictType);
+
         var typeAccessor = context.TypeAccessorProvider(elementType);
-        var properties = new List<PropertyInfo>();
+        var elementInits = new List<ElementInit>();
 
         foreach (var propName in node.Properties)
         {
             var propertyInfo = typeAccessor.GetPropertyInfo(propName)
                                ?? throw new InvalidOperationException(
                                    $"Property '{propName}' not found on type '{elementType.Name}'");
-            properties.Add(propertyInfo);
+
+            var keyExpr = Expression.Constant(propName);
+            var valueExpr = Expression.Convert(
+                Expression.Property(selectParameter, propertyInfo),
+                typeof(object));
+
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, valueExpr));
         }
 
-        // Create anonymous type or use Dictionary<string, object>
-        // For simplicity, we'll create a ExpandoObject or return as array of values
-        // In real implementation, you might want to generate anonymous type dynamically
-
-        var propertyExpressions = properties.Select(p =>
-            Expression.Convert(Expression.Property(selectParameter, p), typeof(object))).ToArray();
-
-        var newArrayExpr = Expression.NewArrayInit(typeof(object), propertyExpressions);
-        var selectLambda = Expression.Lambda(newArrayExpr, selectParameter);
+        var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
+        var selectLambda = Expression.Lambda(dictInitExpr, selectParameter);
 
         var selectCall = Expression.Call(
             typeof(Enumerable),
             nameof(Enumerable.Select),
-            [elementType, typeof(object[])],
+            [elementType, dictType],
             sourceResult.Expression,
             selectLambda);
 
-        return new ExpressionBuildResult(typeof(IEnumerable<object[]>), selectCall);
+        return new ExpressionBuildResult(typeof(IEnumerable<Dictionary<string, object>>), selectCall);
+    }
+
+    /// <summary>
+    /// Builds projection for a single object: Country.{Id, Name} -> new Dictionary...
+    /// </summary>
+    private ExpressionBuildResult BuildSingleObjectProjection(
+        ProjectionNode node,
+        ExpressionBuildResult sourceResult,
+        ExpressionBuildContext context)
+    {
+        var sourceType = sourceResult.Type;
+        var typeAccessor = context.TypeAccessorProvider(sourceType);
+
+        // Build: new Dictionary<string, object> { { "Id", source.Id }, { "Name", source.Name }, ... }
+        var dictType = typeof(Dictionary<string, object>);
+        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var newDictExpr = Expression.New(dictType);
+
+        var elementInits = new List<ElementInit>();
+
+        foreach (var propName in node.Properties)
+        {
+            var propertyInfo = typeAccessor.GetPropertyInfo(propName)
+                               ?? throw new InvalidOperationException(
+                                   $"Property '{propName}' not found on type '{sourceType.Name}'");
+
+            var keyExpr = Expression.Constant(propName);
+            var valueExpr = Expression.Convert(
+                Expression.Property(sourceResult.Expression, propertyInfo),
+                typeof(object));
+
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, valueExpr));
+        }
+
+        var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
+
+        return new ExpressionBuildResult(dictType, dictInitExpr);
+    }
+
+    public ExpressionBuildResult VisitRootProjection(RootProjectionNode node, ExpressionBuildContext context)
+    {
+        // Build projection directly from the root object (context.CurrentExpression)
+        // Returns Dictionary<string, object> so it can be serialized as JSON object
+        // Supports navigation paths and aliases: {Id, Name, Country.Name as CountryName}
+
+        // Build: new Dictionary<string, object> { { "Id", x.Id }, { "CountryName", x.Country.Name }, ... }
+        var dictType = typeof(Dictionary<string, object>);
+        var addMethod = dictType.GetMethod(nameof(Dictionary<,>.Add), [typeof(string), typeof(object)])!;
+
+        // Create new Dictionary<string, object>()
+        var newDictExpr = Expression.New(dictType);
+
+        // Build list of ElementInit for dictionary initializer
+        var elementInits = new List<ElementInit>();
+
+        foreach (var prop in node.Properties)
+        {
+            // Build expression for the property path (may include navigation)
+            var valueExpr = BuildPropertyPath(prop.PathSegments, context);
+
+            // Key is OutputKey (alias if provided, otherwise last segment of path)
+            var keyExpr = Expression.Constant(prop.OutputKey);
+
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr,
+                Expression.Convert(valueExpr, typeof(object))));
+        }
+
+        // Create dictionary initializer expression
+        var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
+
+        return new ExpressionBuildResult(dictType, dictInitExpr);
+    }
+
+    /// <summary>
+    /// Builds an expression for a property path, supporting navigation (e.g., "Country.Name").
+    /// </summary>
+    private Expression BuildPropertyPath(string[] pathSegments, ExpressionBuildContext context)
+    {
+        var currentExpr = context.CurrentExpression;
+        var currentType = context.CurrentType;
+
+        foreach (var segment in pathSegments)
+        {
+            var typeAccessor = context.TypeAccessorProvider(currentType);
+            var propertyInfo = typeAccessor.GetPropertyInfo(segment)
+                               ?? throw new InvalidOperationException(
+                                   $"Property '{segment}' not found on type '{currentType.Name}'");
+
+            currentExpr = Expression.Property(currentExpr, propertyInfo);
+            currentType = propertyInfo.PropertyType;
+        }
+
+        return currentExpr;
     }
 
     public ExpressionBuildResult VisitFunction(FunctionNode node, ExpressionBuildContext context)

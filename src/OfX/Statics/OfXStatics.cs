@@ -3,7 +3,6 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Extensions;
-using OfX.Responses;
 
 namespace OfX.Statics;
 
@@ -37,24 +36,10 @@ public static class OfXStatics
     public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
 
-    internal static readonly Type OfXValueType = typeof(OfXValueResponse);
-
     public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
 
     public static readonly Type DefaultQueryOfHandlerType = typeof(DefaultQueryOfHandler<,>);
     public static Assembly ModelConfigurationAssembly { get; internal set; }
-
-    internal static readonly PropertyInfo ValueExpressionTypeProp =
-        OfXValueType.GetProperty(nameof(OfXValueResponse.Expression))!;
-
-    internal static readonly PropertyInfo ValueValueTypeProp =
-        OfXValueType.GetProperty(nameof(OfXValueResponse.Value))!;
-
-    internal static readonly PropertyInfo OfXIdProp =
-        typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.Id))!;
-
-    internal static readonly PropertyInfo OfXValuesProp =
-        typeof(OfXDataResponse).GetProperty(nameof(OfXDataResponse.OfXValues))!;
 
     public static readonly Lazy<IReadOnlyCollection<OfXModelData>> ModelConfigurations = new(() =>
     {
@@ -91,4 +76,18 @@ public static class OfXStatics
         ..AttributesRegister.SelectMany(a => a.ExportedTypes)
             .Where(a => typeof(OfXAttribute).IsAssignableFrom(a) && a.IsConcrete())
     ]);
+
+    /// <summary>
+    /// Gets the internal dictionary mapping attribute types to their query handler types.
+    /// </summary>
+    internal static Dictionary<Type, Type> InternalAttributeMapHandlers { get; } = [];
+
+    /// <summary>
+    /// Gets a read-only view of the attribute-to-handler type mappings.
+    /// </summary>
+    /// <remarks>
+    /// The key is the <see cref="Attributes.OfXAttribute"/> type (e.g., <c>UserOfAttribute</c>),
+    /// and the value is the corresponding <see cref="Abstractions.IQueryOfHandler{TModel, TAttribute}"/> type.
+    /// </remarks>
+    public static IReadOnlyDictionary<Type, Type> AttributeMapHandlers => InternalAttributeMapHandlers;
 }

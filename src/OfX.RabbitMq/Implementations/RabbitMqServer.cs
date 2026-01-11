@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.ApplicationModels;
-using OfX.Cached;
 using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Implementations;
@@ -13,6 +12,7 @@ using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
 using OfX.Responses;
+using OfX.Statics;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -45,7 +45,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         await _channel.QueueDeclareAsync(queue: queueName, durable: false, exclusive: false,
             autoDelete: false, arguments: null, cancellationToken: cancellationToken);
 
-        var attributeTypes = OfXCached.AttributeMapHandlers.Keys.ToList();
+        var attributeTypes = OfXStatics.AttributeMapHandlers.Keys.ToList();
         if (attributeTypes is not { Count: > 0 }) return;
 
         foreach (var exchangeName in attributeTypes.Select(attributeType => attributeType.GetExchangeName()))
@@ -69,7 +69,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var receivedPipelineOrchestrator = AttributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
-                if (!OfXCached.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))
+                if (!OfXStatics.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))
                     throw new OfXException.CannotFindHandlerForOfAttribute(ofXAttributeType);
                 var modelType = handlerType.GetGenericArguments()[0];
                 return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelType, ofXAttributeType);

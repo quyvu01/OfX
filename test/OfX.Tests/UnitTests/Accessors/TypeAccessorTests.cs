@@ -74,4 +74,92 @@ public sealed class TypeAccessorTests
         // Assert
         Should.Throw<OfXException.DuplicatedNameByExposedName>(() => accessor.GetPropertyInfo("UserName"));
     }
+
+    #region GetPropertyInfoDirect Tests
+
+    [Fact]
+    public void GetPropertyInfoDirect_Should_Get_Property_By_ActualName_BypassingExposedName()
+    {
+        // Arrange
+        var accessor = OfXTypeCache.GetTypeAccessor(typeof(TestCorrectUser));
+
+        // Act
+        var idPropertyInfo = accessor.GetPropertyInfoDirect("Id");
+        var namePropertyInfo = accessor.GetPropertyInfoDirect("Name"); // Actual name, not "UserName"
+        var agePropertyInfo = accessor.GetPropertyInfoDirect("Age"); // Actual name, not "UserAge"
+
+        // Assert
+        idPropertyInfo.ShouldNotBeNull();
+        idPropertyInfo.Name.ShouldBe("Id");
+
+        namePropertyInfo.ShouldNotBeNull();
+        namePropertyInfo.Name.ShouldBe("Name");
+
+        agePropertyInfo.ShouldNotBeNull();
+        agePropertyInfo.Name.ShouldBe("Age");
+    }
+
+    [Fact]
+    public void GetPropertyInfoDirect_Should_Return_Null_For_ExposedName()
+    {
+        // Arrange
+        var accessor = OfXTypeCache.GetTypeAccessor(typeof(TestCorrectUser));
+
+        // Act - trying to get property by ExposedName should return null
+        var userNamePropertyInfo = accessor.GetPropertyInfoDirect("UserName");
+        var userAgePropertyInfo = accessor.GetPropertyInfoDirect("UserAge");
+
+        // Assert
+        userNamePropertyInfo.ShouldBeNull();
+        userAgePropertyInfo.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetPropertyInfoDirect_Should_Return_Null_For_NonExistent_Property()
+    {
+        // Arrange
+        var accessor = OfXTypeCache.GetTypeAccessor(typeof(TestCorrectUser));
+
+        // Act
+        var nonExistentPropertyInfo = accessor.GetPropertyInfoDirect("NonExistentProperty");
+
+        // Assert
+        nonExistentPropertyInfo.ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetPropertyInfoDirect_Should_Work_With_Duplicated_ExposedName_Class()
+    {
+        // Arrange - this class has duplicate ExposedName which throws for GetPropertyInfo
+        var accessor = OfXTypeCache.GetTypeAccessor(typeof(TestUnCorrectUserByExposedName));
+
+        // Act - GetPropertyInfoDirect should still work by actual name
+        var namePropertyInfo = accessor.GetPropertyInfoDirect("Name");
+        var agePropertyInfo = accessor.GetPropertyInfoDirect("Age");
+
+        // Assert - Should not throw and return correct properties
+        namePropertyInfo.ShouldNotBeNull();
+        namePropertyInfo.Name.ShouldBe("Name");
+
+        agePropertyInfo.ShouldNotBeNull();
+        agePropertyInfo.Name.ShouldBe("Age");
+    }
+
+    [Fact]
+    public void GetPropertyInfo_And_GetPropertyInfoDirect_Should_Return_Same_Property_For_NonExposed()
+    {
+        // Arrange
+        var accessor = OfXTypeCache.GetTypeAccessor(typeof(TestCorrectUser));
+
+        // Act
+        var idViaGetPropertyInfo = accessor.GetPropertyInfo("Id");
+        var idViaGetPropertyInfoDirect = accessor.GetPropertyInfoDirect("Id");
+
+        // Assert - Both should return the same property
+        idViaGetPropertyInfo.ShouldNotBeNull();
+        idViaGetPropertyInfoDirect.ShouldNotBeNull();
+        idViaGetPropertyInfo.ShouldBeSameAs(idViaGetPropertyInfoDirect);
+    }
+
+    #endregion
 }

@@ -9,21 +9,24 @@ namespace OfX.Expressions.Parsing;
 /// <remarks>
 /// Grammar:
 /// <code>
-/// Expression     := Segment ('.' Segment)*
-/// Segment        := PropertyAccess Filter? Indexer? Projection? Function?
-/// PropertyAccess := Identifier ('?')?
-/// Filter         := '(' Condition ')'
-/// Condition      := OrCondition
-/// OrCondition    := AndCondition (('||' | 'or') AndCondition)*
-/// AndCondition   := Comparison (('&amp;&amp;' | 'and' | ',') Comparison)*
-/// Comparison     := FieldPath Operator Value
-/// FieldPath      := Identifier (':' FunctionName)?
-/// Operator       := '=' | '!=' | '>' | '&lt;' | '>=' | '&lt;=' | 'contains' | 'startswith' | 'endswith'
-/// Value          := String | Number | Boolean | Null
-/// Indexer        := '[' Number (Number)? ('asc' | 'desc') Identifier ']'
-/// Projection     := '.{' Identifier (',' Identifier)* '}'
-/// Function       := ':' FunctionName ('(' Identifier ')')?
-/// FunctionName   := 'count' | 'sum' | 'avg' | 'min' | 'max'
+/// Expression       := RootProjection | Segment ('.' Segment)*
+/// RootProjection   := '{' ProjectionProperty (',' ProjectionProperty)* '}'
+/// ProjectionProperty := PropertyPath ('as' Identifier)?
+/// PropertyPath     := Identifier ('.' Identifier)*
+/// Segment          := PropertyAccess Filter? Indexer? Projection? Function?
+/// PropertyAccess   := Identifier ('?')?
+/// Filter           := '(' Condition ')'
+/// Condition        := OrCondition
+/// OrCondition      := AndCondition (('||' | 'or') AndCondition)*
+/// AndCondition     := Comparison (('&amp;&amp;' | 'and' | ',') Comparison)*
+/// Comparison       := FieldPath Operator Value
+/// FieldPath        := Identifier (':' FunctionName)?
+/// Operator         := '=' | '!=' | '>' | '&lt;' | '>=' | '&lt;=' | 'contains' | 'startswith' | 'endswith'
+/// Value            := String | Number | Boolean | Null
+/// Indexer          := '[' Number (Number)? ('asc' | 'desc') Identifier ']'
+/// Projection       := '.{' Identifier (',' Identifier)* '}'
+/// Function         := ':' FunctionName ('(' Identifier ')')?
+/// FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max'
 /// </code>
 /// </remarks>
 public sealed class ExpressionParser
@@ -70,6 +73,12 @@ public sealed class ExpressionParser
     /// </summary>
     public ExpressionNode ParseExpression()
     {
+        // Check for root projection: {Id, Name, Description}
+        if (Check(TokenType.OpenBrace))
+        {
+            return ParseRootProjection();
+        }
+
         var segments = new List<ExpressionNode>();
         segments.Add(ParseSegment());
 
@@ -346,6 +355,55 @@ public sealed class ExpressionParser
         Consume(TokenType.CloseBrace, "Expected '}' after projection");
 
         return new ProjectionNode(source, properties);
+    }
+
+    /// <summary>
+    /// Parses a root projection: {Id, Name, Country.Name as CountryName}
+    /// This projects properties directly from the root object.
+    /// Supports navigation paths and aliases.
+    /// </summary>
+    private RootProjectionNode ParseRootProjection()
+    {
+        Consume(TokenType.OpenBrace, "Expected '{' for root projection");
+
+        var properties = new List<ProjectionProperty>();
+        properties.Add(ParseProjectionProperty());
+
+        while (Match(TokenType.Comma))
+        {
+            properties.Add(ParseProjectionProperty());
+        }
+
+        Consume(TokenType.CloseBrace, "Expected '}' after projection");
+
+        return new RootProjectionNode(properties);
+    }
+
+    /// <summary>
+    /// Parses a single projection property: Name, Country.Name, or Country.Name as CountryName
+    /// </summary>
+    private ProjectionProperty ParseProjectionProperty()
+    {
+        // Parse property path (can include navigation: Country.Name)
+        var pathParts = new List<string>();
+        pathParts.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
+
+        // Continue collecting path segments while we see dots
+        while (Match(TokenType.Dot))
+        {
+            pathParts.Add(Consume(TokenType.Identifier, "Expected property name after '.'").Value);
+        }
+
+        var path = string.Join(".", pathParts);
+
+        // Check for alias: "as AliasName"
+        string alias = null;
+        if (Match(TokenType.As))
+        {
+            alias = Consume(TokenType.Identifier, "Expected alias name after 'as'").Value;
+        }
+
+        return new ProjectionProperty(path, alias);
     }
 
     #region Helper Methods
