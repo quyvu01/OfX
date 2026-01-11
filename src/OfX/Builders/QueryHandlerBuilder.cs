@@ -133,10 +133,9 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
                 // Create parameter expression
                 ModelParameter = Expression.Parameter(typeof(TModel), ParameterName);
 
-                // Get Id property info
+                // Get Id property info - use GetPropertyInfoDirect to bypass ExposedName
                 var typeAccessor = OfXTypeCache.GetTypeAccessor(typeof(TModel));
-                IdPropertyInfo = typeAccessor.GetPropertyInfo(idPropertyName)
-                                 ?? typeof(TModel).GetProperty(idPropertyName)
+                IdPropertyInfo = typeAccessor.GetPropertyInfoDirect(idPropertyName)
                                  ?? throw new InvalidOperationException(
                                      $"Id property '{idPropertyName}' not found on type '{typeof(TModel).Name}'");
 

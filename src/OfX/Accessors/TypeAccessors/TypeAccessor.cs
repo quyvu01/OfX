@@ -8,6 +8,7 @@ namespace OfX.Accessors.TypeAccessors;
 public sealed class TypeAccessor(Type objectType) : ITypeAccessor
 {
     private readonly ConcurrentDictionary<string, PropertyInfo> _properties = [];
+    private readonly ConcurrentDictionary<string, PropertyInfo> _directProperties = [];
 
     public PropertyInfo GetPropertyInfo(string name)
     {
@@ -28,5 +29,11 @@ public sealed class TypeAccessor(Type objectType) : ITypeAccessor
             };
         });
         return result;
+    }
+
+    public PropertyInfo GetPropertyInfoDirect(string propertyName)
+    {
+        return _directProperties.GetOrAdd(propertyName,
+            n => objectType.GetProperty(n, BindingFlags.Public | BindingFlags.Instance));
     }
 }

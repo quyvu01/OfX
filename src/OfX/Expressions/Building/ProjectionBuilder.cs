@@ -30,23 +30,16 @@ namespace OfX.Expressions.Building;
 /// The result can then be transformed to OfXDataResponse in memory.
 /// </para>
 /// </remarks>
-public sealed class ProjectionBuilder<TModel> where TModel : class
+public sealed class ProjectionBuilder<TModel>(
+    string idProperty,
+    string defaultProperty = null,
+    Func<Type, ITypeAccessor> typeAccessorProvider = null)
+    where TModel : class
 {
-    private readonly ParameterExpression _parameter;
-    private readonly Func<Type, ITypeAccessor> _typeAccessorProvider;
-    private readonly string _idProperty;
-    private readonly string _defaultProperty;
+    private readonly ParameterExpression _parameter = Expression.Parameter(typeof(TModel), "x");
 
-    public ProjectionBuilder(
-        string idProperty,
-        string defaultProperty = null,
-        Func<Type, ITypeAccessor> typeAccessorProvider = null)
-    {
-        _parameter = Expression.Parameter(typeof(TModel), "x");
-        _typeAccessorProvider = typeAccessorProvider ?? OfXTypeCache.GetTypeAccessor;
-        _idProperty = idProperty;
-        _defaultProperty = defaultProperty;
-    }
+    private readonly Func<Type, ITypeAccessor> _typeAccessorProvider =
+        typeAccessorProvider ?? OfXTypeCache.GetTypeAccessor;
 
     /// <summary>
     /// Builds a projection expression that returns object[].
@@ -66,7 +59,9 @@ public sealed class ProjectionBuilder<TModel> where TModel : class
         // [1..n] = Expression values
         foreach (var expr in expressionList)
         {
-            var valueExpr = BuildExpressionValue(expr);
+            var isDefaultProperty = expr == null;
+            var actualExpr = expr ?? defaultProperty;
+            var valueExpr = BuildExpressionValue(actualExpr, isDefaultProperty);
             projections.Add(Expression.Convert(valueExpr, typeof(object)));
         }
 
@@ -95,11 +90,12 @@ public sealed class ProjectionBuilder<TModel> where TModel : class
         for (var i = 0; i < expressionList.Count; i++)
         {
             var expr = expressionList[i];
-            var actualExpr = expr ?? _defaultProperty;
+            var isDefaultProperty = expr == null;
+            var actualExpr = expr ?? defaultProperty;
 
             try
             {
-                var valueExpr = BuildExpressionValue(actualExpr);
+                var valueExpr = BuildExpressionValue(actualExpr, isDefaultProperty);
                 projections.Add(Expression.Convert(valueExpr, typeof(object)));
                 metadata.Add(new ProjectionMetadata(i + 1, expr, false));
             }
@@ -120,19 +116,40 @@ public sealed class ProjectionBuilder<TModel> where TModel : class
     private Expression BuildIdExpression()
     {
         var typeAccessor = _typeAccessorProvider(typeof(TModel));
-        var idPropertyInfo = typeAccessor.GetPropertyInfo(_idProperty)
-            ?? typeof(TModel).GetProperty(_idProperty)
-            ?? throw new InvalidOperationException($"Id property '{_idProperty}' not found on type '{typeof(TModel).Name}'");
+        // Use GetPropertyInfoDirect to bypass ExposedName for Id property
+        var idPropertyInfo = typeAccessor.GetPropertyInfoDirect(idProperty)
+                             ?? throw new InvalidOperationException(
+                                 $"Id property '{idProperty}' not found on type '{typeof(TModel).Name}'");
 
         return Expression.Property(_parameter, idPropertyInfo);
     }
 
-    private Expression BuildExpressionValue(string expression)
+    /// <summary>
+    /// Builds expression for defaultProperty, bypassing ExposedName.
+    /// </summary>
+    private Expression BuildDefaultPropertyExpression()
+    {
+        if (string.IsNullOrEmpty(defaultProperty))
+            return Expression.Constant(null, typeof(object));
+
+        var typeAccessor = _typeAccessorProvider(typeof(TModel));
+        // Use GetPropertyInfoDirect to bypass ExposedName for defaultProperty
+        var propertyInfo = typeAccessor.GetPropertyInfoDirect(defaultProperty)
+                           ?? throw new InvalidOperationException(
+                               $"Default property '{defaultProperty}' not found on type '{typeof(TModel).Name}'");
+
+        return Expression.Property(_parameter, propertyInfo);
+    }
+
+    private Expression BuildExpressionValue(string expression, bool isDefaultProperty = false)
     {
         if (string.IsNullOrEmpty(expression))
-        {
             return Expression.Constant(null, typeof(object));
-        }
+
+        // If this is the default property (expression was null, using _defaultProperty),
+        // bypass ExposedName and access property directly
+        if (isDefaultProperty)
+            return BuildDefaultPropertyExpression();
 
         // Parse the expression using our new parser
         var node = ExpressionParser.Parse(expression);
@@ -190,8 +207,6 @@ public static class ProjectionBuilder
         string idProperty,
         string defaultProperty = null,
         Func<Type, ITypeAccessor> typeAccessorProvider = null)
-        where TModel : class
-    {
-        return new ProjectionBuilder<TModel>(idProperty, defaultProperty, typeAccessorProvider);
-    }
+        where TModel : class =>
+        new(idProperty, defaultProperty, typeAccessorProvider);
 }
