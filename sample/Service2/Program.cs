@@ -1,13 +1,9 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using OfX.Azure.ServiceBus.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
-using OfX.Kafka.Extensions;
 using OfX.Nats.Extensions;
-using OfX.RabbitMq.Extensions;
 using Service2;
 using Service2.Contexts;
 using Service2.Models;

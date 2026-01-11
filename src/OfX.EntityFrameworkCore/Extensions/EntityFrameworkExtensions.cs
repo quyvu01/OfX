@@ -50,8 +50,8 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped(typeof(IDbContextResolver<>), typeof(DbContextResolverInternal<>));
 
+        // var efQueryHandler = typeof(EfQueryHandler<,>);
         var efQueryHandler = typeof(EfQueryHandler<,>);
-
         serviceCollection.AddScoped(efQueryHandler);
 
         OfXStatics.ModelConfigurations.Value

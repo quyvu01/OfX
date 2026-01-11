@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 
 namespace OfX.Benchmark.OfXPropertyAssessors;
 
@@ -34,48 +34,48 @@ public class Dummy
 // 1️⃣ Direct: cache instance directly
 public sealed class DirectModel
 {
-    private readonly Dictionary<string, IOfXPropertyAccessor> _props;
+    private readonly Dictionary<string, IPropertyAccessor> _props;
 
     public DirectModel(Type type)
     {
         _props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToDictionary(
             p => p.Name,
-            p => (IOfXPropertyAccessor)Activator.CreateInstance(
-                typeof(OfXPropertyAccessor<,>).MakeGenericType(type, p.PropertyType), p)!);
+            p => (IPropertyAccessor)Activator.CreateInstance(
+                typeof(PropertyAccessor<,>).MakeGenericType(type, p.PropertyType), p)!);
     }
 
-    public IOfXPropertyAccessor Get(string name) => _props[name];
+    public IPropertyAccessor Get(string name) => _props[name];
 }
 
 // 2️⃣ Lazy: lazy init
 public sealed class LazyModel
 {
-    private readonly Dictionary<string, Lazy<IOfXPropertyAccessor>> _props;
+    private readonly Dictionary<string, Lazy<IPropertyAccessor>> _props;
 
     public LazyModel(Type type)
     {
         _props = type.GetProperties().ToDictionary(
             p => p.Name,
-            p => new Lazy<IOfXPropertyAccessor>(() =>
-                (IOfXPropertyAccessor)Activator.CreateInstance(
-                    typeof(OfXPropertyAccessor<,>).MakeGenericType(type, p.PropertyType), p)!));
+            p => new Lazy<IPropertyAccessor>(() =>
+                (IPropertyAccessor)Activator.CreateInstance(
+                    typeof(PropertyAccessor<,>).MakeGenericType(type, p.PropertyType), p)!));
     }
 
-    public IOfXPropertyAccessor Get(string name) => _props[name].Value;
+    public IPropertyAccessor Get(string name) => _props[name].Value;
 }
 
 public sealed class LazyLambdaModel
 {
-    private readonly Dictionary<string, Lazy<IOfXPropertyAccessor>> _props;
+    private readonly Dictionary<string, Lazy<IPropertyAccessor>> _props;
 
     public LazyLambdaModel(Type type)
     {
         _props = type.GetProperties().ToDictionary(
             p => p.Name,
-            p => new Lazy<IOfXPropertyAccessor>(
-                Expression.Lambda<Func<IOfXPropertyAccessor>>(
+            p => new Lazy<IPropertyAccessor>(
+                Expression.Lambda<Func<IPropertyAccessor>>(
                     Expression.New(
-                        typeof(OfXPropertyAccessor<,>)
+                        typeof(PropertyAccessor<,>)
                             .MakeGenericType(type, p.PropertyType)
                             .GetConstructor([typeof(PropertyInfo)])!,
                         Expression.Constant(p))
@@ -83,13 +83,13 @@ public sealed class LazyLambdaModel
             ));
     }
 
-    public IOfXPropertyAccessor Get(string name) => _props[name].Value;
+    public IPropertyAccessor Get(string name) => _props[name].Value;
 }
 
 // 3️⃣ FactoryCompiled: compile lambda
 public sealed class FactoryCompiledModel
 {
-    private readonly Dictionary<string, Func<IOfXPropertyAccessor>> _props;
+    private readonly Dictionary<string, Func<IPropertyAccessor>> _props;
 
     public FactoryCompiledModel(Type type)
     {
@@ -97,16 +97,16 @@ public sealed class FactoryCompiledModel
             p => p.Name,
             p =>
             {
-                var ctor = typeof(OfXPropertyAccessor<,>)
+                var ctor = typeof(PropertyAccessor<,>)
                     .MakeGenericType(type, p.PropertyType)
                     .GetConstructor([typeof(PropertyInfo)])!;
                 var newExp = Expression.New(ctor, Expression.Constant(p));
-                var lambda = Expression.Lambda<Func<IOfXPropertyAccessor>>(newExp);
+                var lambda = Expression.Lambda<Func<IPropertyAccessor>>(newExp);
                 return lambda.Compile();
             });
     }
 
-    public IOfXPropertyAccessor Get(string name) => _props[name]();
+    public IPropertyAccessor Get(string name) => _props[name]();
 }
 
 #endregion

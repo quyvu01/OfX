@@ -36,6 +36,21 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IActionResult> GetMembersWithComplexExpression(
+        [FromServices] IDistributedMapper distributedMapper)
+    {
+        List<MemberWitComplexExpressionResponse> members =
+        [
+            .. Enumerable.Range(1, 3).Select(a => new MemberWitComplexExpressionResponse
+            {
+                UserId = a.ToString()
+            })
+        ];
+        await distributedMapper.MapDataAsync(members);
+        return Ok(members);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetSimpleMembers([FromServices] IDistributedMapper distributedMapper,
         string userAlias, CancellationToken token = default)
     {

@@ -1,3 +1,4 @@
+using System.Reflection;
 using OfX.Abstractions;
 using OfX.Statics;
 
@@ -77,4 +78,7 @@ public static class OfXException
         Exception($"Ambiguous handlers for interface '{interfaceType.FullName}'.");
 
     public sealed class NoHandlerForAttribute(Type type) : Exception($"There is no handler for '{type.FullName}'!");
+
+    public sealed class DuplicatedNameByExposedName(Type type, PropertyInfo[] propertyInfos) : Exception(
+        $"Properties: {string.Join(", ", propertyInfos.Select(p => p.Name))} cannot be dupplicated for type '{type.FullName}'.");
 }

@@ -7,7 +7,6 @@ using OfX.Attributes;
 using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.Helpers;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;

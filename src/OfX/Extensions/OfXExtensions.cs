@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
 using OfX.Delegates;
 using OfX.Exceptions;
 using OfX.Handlers;
@@ -97,7 +96,7 @@ public static class OfXExtensions
         modelConfigurations.ForEach(m =>
         {
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
-            OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
+            OfXStatics.InternalAttributeMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
 
         return new OfXRegisterWrapped(newOfRegister);

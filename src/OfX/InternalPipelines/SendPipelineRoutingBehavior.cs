@@ -1,8 +1,8 @@
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
 using OfX.Implementations;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.InternalPipelines;
 
@@ -28,7 +28,7 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
         // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesOrchestrator<,> instead of sending via the message!
-        var existedHandler = OfXCached.AttributeMapHandlers;
+        var existedHandler = OfXStatics.AttributeMapHandlers;
         if (!existedHandler.TryGetValue(typeof(TAttribute), out var handlerType) || !handlerType.IsGenericType)
             return await next.Invoke();
         _receivedPipelinesOrchestratorType ??= typeof(ReceivedPipelinesOrchestrator<,>)

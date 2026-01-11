@@ -1,5 +1,5 @@
 using System.Reflection;
-using OfX.Accessors;
+using OfX.Accessors.PropertyAccessors;
 
 namespace OfX.ApplicationModels;
 
