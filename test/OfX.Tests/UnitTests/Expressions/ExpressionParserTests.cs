@@ -1091,4 +1091,191 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region String Functions
+
+    [Fact]
+    public void Parse_UpperFunction_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Name:upper");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Upper);
+        func.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Source).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_LowerFunction_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Name:lower");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Lower);
+    }
+
+    [Fact]
+    public void Parse_TrimFunction_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Description:trim");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Trim);
+    }
+
+    [Fact]
+    public void Parse_SubstringWithOneArg_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Name:substring(0)");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Substring);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(0m);
+    }
+
+    [Fact]
+    public void Parse_SubstringWithTwoArgs_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Name:substring(0, 3)");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Substring);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(2);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(0m);
+        ((LiteralNode)func.Arguments[1]).Value.ShouldBe(3m);
+    }
+
+    [Fact]
+    public void Parse_ReplaceFunction_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Name:replace('a', 'b')");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Replace);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(2);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe("a");
+        ((LiteralNode)func.Arguments[1]).Value.ShouldBe("b");
+    }
+
+    [Fact]
+    public void Parse_ConcatWithLiterals_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("FirstName:concat(' ', LastName)");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Concat);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(2);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(" ");
+        func.Arguments[1].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Arguments[1]).Name.ShouldBe("LastName");
+    }
+
+    [Fact]
+    public void Parse_SplitFunction_ReturnsFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Tags:split(',')");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Split);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(",");
+    }
+
+    [Fact]
+    public void Parse_ChainedStringFunctions_ReturnsFunctionNode()
+    {
+        // Name:trim:upper - trim first, then uppercase
+        // This parses as (Name:trim):upper
+        var result = ExpressionParser.Parse("Name:trim:upper");
+
+        // Assert
+        result.ShouldBeOfType<FunctionNode>();
+        var upperFunc = (FunctionNode)result;
+        upperFunc.FunctionName.ShouldBe(FunctionType.Upper);
+
+        upperFunc.Source.ShouldBeOfType<FunctionNode>();
+        var trimFunc = (FunctionNode)upperFunc.Source;
+        trimFunc.FunctionName.ShouldBe(FunctionType.Trim);
+        trimFunc.Source.ShouldBeOfType<PropertyNode>();
+    }
+
+    [Fact]
+    public void Parse_SubstringWithoutArgs_ThrowsException()
+    {
+        // substring requires at least 1 argument
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Name:substring"));
+        ex.Message.ShouldContain("requires arguments");
+    }
+
+    [Fact]
+    public void Parse_ReplaceWithOneArg_ThrowsException()
+    {
+        // replace requires exactly 2 arguments
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Name:replace('a')"));
+        ex.Message.ShouldContain("requires exactly 2 arguments");
+    }
+
+    [Fact]
+    public void Parse_SplitWithoutArgs_ThrowsException()
+    {
+        // split requires exactly 1 argument
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Tags:split"));
+        ex.Message.ShouldContain("requires arguments");
+    }
+
+    [Fact]
+    public void Parse_StringFunctionInProjection_ReturnsCorrectStructure()
+    {
+        // {Id, Name:upper as UpperName}
+        var result = ExpressionParser.Parse("{Id, (Name:upper) as UpperName}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("UpperName");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Upper);
+    }
+
+    #endregion
 }

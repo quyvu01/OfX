@@ -321,13 +321,92 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
         return node.FunctionName switch
         {
+            // Aggregate functions
             FunctionType.Count => BuildCountFunction(sourceValue),
             FunctionType.Sum => BuildAggregateFunction(sourceValue, "$sum", node.Argument),
             FunctionType.Avg => BuildAggregateFunction(sourceValue, "$avg", node.Argument),
             FunctionType.Min => BuildAggregateFunction(sourceValue, "$min", node.Argument),
             FunctionType.Max => BuildAggregateFunction(sourceValue, "$max", node.Argument),
+            // String functions
+            FunctionType.Upper => new BsonDocument("$toUpper", sourceValue),
+            FunctionType.Lower => new BsonDocument("$toLower", sourceValue),
+            FunctionType.Trim => new BsonDocument("$trim", new BsonDocument("input", sourceValue)),
+            FunctionType.Substring => BuildSubstringFunction(sourceValue, node, context),
+            FunctionType.Replace => BuildReplaceFunction(sourceValue, node, context),
+            FunctionType.Concat => BuildConcatFunction(sourceValue, node, context),
+            FunctionType.Split => BuildSplitFunction(sourceValue, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
+    }
+
+    /// <summary>
+    /// Builds MongoDB $substrCP: { $substrCP: [ string, start, length ] }
+    /// </summary>
+    private BsonValue BuildSubstringFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        var start = args[0].Accept(this, context);
+
+        // If no length specified, use $strLenCP to get remaining length
+        BsonValue length;
+        if (args.Count > 1)
+        {
+            length = args[1].Accept(this, context);
+        }
+        else
+        {
+            // Get remaining length: strLen - start
+            length = new BsonDocument("$subtract", new BsonArray
+            {
+                new BsonDocument("$strLenCP", sourceValue),
+                start
+            });
+        }
+
+        return new BsonDocument("$substrCP", new BsonArray { sourceValue, start, length });
+    }
+
+    /// <summary>
+    /// Builds MongoDB $replaceAll: { $replaceAll: { input: string, find: old, replacement: new } }
+    /// </summary>
+    private BsonValue BuildReplaceFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        var findValue = args[0].Accept(this, context);
+        var replacementValue = args[1].Accept(this, context);
+
+        return new BsonDocument("$replaceAll", new BsonDocument
+        {
+            { "input", sourceValue },
+            { "find", findValue },
+            { "replacement", replacementValue }
+        });
+    }
+
+    /// <summary>
+    /// Builds MongoDB $concat: { $concat: [ source, arg1, arg2, ... ] }
+    /// </summary>
+    private BsonValue BuildConcatFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var concatArray = new BsonArray { sourceValue };
+
+        foreach (var arg in node.GetArguments())
+        {
+            concatArray.Add(arg.Accept(this, context));
+        }
+
+        return new BsonDocument("$concat", concatArray);
+    }
+
+    /// <summary>
+    /// Builds MongoDB $split: { $split: [ string, delimiter ] }
+    /// </summary>
+    private BsonValue BuildSplitFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        var delimiter = args[0].Accept(this, context);
+
+        return new BsonDocument("$split", new BsonArray { sourceValue, delimiter });
     }
 
     public BsonValue VisitBooleanFunction(BooleanFunctionNode node, BsonBuildContext context)

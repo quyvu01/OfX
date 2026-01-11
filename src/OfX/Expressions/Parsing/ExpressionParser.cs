@@ -40,12 +40,32 @@ public sealed class ExpressionParser
 
     private static readonly Dictionary<string, FunctionType> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
     {
+        // Aggregate functions
         ["count"] = FunctionType.Count,
         ["sum"] = FunctionType.Sum,
         ["avg"] = FunctionType.Avg,
         ["min"] = FunctionType.Min,
-        ["max"] = FunctionType.Max
+        ["max"] = FunctionType.Max,
+        // String functions
+        ["upper"] = FunctionType.Upper,
+        ["lower"] = FunctionType.Lower,
+        ["trim"] = FunctionType.Trim,
+        ["substring"] = FunctionType.Substring,
+        ["replace"] = FunctionType.Replace,
+        ["concat"] = FunctionType.Concat,
+        ["split"] = FunctionType.Split
     };
+
+    private static readonly HashSet<FunctionType> StringFunctions =
+    [
+        FunctionType.Upper,
+        FunctionType.Lower,
+        FunctionType.Trim,
+        FunctionType.Substring,
+        FunctionType.Replace,
+        FunctionType.Concat,
+        FunctionType.Split
+    ];
 
     private static readonly Dictionary<string, AggregationType> AggregationNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -431,6 +451,7 @@ public sealed class ExpressionParser
 
     /// <summary>
     /// Parses a function or aggregation: :count, :sum(Total), :any, :any(Status = 'Done'), :all(IsApproved = true)
+    /// String functions: :upper, :lower, :trim, :substring(0, 3), :replace('a', 'b'), :concat(' ', LastName), :split(',')
     /// </summary>
     private ExpressionNode ParseFunctionOrAggregation(ExpressionNode source)
     {
@@ -446,6 +467,12 @@ public sealed class ExpressionParser
         if (!FunctionNames.TryGetValue(funcName, out var functionType))
         {
             throw new ExpressionParseException($"Unknown function '{funcName}' at position {funcToken.Position}");
+        }
+
+        // Handle string functions
+        if (StringFunctions.Contains(functionType))
+        {
+            return ParseStringFunction(source, functionType, funcToken);
         }
 
         string argument = null;
@@ -464,6 +491,97 @@ public sealed class ExpressionParser
         }
 
         return new FunctionNode(source, functionType, argument);
+    }
+
+    /// <summary>
+    /// Parses string functions with their arguments.
+    /// :upper, :lower, :trim - no arguments
+    /// :substring(start) or :substring(start, length)
+    /// :replace(oldValue, newValue)
+    /// :concat(value1, value2, ...) - multiple arguments
+    /// :split(separator)
+    /// </summary>
+    private FunctionNode ParseStringFunction(ExpressionNode source, FunctionType functionType, Token funcToken)
+    {
+        // Functions without arguments: upper, lower, trim
+        if (functionType is FunctionType.Upper or FunctionType.Lower or FunctionType.Trim)
+        {
+            return new FunctionNode(source, functionType);
+        }
+
+        // Functions with required arguments: substring, replace, concat, split
+        if (!Match(TokenType.OpenParen))
+        {
+            throw new ExpressionParseException($"Function '{funcToken.Value}' requires arguments at position {funcToken.Position}");
+        }
+
+        var arguments = new List<ExpressionNode>();
+        arguments.Add(ParseFunctionArgument());
+
+        while (Match(TokenType.Comma))
+        {
+            arguments.Add(ParseFunctionArgument());
+        }
+
+        Consume(TokenType.CloseParen, $"Expected ')' after {funcToken.Value} arguments");
+
+        // Validate argument counts
+        ValidateStringFunctionArguments(functionType, arguments, funcToken);
+
+        return new FunctionNode(source, functionType, null, arguments);
+    }
+
+    /// <summary>
+    /// Parses a single function argument: can be a literal (string, number) or property reference.
+    /// </summary>
+    private ExpressionNode ParseFunctionArgument()
+    {
+        // String literal
+        if (Match(TokenType.String))
+        {
+            return LiteralNode.String(Previous().Value);
+        }
+
+        // Number literal
+        if (Match(TokenType.Number))
+        {
+            return LiteralNode.Number(decimal.Parse(Previous().Value));
+        }
+
+        // Property reference (identifier)
+        if (Check(TokenType.Identifier))
+        {
+            var name = Consume(TokenType.Identifier, "Expected argument").Value;
+            return new PropertyNode(name);
+        }
+
+        throw new ExpressionParseException($"Expected argument (string, number, or property) at position {Current().Position}");
+    }
+
+    /// <summary>
+    /// Validates the number of arguments for string functions.
+    /// </summary>
+    private static void ValidateStringFunctionArguments(FunctionType functionType, List<ExpressionNode> arguments, Token funcToken)
+    {
+        switch (functionType)
+        {
+            case FunctionType.Substring:
+                if (arguments.Count < 1 || arguments.Count > 2)
+                    throw new ExpressionParseException($"substring requires 1 or 2 arguments at position {funcToken.Position}");
+                break;
+            case FunctionType.Replace:
+                if (arguments.Count != 2)
+                    throw new ExpressionParseException($"replace requires exactly 2 arguments at position {funcToken.Position}");
+                break;
+            case FunctionType.Concat:
+                if (arguments.Count < 1)
+                    throw new ExpressionParseException($"concat requires at least 1 argument at position {funcToken.Position}");
+                break;
+            case FunctionType.Split:
+                if (arguments.Count != 1)
+                    throw new ExpressionParseException($"split requires exactly 1 argument at position {funcToken.Position}");
+                break;
+        }
     }
 
     /// <summary>

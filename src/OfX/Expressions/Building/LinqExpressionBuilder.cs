@@ -429,14 +429,126 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         return node.FunctionName switch
         {
+            // Aggregate functions
             FunctionType.Count => BuildCountFunction(sourceResult),
             FunctionType.Sum => BuildAggregateFunction(sourceResult, nameof(Enumerable.Sum), node.Argument, context),
             FunctionType.Avg => BuildAggregateFunction(sourceResult, nameof(Enumerable.Average), node.Argument,
                 context),
             FunctionType.Min => BuildAggregateFunction(sourceResult, nameof(Enumerable.Min), node.Argument, context),
             FunctionType.Max => BuildAggregateFunction(sourceResult, nameof(Enumerable.Max), node.Argument, context),
+            // String functions
+            FunctionType.Upper => BuildStringMethodFunction(sourceResult, nameof(string.ToUpper)),
+            FunctionType.Lower => BuildStringMethodFunction(sourceResult, nameof(string.ToLower)),
+            FunctionType.Trim => BuildStringMethodFunction(sourceResult, nameof(string.Trim)),
+            FunctionType.Substring => BuildSubstringFunction(sourceResult, node, context),
+            FunctionType.Replace => BuildReplaceFunction(sourceResult, node, context),
+            FunctionType.Concat => BuildConcatFunction(sourceResult, node, context),
+            FunctionType.Split => BuildSplitFunction(sourceResult, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
+    }
+
+    /// <summary>
+    /// Builds a simple string method call: source.ToUpper(), source.ToLower(), source.Trim()
+    /// </summary>
+    private static ExpressionBuildResult BuildStringMethodFunction(ExpressionBuildResult source, string methodName)
+    {
+        var method = typeof(string).GetMethod(methodName, Type.EmptyTypes)
+            ?? throw new InvalidOperationException($"Method {methodName}() not found on string");
+
+        var call = Expression.Call(source.Expression, method);
+        return new ExpressionBuildResult(typeof(string), call);
+    }
+
+    /// <summary>
+    /// Builds Substring call: source.Substring(start) or source.Substring(start, length)
+    /// </summary>
+    private ExpressionBuildResult BuildSubstringFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var args = node.GetArguments();
+        var startExpr = BuildArgumentExpression(args[0], context);
+
+        if (args.Count > 1)
+        {
+            // Substring(start, length)
+            var lengthExpr = BuildArgumentExpression(args[1], context);
+            var method = typeof(string).GetMethod(nameof(string.Substring), [typeof(int), typeof(int)])!;
+            var call = Expression.Call(source.Expression, method,
+                Expression.Convert(startExpr, typeof(int)),
+                Expression.Convert(lengthExpr, typeof(int)));
+            return new ExpressionBuildResult(typeof(string), call);
+        }
+        else
+        {
+            // Substring(start) - to end of string
+            var method = typeof(string).GetMethod(nameof(string.Substring), [typeof(int)])!;
+            var call = Expression.Call(source.Expression, method,
+                Expression.Convert(startExpr, typeof(int)));
+            return new ExpressionBuildResult(typeof(string), call);
+        }
+    }
+
+    /// <summary>
+    /// Builds Replace call: source.Replace(oldValue, newValue)
+    /// </summary>
+    private ExpressionBuildResult BuildReplaceFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var args = node.GetArguments();
+        var oldValueExpr = BuildArgumentExpression(args[0], context);
+        var newValueExpr = BuildArgumentExpression(args[1], context);
+
+        var method = typeof(string).GetMethod(nameof(string.Replace), [typeof(string), typeof(string)])!;
+        var call = Expression.Call(source.Expression, method,
+            Expression.Convert(oldValueExpr, typeof(string)),
+            Expression.Convert(newValueExpr, typeof(string)));
+        return new ExpressionBuildResult(typeof(string), call);
+    }
+
+    /// <summary>
+    /// Builds Concat: string.Concat(source, arg1, arg2, ...)
+    /// </summary>
+    private ExpressionBuildResult BuildConcatFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var allParts = new List<Expression> { source.Expression };
+
+        foreach (var arg in node.GetArguments())
+        {
+            var argExpr = BuildArgumentExpression(arg, context);
+            allParts.Add(Expression.Convert(argExpr, typeof(string)));
+        }
+
+        // Use string.Concat(params string[])
+        var arrayExpr = Expression.NewArrayInit(typeof(string),
+            allParts.Select(e => Expression.Convert(e, typeof(string))));
+        var concatMethod = typeof(string).GetMethod(nameof(string.Concat), [typeof(string[])])!;
+        var call = Expression.Call(concatMethod, arrayExpr);
+        return new ExpressionBuildResult(typeof(string), call);
+    }
+
+    /// <summary>
+    /// Builds Split call: source.Split(separator)
+    /// </summary>
+    private ExpressionBuildResult BuildSplitFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var args = node.GetArguments();
+        var separatorExpr = BuildArgumentExpression(args[0], context);
+
+        // Use Split(char[]) for single char, or Split(string[], StringSplitOptions) for strings
+        // For simplicity, use Split(string, StringSplitOptions.None) which is available in .NET
+        var method = typeof(string).GetMethod(nameof(string.Split), [typeof(string), typeof(StringSplitOptions)])!;
+        var call = Expression.Call(source.Expression, method,
+            Expression.Convert(separatorExpr, typeof(string)),
+            Expression.Constant(StringSplitOptions.None));
+        return new ExpressionBuildResult(typeof(string[]), call);
+    }
+
+    /// <summary>
+    /// Builds an expression from a function argument (literal or property reference).
+    /// </summary>
+    private Expression BuildArgumentExpression(ExpressionNode arg, ExpressionBuildContext context)
+    {
+        var result = arg.Accept(this, context);
+        return result.Expression;
     }
 
     public ExpressionBuildResult VisitBooleanFunction(BooleanFunctionNode node, ExpressionBuildContext context)
