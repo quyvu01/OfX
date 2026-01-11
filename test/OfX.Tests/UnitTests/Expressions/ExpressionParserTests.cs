@@ -331,8 +331,8 @@ public sealed class ExpressionParserTests
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
         projNode.Properties.Count.ShouldBe(2);
-        projNode.Properties.ShouldContain("Id");
-        projNode.Properties.ShouldContain("Status");
+        projNode.Properties[0].Path.ShouldBe("Id");
+        projNode.Properties[1].Path.ShouldBe("Status");
     }
 
     [Fact]
@@ -761,6 +761,333 @@ public sealed class ExpressionParserTests
         result.ShouldBeOfType<BooleanFunctionNode>();
         var boolFunc = (BooleanFunctionNode)result;
         boolFunc.Source.ShouldBeOfType<FilterNode>();
+    }
+
+    #endregion
+
+    #region Coalesce Tests (??)
+
+    [Fact]
+    public void Parse_SimpleCoalesce_ReturnsCoalesceNode()
+    {
+        // Arrange & Act
+        var result = ExpressionParser.Parse("Nickname ?? Name");
+
+        // Assert
+        result.ShouldBeOfType<CoalesceNode>();
+        var coalesce = (CoalesceNode)result;
+
+        coalesce.Left.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)coalesce.Left).Name.ShouldBe("Nickname");
+
+        coalesce.Right.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)coalesce.Right).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_CoalesceWithLiteral_ReturnsCoalesceNode()
+    {
+        // Arrange & Act - Address?.City ?? 'Unknown'
+        var result = ExpressionParser.Parse("City ?? 'Unknown'");
+
+        // Assert
+        result.ShouldBeOfType<CoalesceNode>();
+        var coalesce = (CoalesceNode)result;
+
+        coalesce.Left.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)coalesce.Left).Name.ShouldBe("City");
+
+        coalesce.Right.ShouldBeOfType<LiteralNode>();
+        var literal = (LiteralNode)coalesce.Right;
+        literal.Value.ShouldBe("Unknown");
+    }
+
+    [Fact]
+    public void Parse_ChainedCoalesce_ReturnsRightToLeftAssociativity()
+    {
+        // Arrange & Act - A ?? B ?? C should be A ?? (B ?? C)
+        var result = ExpressionParser.Parse("PreferredName ?? Nickname ?? Name");
+
+        // Assert
+        result.ShouldBeOfType<CoalesceNode>();
+        var coalesce = (CoalesceNode)result;
+
+        coalesce.Left.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)coalesce.Left).Name.ShouldBe("PreferredName");
+
+        // Right should be another CoalesceNode: Nickname ?? Name
+        coalesce.Right.ShouldBeOfType<CoalesceNode>();
+        var innerCoalesce = (CoalesceNode)coalesce.Right;
+        ((PropertyNode)innerCoalesce.Left).Name.ShouldBe("Nickname");
+        ((PropertyNode)innerCoalesce.Right).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_CoalesceWithNumber_ReturnsCoalesceNode()
+    {
+        // Arrange & Act
+        var result = ExpressionParser.Parse("Score ?? 0");
+
+        // Assert
+        result.ShouldBeOfType<CoalesceNode>();
+        var coalesce = (CoalesceNode)result;
+
+        coalesce.Left.ShouldBeOfType<PropertyNode>();
+        coalesce.Right.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)coalesce.Right).Value.ShouldBe(0m);
+    }
+
+    [Fact]
+    public void Parse_CoalesceWithBoolean_ReturnsCoalesceNode()
+    {
+        // Arrange & Act
+        var result = ExpressionParser.Parse("IsActive ?? false");
+
+        // Assert
+        result.ShouldBeOfType<CoalesceNode>();
+        var coalesce = (CoalesceNode)result;
+
+        coalesce.Left.ShouldBeOfType<PropertyNode>();
+        coalesce.Right.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)coalesce.Right).Value.ShouldBe(false);
+    }
+
+    #endregion
+
+    #region Ternary Tests (?:)
+
+    [Fact]
+    public void Parse_SimpleTernary_ReturnsTernaryNode()
+    {
+        // Arrange & Act - Status = 'Active' ? 'Yes' : 'No'
+        var result = ExpressionParser.Parse("Status = 'Active' ? 'Yes' : 'No'");
+
+        // Assert
+        result.ShouldBeOfType<TernaryNode>();
+        var ternary = (TernaryNode)result;
+
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+        var condition = (BinaryConditionNode)ternary.Condition;
+        condition.Left.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)condition.Left).Name.ShouldBe("Status");
+        condition.Operator.ShouldBe(ComparisonOperator.Equal);
+
+        ternary.WhenTrue.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)ternary.WhenTrue).Value.ShouldBe("Yes");
+
+        ternary.WhenFalse.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)ternary.WhenFalse).Value.ShouldBe("No");
+    }
+
+    [Fact]
+    public void Parse_TernaryWithGreaterThan_ReturnsTernaryNode()
+    {
+        // Arrange & Act - Count > 0 ? 'HasItems' : 'Empty'
+        var result = ExpressionParser.Parse("Count > 0 ? 'HasItems' : 'Empty'");
+
+        // Assert
+        result.ShouldBeOfType<TernaryNode>();
+        var ternary = (TernaryNode)result;
+
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+        var condition = (BinaryConditionNode)ternary.Condition;
+        condition.Operator.ShouldBe(ComparisonOperator.GreaterThan);
+    }
+
+    [Fact]
+    public void Parse_TernaryWithExpressionResults_ReturnsTernaryNode()
+    {
+        // Arrange & Act - IsVIP = true ? Discount1 : Discount2
+        var result = ExpressionParser.Parse("IsVIP = true ? Discount1 : Discount2");
+
+        // Assert
+        result.ShouldBeOfType<TernaryNode>();
+        var ternary = (TernaryNode)result;
+
+        ternary.WhenTrue.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)ternary.WhenTrue).Name.ShouldBe("Discount1");
+
+        ternary.WhenFalse.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)ternary.WhenFalse).Name.ShouldBe("Discount2");
+    }
+
+    [Fact]
+    public void Parse_NestedTernary_ReturnsRightToLeftAssociativity()
+    {
+        // Arrange & Act - A = 1 ? 'One' : B = 2 ? 'Two' : 'Other'
+        // Should be: A = 1 ? 'One' : (B = 2 ? 'Two' : 'Other')
+        var result = ExpressionParser.Parse("Score >= 90 ? 'A' : Score >= 80 ? 'B' : 'C'");
+
+        // Assert
+        result.ShouldBeOfType<TernaryNode>();
+        var ternary = (TernaryNode)result;
+
+        ternary.WhenTrue.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)ternary.WhenTrue).Value.ShouldBe("A");
+
+        // WhenFalse should be another TernaryNode
+        ternary.WhenFalse.ShouldBeOfType<TernaryNode>();
+        var innerTernary = (TernaryNode)ternary.WhenFalse;
+        ((LiteralNode)innerTernary.WhenTrue).Value.ShouldBe("B");
+        ((LiteralNode)innerTernary.WhenFalse).Value.ShouldBe("C");
+    }
+
+    [Fact]
+    public void Parse_TernaryWithBooleanFunction_ReturnsTernaryNode()
+    {
+        // Arrange & Act - Orders:any ? 'Has Orders' : 'No Orders'
+        var result = ExpressionParser.Parse("Orders:any ? 'Has Orders' : 'No Orders'");
+
+        // Assert
+        result.ShouldBeOfType<TernaryNode>();
+        var ternary = (TernaryNode)result;
+
+        // Condition should wrap BooleanFunctionNode as comparison
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+        var condition = (BinaryConditionNode)ternary.Condition;
+        condition.Left.ShouldBeOfType<BooleanFunctionNode>();
+    }
+
+    #endregion
+
+    #region Computed Projection Tests
+
+    [Fact]
+    public void Parse_RootProjectionWithCoalesceExpression_ReturnsCorrectNode()
+    {
+        // Arrange & Act - {Id, (Nickname ?? Name) as DisplayName}
+        var result = ExpressionParser.Parse("{Id, (Nickname ?? Name) as DisplayName}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        // First property: Id
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[0].IsComputed.ShouldBeFalse();
+
+        // Second property: computed coalesce
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("DisplayName");
+        projection.Properties[1].Expression.ShouldBeOfType<CoalesceNode>();
+
+        var coalesce = (CoalesceNode)projection.Properties[1].Expression;
+        ((PropertyNode)coalesce.Left).Name.ShouldBe("Nickname");
+        ((PropertyNode)coalesce.Right).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_RootProjectionWithTernaryExpression_ReturnsCorrectNode()
+    {
+        // Arrange & Act - {Id, (Status = 'Active' ? 'Yes' : 'No') as StatusText}
+        var result = ExpressionParser.Parse("{Id, (Status = 'Active' ? 'Yes' : 'No') as StatusText}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        // Second property: computed ternary
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("StatusText");
+        projection.Properties[1].Expression.ShouldBeOfType<TernaryNode>();
+
+        var ternary = (TernaryNode)projection.Properties[1].Expression;
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+        ((LiteralNode)ternary.WhenTrue).Value.ShouldBe("Yes");
+        ((LiteralNode)ternary.WhenFalse).Value.ShouldBe("No");
+    }
+
+    [Fact]
+    public void Parse_RootProjectionWithMixedProperties_ReturnsCorrectNode()
+    {
+        // Arrange & Act - {Id, Name, Country.Name as CountryName, (Nickname ?? Name) as Display}
+        var result = ExpressionParser.Parse("{Id, Name, Country.Name as CountryName, (Nickname ?? Name) as Display}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(4);
+
+        // Check each property type
+        projection.Properties[0].IsComputed.ShouldBeFalse();
+        projection.Properties[0].OutputKey.ShouldBe("Id");
+
+        projection.Properties[1].IsComputed.ShouldBeFalse();
+        projection.Properties[1].OutputKey.ShouldBe("Name");
+
+        projection.Properties[2].IsComputed.ShouldBeFalse();
+        projection.Properties[2].OutputKey.ShouldBe("CountryName");
+        projection.Properties[2].HasNavigation.ShouldBeTrue();
+
+        projection.Properties[3].IsComputed.ShouldBeTrue();
+        projection.Properties[3].OutputKey.ShouldBe("Display");
+    }
+
+    [Fact]
+    public void Parse_ComputedProjectionWithoutAlias_ThrowsException()
+    {
+        // Arrange & Act - (Nickname ?? Name) without alias should fail
+        var expression = "{Id, (Nickname ?? Name)}";
+
+        // Assert
+        var ex = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse(expression));
+        ex.Message.ShouldContain("as");
+    }
+
+    [Fact]
+    public void Parse_FilterWithSimpleProjection_ReturnsCorrectStructure()
+    {
+        // Non-root projection (Collection.{...}) only supports simple property names
+        // For computed expressions, use RootProjection syntax
+        var expression = "Provinces(Name endswith '0').{Id, Name}";
+
+        // Act
+        var result = ExpressionParser.Parse(expression);
+
+        // Assert
+        result.ShouldBeOfType<ProjectionNode>();
+        var projection = (ProjectionNode)result;
+
+        // The source should be a FilterNode
+        projection.Source.ShouldBeOfType<FilterNode>();
+        var filter = (FilterNode)projection.Source;
+        ((PropertyNode)filter.Source).Name.ShouldBe("Provinces");
+
+        // Properties should be simple names
+        projection.Properties.Count.ShouldBe(2);
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[1].Path.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_NonRootProjectionWithComputedExpression_ReturnsCorrectStructure()
+    {
+        // Non-root projection (Collection.{...}) now supports computed expressions
+        var expression = "Provinces(Name endswith '0').{Id, (Name endswith '0' ? Name : 'N/A') as DisplayName}";
+
+        // Act
+        var result = ExpressionParser.Parse(expression);
+
+        // Assert
+        result.ShouldBeOfType<ProjectionNode>();
+        var projection = (ProjectionNode)result;
+
+        // The source should be a FilterNode
+        projection.Source.ShouldBeOfType<FilterNode>();
+
+        // Properties
+        projection.Properties.Count.ShouldBe(2);
+
+        // First property: simple path
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[0].IsComputed.ShouldBeFalse();
+
+        // Second property: computed ternary expression
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("DisplayName");
+        projection.Properties[1].Expression.ShouldBeOfType<TernaryNode>();
     }
 
     #endregion

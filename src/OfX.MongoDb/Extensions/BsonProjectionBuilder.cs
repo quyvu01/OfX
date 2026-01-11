@@ -159,20 +159,42 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
         if (IsArrayExpression(sourceValue))
         {
             // Collection projection: Orders.{Id, Status} -> $map
-            return BuildCollectionProjection(sourceValue, node.Properties);
+            return BuildCollectionProjection(sourceValue, node.Properties, context);
         }
 
         // Single object projection: Country.{Id, Name} -> direct field extraction
-        return BuildSingleObjectProjection(sourceValue, node.Properties);
+        return BuildSingleObjectProjection(sourceValue, node.Properties, context);
     }
 
     /// <summary>
     /// Builds a projection for a collection using $map.
+    /// Supports simple properties, navigation, aliases, and computed expressions.
     /// </summary>
-    private static BsonValue BuildCollectionProjection(BsonValue sourceValue, IReadOnlyList<string> properties)
+    private BsonValue BuildCollectionProjection(BsonValue sourceValue, IReadOnlyList<ProjectionProperty> properties, BsonBuildContext context)
     {
         var projectionDoc = new BsonDocument();
-        foreach (var prop in properties) projectionDoc.Add(prop, $"$$item.{prop}");
+
+        // Create item context for expressions within $map
+        var itemContext = new BsonBuildContext(null, "$$item");
+
+        foreach (var prop in properties)
+        {
+            BsonValue fieldValue;
+
+            if (prop.IsComputed)
+            {
+                // Computed expression: build using visitor with item context
+                fieldValue = prop.Expression!.Accept(this, itemContext);
+            }
+            else
+            {
+                // Simple property or navigation path
+                var path = string.Join(".", prop.PathSegments);
+                fieldValue = $"$$item.{path}";
+            }
+
+            projectionDoc.Add(prop.OutputKey, fieldValue);
+        }
 
         return new BsonDocument("$map", new BsonDocument
         {
@@ -184,21 +206,39 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
     /// <summary>
     /// Builds a projection for a single object by extracting specific fields.
+    /// Supports simple properties, navigation, aliases, and computed expressions.
     /// </summary>
-    private static BsonValue BuildSingleObjectProjection(BsonValue sourceValue, IReadOnlyList<string> properties)
+    private BsonValue BuildSingleObjectProjection(BsonValue sourceValue, IReadOnlyList<ProjectionProperty> properties, BsonBuildContext context)
     {
         // For single object, we create a document that extracts specific fields
         // If sourceValue is a field reference like "$Country", we build:
         // { Id: { $getField: { field: "Id", input: "$Country" } }, Name: { $getField: { field: "Name", input: "$Country" } } }
         var projectionDoc = new BsonDocument();
 
+        // Create context for single object
+        var objectContext = new BsonBuildContext(sourceValue);
+
         foreach (var prop in properties)
         {
-            projectionDoc.Add(prop, new BsonDocument("$getField", new BsonDocument
+            BsonValue fieldValue;
+
+            if (prop.IsComputed)
             {
-                { "field", prop },
-                { "input", sourceValue }
-            }));
+                // Computed expression: build using visitor with object context
+                fieldValue = prop.Expression!.Accept(this, objectContext);
+            }
+            else
+            {
+                // Simple property or navigation path - use $getField for nested access
+                var path = string.Join(".", prop.PathSegments);
+                fieldValue = new BsonDocument("$getField", new BsonDocument
+                {
+                    { "field", path },
+                    { "input", sourceValue }
+                });
+            }
+
+            projectionDoc.Add(prop.OutputKey, fieldValue);
         }
 
         return projectionDoc;
@@ -229,16 +269,28 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
     public BsonValue VisitRootProjection(RootProjectionNode node, BsonBuildContext context)
     {
         // Build a document with selected properties from the root object
-        // Supports navigation paths and aliases: {Id, Name, Country.Name as CountryName}
+        // Supports navigation paths, aliases, and computed expressions:
+        // {Id, Name, Country.Name as CountryName, (Nickname ?? Name) as DisplayName}
         var projectionDoc = new BsonDocument();
 
         foreach (var prop in node.Properties)
         {
-            // Build the field reference for the path
-            var fieldRef = BuildFieldPath(prop.PathSegments);
+            BsonValue fieldValue;
+
+            if (prop.IsComputed)
+            {
+                // Computed expression: (expression) as Alias
+                // Build the expression using the visitor pattern
+                fieldValue = prop.Expression!.Accept(this, context);
+            }
+            else
+            {
+                // Path-based property: Build the field reference for the path
+                fieldValue = BuildFieldPath(prop.PathSegments);
+            }
 
             // Use OutputKey as the key (alias if provided, otherwise last segment)
-            projectionDoc.Add(prop.OutputKey, fieldRef);
+            projectionDoc.Add(prop.OutputKey, fieldValue);
         }
 
         return projectionDoc;
@@ -391,6 +443,35 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             AggregationType.Max => BuildAggregateFunction(sourceValue, "$max", node.PropertyName),
             _ => throw new InvalidOperationException($"Unknown aggregation: {node.AggregationType}")
         };
+    }
+
+    public BsonValue VisitCoalesce(CoalesceNode node, BsonBuildContext context)
+    {
+        // Build left and right expressions
+        var leftValue = node.Left.Accept(this, context);
+        var rightValue = node.Right.Accept(this, context);
+
+        // MongoDB $ifNull: { $ifNull: [ <expression>, <replacement-value> ] }
+        // Returns the first non-null value
+        return new BsonDocument("$ifNull", new BsonArray { leftValue, rightValue });
+    }
+
+    public BsonValue VisitTernary(TernaryNode node, BsonBuildContext context)
+    {
+        // Build condition
+        var conditionValue = BuildCondition(node.Condition, context);
+
+        // Build whenTrue and whenFalse expressions
+        var whenTrueValue = node.WhenTrue.Accept(this, context);
+        var whenFalseValue = node.WhenFalse.Accept(this, context);
+
+        // MongoDB $cond: { $cond: { if: <condition>, then: <true-case>, else: <false-case> } }
+        return new BsonDocument("$cond", new BsonDocument
+        {
+            { "if", conditionValue },
+            { "then", whenTrueValue },
+            { "else", whenFalseValue }
+        });
     }
 
     #region Helper Methods

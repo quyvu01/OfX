@@ -7,9 +7,13 @@ namespace OfX.Expressions.Parsing;
 /// Parses OfX expression strings into an Abstract Syntax Tree (AST).
 /// </summary>
 /// <remarks>
-/// Grammar:
+/// Grammar (with precedence from low to high):
 /// <code>
-/// Expression       := RootProjection | Segment ('.' Segment)*
+/// Expression       := TernaryExpr
+/// TernaryExpr      := CoalesceExpr (Condition '?' Expression ':' Expression)?
+/// CoalesceExpr     := PrimaryExpr ('??' CoalesceExpr)?
+/// PrimaryExpr      := RootProjection | NavigationExpr
+/// NavigationExpr   := Segment ('.' Segment)*
 /// RootProjection   := '{' ProjectionProperty (',' ProjectionProperty)* '}'
 /// ProjectionProperty := PropertyPath ('as' Identifier)?
 /// PropertyPath     := Identifier ('.' Identifier)*
@@ -76,8 +80,245 @@ public sealed class ExpressionParser
 
     /// <summary>
     /// Parses the complete expression.
+    /// Entry point that handles ternary expressions (lowest precedence).
     /// </summary>
     public ExpressionNode ParseExpression()
+    {
+        return ParseTernaryExpression();
+    }
+
+    /// <summary>
+    /// Parses ternary expression: Condition ? TrueExpr : FalseExpr
+    /// Ternary has lowest precedence, right-to-left associativity.
+    /// Format: LeftExpr Operator RightValue ? TrueExpr : FalseExpr
+    /// Example: Status = 'Active' ? 'Yes' : 'No'
+    /// </summary>
+    private ExpressionNode ParseTernaryExpression()
+    {
+        var expr = ParseCoalesceExpression();
+
+        // After parsing the left expression, check if this looks like a ternary condition
+        // A ternary condition has format: expr op value ? trueExpr : falseExpr
+        // We need to check if there's a comparison operator followed by a value, then ?
+        if (IsComparisonOperator())
+        {
+            // This is a condition: parse the comparison
+            var op = ParseComparisonOperator();
+            var rightValue = ParseValue();
+            var condition = new BinaryConditionNode(expr, op, rightValue);
+
+            // Now check for ternary
+            if (Match(TokenType.Question))
+            {
+                var whenTrue = ParseTernaryBranch();
+                Consume(TokenType.Colon, "Expected ':' in ternary expression");
+                var whenFalse = ParseExpression();
+                return new TernaryNode(condition, whenTrue, whenFalse);
+            }
+
+            // If no ternary, this is just a condition (unusual at top level, but valid)
+            return condition;
+        }
+
+        // Check if the expression itself is already usable as a boolean (e.g., BooleanFunctionNode)
+        // and there's a ? following
+        if (Check(TokenType.Question) && CanBeCondition(expr))
+        {
+            if (Match(TokenType.Question))
+            {
+                var whenTrue = ParseTernaryBranch();
+                Consume(TokenType.Colon, "Expected ':' in ternary expression");
+                var whenFalse = ParseExpression();
+                var condition = ConvertToCondition(expr);
+                return new TernaryNode(condition, whenTrue, whenFalse);
+            }
+        }
+
+        return expr;
+    }
+
+    /// <summary>
+    /// Parses a ternary branch expression (whenTrue part).
+    /// This stops at ':' to avoid consuming it as a function prefix.
+    /// </summary>
+    private ExpressionNode ParseTernaryBranch()
+    {
+        return ParseCoalesceBranchExpression();
+    }
+
+    /// <summary>
+    /// Parses coalesce expression for ternary branch (stops at ':').
+    /// </summary>
+    private ExpressionNode ParseCoalesceBranchExpression()
+    {
+        var left = ParsePrimaryBranchExpression();
+
+        if (Match(TokenType.QuestionQuestion))
+        {
+            var right = ParseCoalesceBranchExpression();
+            return new CoalesceNode(left, right);
+        }
+
+        return left;
+    }
+
+    /// <summary>
+    /// Parses primary expression for ternary branch (does not consume ':' as function).
+    /// </summary>
+    private ExpressionNode ParsePrimaryBranchExpression()
+    {
+        if (Check(TokenType.OpenBrace))
+        {
+            return ParseRootProjection();
+        }
+
+        if (Check(TokenType.String) || Check(TokenType.Number) || Check(TokenType.Boolean) || Check(TokenType.Null))
+        {
+            return ParseLiteralExpression();
+        }
+
+        // Parse navigation expression without function suffix
+        return ParseNavigationBranchExpression();
+    }
+
+    /// <summary>
+    /// Parses navigation expression for ternary branch.
+    /// Does not consume trailing ':' as function - it's the ternary separator.
+    /// </summary>
+    private ExpressionNode ParseNavigationBranchExpression()
+    {
+        var segments = new List<ExpressionNode>();
+        segments.Add(ParseSegmentWithoutTrailingFunction());
+
+        while (Match(TokenType.Dot))
+        {
+            if (Check(TokenType.OpenBrace))
+            {
+                var source = segments.Count == 1 ? segments[0] : new NavigationNode(segments);
+                return ParseProjection(source);
+            }
+
+            segments.Add(ParseSegmentWithoutTrailingFunction());
+        }
+
+        return segments.Count == 1 ? segments[0] : new NavigationNode(segments);
+    }
+
+    /// <summary>
+    /// Parses a segment but does not consume trailing ':' as function if it's a ternary separator.
+    /// </summary>
+    private ExpressionNode ParseSegmentWithoutTrailingFunction()
+    {
+        var propertyName = Consume(TokenType.Identifier, "Expected property name").Value;
+        var isNullSafe = Match(TokenType.Question);
+
+        ExpressionNode result = new PropertyNode(propertyName, isNullSafe);
+
+        // Check for function: :count, :sum - but only if followed by identifier
+        // We need to look ahead to see if this is a function or ternary separator
+        if (Check(TokenType.Colon))
+        {
+            // Look ahead: if next is identifier that's a known function, parse it
+            // Otherwise, leave the ':' for ternary
+            var savedPosition = _position;
+            Advance(); // consume ':'
+
+            if (Check(TokenType.Identifier))
+            {
+                var funcName = Current().Value.ToLowerInvariant();
+                if (FunctionNames.ContainsKey(funcName) || BooleanFunctionNames.ContainsKey(funcName) || AggregationNames.ContainsKey(funcName))
+                {
+                    // It's a function, restore and parse normally
+                    _position = savedPosition;
+                    if (Match(TokenType.Colon))
+                    {
+                        result = ParseFunctionOrAggregation(result);
+                    }
+                }
+                else
+                {
+                    // Not a known function, restore position - this ':' is for ternary
+                    _position = savedPosition;
+                }
+            }
+            else
+            {
+                // Not followed by identifier, restore - this ':' is for ternary
+                _position = savedPosition;
+            }
+        }
+
+        // Check for filter: (condition)
+        if (Match(TokenType.OpenParen))
+        {
+            var condition = ParseCondition();
+            Consume(TokenType.CloseParen, "Expected ')' after filter condition");
+            result = new FilterNode(result, condition);
+        }
+
+        // Check for indexer: [0 asc Name]
+        if (Match(TokenType.OpenBracket))
+        {
+            result = ParseIndexer(result);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Checks if an expression can be used as a boolean condition.
+    /// </summary>
+    private static bool CanBeCondition(ExpressionNode expr)
+    {
+        return expr is BooleanFunctionNode or ConditionNode;
+    }
+
+    /// <summary>
+    /// Converts an expression to a condition node.
+    /// Supports: BinaryConditionNode, LogicalConditionNode, BooleanFunctionNode.
+    /// </summary>
+    private static ConditionNode ConvertToCondition(ExpressionNode expr)
+    {
+        // If it's already a condition, return it
+        if (expr is ConditionNode condition)
+        {
+            return condition;
+        }
+
+        // If it's a boolean function (like Orders:any), wrap it as implicit boolean check
+        if (expr is BooleanFunctionNode boolFunc)
+        {
+            // Treat as: boolFunc = true
+            return new BinaryConditionNode(boolFunc, ComparisonOperator.Equal, LiteralNode.Boolean(true));
+        }
+
+        // For other expressions, we need to have parsed a condition
+        throw new ExpressionParseException(
+            $"Expected a condition expression for ternary operator. Got {expr.GetType().Name}");
+    }
+
+    /// <summary>
+    /// Parses coalesce expression: A ?? B ?? C
+    /// Right-to-left associativity: A ?? (B ?? C)
+    /// </summary>
+    private ExpressionNode ParseCoalesceExpression()
+    {
+        var left = ParsePrimaryExpression();
+
+        if (Match(TokenType.QuestionQuestion))
+        {
+            // Right-to-left: parse the right side which can include more ??
+            var right = ParseCoalesceExpression();
+            return new CoalesceNode(left, right);
+        }
+
+        return left;
+    }
+
+    /// <summary>
+    /// Parses primary expression: RootProjection | NavigationExpr | Literal
+    /// </summary>
+    private ExpressionNode ParsePrimaryExpression()
     {
         // Check for root projection: {Id, Name, Description}
         if (Check(TokenType.OpenBrace))
@@ -85,6 +326,49 @@ public sealed class ExpressionParser
             return ParseRootProjection();
         }
 
+        // Check for literal values (for ternary/coalesce right-hand side)
+        if (Check(TokenType.String) || Check(TokenType.Number) || Check(TokenType.Boolean) || Check(TokenType.Null))
+        {
+            return ParseLiteralExpression();
+        }
+
+        // Parse navigation expression
+        return ParseNavigationExpression();
+    }
+
+    /// <summary>
+    /// Parses a literal value as an expression node.
+    /// </summary>
+    private LiteralNode ParseLiteralExpression()
+    {
+        if (Match(TokenType.String))
+        {
+            return LiteralNode.String(Previous().Value);
+        }
+
+        if (Match(TokenType.Number))
+        {
+            return LiteralNode.Number(decimal.Parse(Previous().Value));
+        }
+
+        if (Match(TokenType.Boolean))
+        {
+            return LiteralNode.Boolean(bool.Parse(Previous().Value));
+        }
+
+        if (Match(TokenType.Null))
+        {
+            return LiteralNode.Null();
+        }
+
+        throw new ExpressionParseException($"Expected literal value at position {Current().Position}");
+    }
+
+    /// <summary>
+    /// Parses navigation expression: Segment ('.' Segment)*
+    /// </summary>
+    private ExpressionNode ParseNavigationExpression()
+    {
         var segments = new List<ExpressionNode>();
         segments.Add(ParseSegment());
 
@@ -368,17 +652,18 @@ public sealed class ExpressionParser
 
     /// <summary>
     /// Parses a projection: .{Id, Name, Description}
+    /// Supports simple properties, navigation paths, aliases, and computed expressions.
     /// </summary>
     private ProjectionNode ParseProjection(ExpressionNode source)
     {
         Consume(TokenType.OpenBrace, "Expected '{' for projection");
 
-        var properties = new List<string>();
-        properties.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
+        var properties = new List<ProjectionProperty>();
+        properties.Add(ParseProjectionProperty());
 
         while (Match(TokenType.Comma))
         {
-            properties.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
+            properties.Add(ParseProjectionProperty());
         }
 
         Consume(TokenType.CloseBrace, "Expected '}' after projection");
@@ -409,10 +694,16 @@ public sealed class ExpressionParser
     }
 
     /// <summary>
-    /// Parses a single projection property: Name, Country.Name, or Country.Name as CountryName
+    /// Parses a single projection property: Name, Country.Name, Country.Name as CountryName, or (expression) as Alias
     /// </summary>
     private ProjectionProperty ParseProjectionProperty()
     {
+        // Check for computed expression: (expression) as Alias
+        if (Check(TokenType.OpenParen))
+        {
+            return ParseComputedProjectionProperty();
+        }
+
         // Parse property path (can include navigation: Country.Name)
         var pathParts = new List<string>();
         pathParts.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
@@ -433,6 +724,27 @@ public sealed class ExpressionParser
         }
 
         return new ProjectionProperty(path, alias);
+    }
+
+    /// <summary>
+    /// Parses a computed projection property: (expression) as Alias
+    /// The expression can be ternary, coalesce, or any other expression.
+    /// Alias is required for computed expressions.
+    /// </summary>
+    private ProjectionProperty ParseComputedProjectionProperty()
+    {
+        Consume(TokenType.OpenParen, "Expected '(' for computed expression");
+
+        // Parse the inner expression (can be ternary, coalesce, navigation, etc.)
+        var expression = ParseExpression();
+
+        Consume(TokenType.CloseParen, "Expected ')' after computed expression");
+
+        // Alias is required for computed expressions
+        Consume(TokenType.As, "Expected 'as' keyword after computed expression - alias is required");
+        var alias = Consume(TokenType.Identifier, "Expected alias name after 'as'").Value;
+
+        return ProjectionProperty.FromExpression(expression, alias);
     }
 
     #region Helper Methods

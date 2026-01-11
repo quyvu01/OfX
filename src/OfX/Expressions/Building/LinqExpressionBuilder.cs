@@ -254,6 +254,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
     /// <summary>
     /// Builds projection for a collection: Orders.{Id, Status} -> Select(o => new Dictionary...)
+    /// Supports simple properties, navigation, aliases, and computed expressions.
     /// </summary>
     private ExpressionBuildResult BuildCollectionProjection(
         ProjectionNode node,
@@ -269,21 +270,29 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
         var newDictExpr = Expression.New(dictType);
 
-        var typeAccessor = context.TypeAccessorProvider(elementType);
+        // Create context for the element - use selectParameter as both CurrentExpression and Parameter
+        var elementContext = new ExpressionBuildContext(elementType, selectParameter, selectParameter, context.TypeAccessorProvider);
+
         var elementInits = new List<ElementInit>();
 
-        foreach (var propName in node.Properties)
+        foreach (var prop in node.Properties)
         {
-            var propertyInfo = typeAccessor.GetPropertyInfo(propName)
-                               ?? throw new InvalidOperationException(
-                                   $"Property '{propName}' not found on type '{elementType.Name}'");
+            Expression valueExpr;
 
-            var keyExpr = Expression.Constant(propName);
-            var valueExpr = Expression.Convert(
-                Expression.Property(selectParameter, propertyInfo),
-                typeof(object));
+            if (prop.IsComputed)
+            {
+                // Computed expression: build using visitor with element context
+                var result = prop.Expression!.Accept(this, elementContext);
+                valueExpr = result.Expression;
+            }
+            else
+            {
+                // Simple property or navigation path
+                valueExpr = BuildPropertyPath(prop.PathSegments, elementContext);
+            }
 
-            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, valueExpr));
+            var keyExpr = Expression.Constant(prop.OutputKey);
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, Expression.Convert(valueExpr, typeof(object))));
         }
 
         var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
@@ -301,6 +310,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
     /// <summary>
     /// Builds projection for a single object: Country.{Id, Name} -> new Dictionary...
+    /// Supports simple properties, navigation, aliases, and computed expressions.
     /// </summary>
     private ExpressionBuildResult BuildSingleObjectProjection(
         ProjectionNode node,
@@ -308,27 +318,35 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         ExpressionBuildContext context)
     {
         var sourceType = sourceResult.Type;
-        var typeAccessor = context.TypeAccessorProvider(sourceType);
 
         // Build: new Dictionary<string, object> { { "Id", source.Id }, { "Name", source.Name }, ... }
         var dictType = typeof(Dictionary<string, object>);
         var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
         var newDictExpr = Expression.New(dictType);
 
+        // Create context for the source object - reuse the existing parameter
+        var objectContext = new ExpressionBuildContext(sourceType, sourceResult.Expression, context.Parameter, context.TypeAccessorProvider);
+
         var elementInits = new List<ElementInit>();
 
-        foreach (var propName in node.Properties)
+        foreach (var prop in node.Properties)
         {
-            var propertyInfo = typeAccessor.GetPropertyInfo(propName)
-                               ?? throw new InvalidOperationException(
-                                   $"Property '{propName}' not found on type '{sourceType.Name}'");
+            Expression valueExpr;
 
-            var keyExpr = Expression.Constant(propName);
-            var valueExpr = Expression.Convert(
-                Expression.Property(sourceResult.Expression, propertyInfo),
-                typeof(object));
+            if (prop.IsComputed)
+            {
+                // Computed expression: build using visitor with object context
+                var result = prop.Expression!.Accept(this, objectContext);
+                valueExpr = result.Expression;
+            }
+            else
+            {
+                // Simple property or navigation path
+                valueExpr = BuildPropertyPath(prop.PathSegments, objectContext);
+            }
 
-            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, valueExpr));
+            var keyExpr = Expression.Constant(prop.OutputKey);
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, Expression.Convert(valueExpr, typeof(object))));
         }
 
         var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
@@ -340,7 +358,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     {
         // Build projection directly from the root object (context.CurrentExpression)
         // Returns Dictionary<string, object> so it can be serialized as JSON object
-        // Supports navigation paths and aliases: {Id, Name, Country.Name as CountryName}
+        // Supports navigation paths, aliases, and computed expressions:
+        // {Id, Name, Country.Name as CountryName, (Nickname ?? Name) as DisplayName}
 
         // Build: new Dictionary<string, object> { { "Id", x.Id }, { "CountryName", x.Country.Name }, ... }
         var dictType = typeof(Dictionary<string, object>);
@@ -354,8 +373,20 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         foreach (var prop in node.Properties)
         {
-            // Build expression for the property path (may include navigation)
-            var valueExpr = BuildPropertyPath(prop.PathSegments, context);
+            Expression valueExpr;
+
+            if (prop.IsComputed)
+            {
+                // Computed expression: (expression) as Alias
+                // Build the expression using the visitor pattern
+                var result = prop.Expression!.Accept(this, context);
+                valueExpr = result.Expression;
+            }
+            else
+            {
+                // Path-based property: Build expression for the property path (may include navigation)
+                valueExpr = BuildPropertyPath(prop.PathSegments, context);
+            }
 
             // Key is OutputKey (alias if provided, otherwise last segment of path)
             var keyExpr = Expression.Constant(prop.OutputKey);
@@ -586,7 +617,118 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         };
     }
 
+    public ExpressionBuildResult VisitCoalesce(CoalesceNode node, ExpressionBuildContext context)
+    {
+        var leftResult = node.Left.Accept(this, context);
+        var rightResult = node.Right.Accept(this, context);
+
+        // Determine the result type (use left type, or widen to accommodate both)
+        var resultType = DetermineCoalesceResultType(leftResult.Type, rightResult.Type);
+
+        // Convert both sides to the result type if necessary
+        var leftExpr = ConvertToType(leftResult.Expression, resultType);
+        var rightExpr = ConvertToType(rightResult.Expression, resultType);
+
+        // Build: left ?? right
+        // Expression.Coalesce requires the left to be nullable or reference type
+        Expression coalesceExpr;
+
+        if (leftResult.Type.IsValueType && Nullable.GetUnderlyingType(leftResult.Type) == null)
+        {
+            // Left is non-nullable value type - coalesce doesn't make sense, just return left
+            // But we'll still support it for consistency
+            coalesceExpr = leftExpr;
+        }
+        else
+        {
+            coalesceExpr = Expression.Coalesce(leftExpr, rightExpr);
+        }
+
+        return new ExpressionBuildResult(resultType, coalesceExpr);
+    }
+
+    public ExpressionBuildResult VisitTernary(TernaryNode node, ExpressionBuildContext context)
+    {
+        // Build condition
+        var conditionResult = node.Condition.Accept(this, context);
+
+        // Build whenTrue and whenFalse expressions
+        var whenTrueResult = node.WhenTrue.Accept(this, context);
+        var whenFalseResult = node.WhenFalse.Accept(this, context);
+
+        // Determine the result type
+        var resultType = DetermineCoalesceResultType(whenTrueResult.Type, whenFalseResult.Type);
+
+        // Convert both branches to the result type
+        var whenTrueExpr = ConvertToType(whenTrueResult.Expression, resultType);
+        var whenFalseExpr = ConvertToType(whenFalseResult.Expression, resultType);
+
+        // Build: condition ? whenTrue : whenFalse
+        var conditionalExpr = Expression.Condition(conditionResult.Expression, whenTrueExpr, whenFalseExpr);
+
+        return new ExpressionBuildResult(resultType, conditionalExpr);
+    }
+
     #region Helper Methods
+
+    /// <summary>
+    /// Determines the result type for coalesce/ternary operations.
+    /// </summary>
+    private static Type DetermineCoalesceResultType(Type leftType, Type rightType)
+    {
+        // If types are the same, use that type
+        if (leftType == rightType)
+            return leftType;
+
+        // Handle nullable types
+        var leftUnderlying = Nullable.GetUnderlyingType(leftType) ?? leftType;
+        var rightUnderlying = Nullable.GetUnderlyingType(rightType) ?? rightType;
+
+        if (leftUnderlying == rightUnderlying)
+            return leftUnderlying;
+
+        // If one is object, use the other
+        if (leftType == typeof(object))
+            return rightType;
+        if (rightType == typeof(object))
+            return leftType;
+
+        // For numeric types, widen to the larger type
+        if (IsNumericType(leftUnderlying) && IsNumericType(rightUnderlying))
+        {
+            return GetWiderNumericType(leftUnderlying, rightUnderlying);
+        }
+
+        // Default to object
+        return typeof(object);
+    }
+
+    private static bool IsNumericType(Type type)
+    {
+        return type == typeof(int) || type == typeof(long) || type == typeof(decimal) ||
+               type == typeof(double) || type == typeof(float) || type == typeof(short) ||
+               type == typeof(byte);
+    }
+
+    private static Type GetWiderNumericType(Type left, Type right)
+    {
+        // Priority: decimal > double > float > long > int > short > byte
+        var priority = new Dictionary<Type, int>
+        {
+            [typeof(byte)] = 1,
+            [typeof(short)] = 2,
+            [typeof(int)] = 3,
+            [typeof(long)] = 4,
+            [typeof(float)] = 5,
+            [typeof(double)] = 6,
+            [typeof(decimal)] = 7
+        };
+
+        var leftPriority = priority.GetValueOrDefault(left, 0);
+        var rightPriority = priority.GetValueOrDefault(right, 0);
+
+        return leftPriority >= rightPriority ? left : right;
+    }
 
     private ExpressionBuildResult BuildCountFunction(ExpressionBuildResult source)
     {

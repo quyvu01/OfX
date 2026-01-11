@@ -28,4 +28,6 @@ public interface IExpressionNodeVisitor<out TResult, in TContext>
     TResult VisitLogicalCondition(LogicalConditionNode node, TContext context);
     TResult VisitLiteral(LiteralNode node, TContext context);
     TResult VisitAggregation(AggregationNode node, TContext context);
+    TResult VisitCoalesce(CoalesceNode node, TContext context);
+    TResult VisitTernary(TernaryNode node, TContext context);
 }

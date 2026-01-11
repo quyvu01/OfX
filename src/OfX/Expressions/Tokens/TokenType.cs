@@ -35,6 +35,7 @@ public enum TokenType
     Colon,             // :
     Comma,             // ,
     Question,          // ?
+    QuestionQuestion,  // ?? (null coalescing)
 
     // Brackets
     OpenParen,         // (

@@ -69,7 +69,9 @@ public sealed class Tokenizer(string expression)
             '.' => MakeToken(TokenType.Dot, ".", startPosition),
             ':' => MakeToken(TokenType.Colon, ":", startPosition),
             ',' => MakeToken(TokenType.Comma, ",", startPosition),
-            '?' => MakeToken(TokenType.Question, "?", startPosition),
+            '?' => Match('?')
+                ? MakeToken(TokenType.QuestionQuestion, "??", startPosition)
+                : MakeToken(TokenType.Question, "?", startPosition),
             '(' => MakeToken(TokenType.OpenParen, "(", startPosition),
             ')' => MakeToken(TokenType.CloseParen, ")", startPosition),
             '[' => MakeToken(TokenType.OpenBracket, "[", startPosition),
