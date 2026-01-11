@@ -177,4 +177,105 @@ public sealed class BsonProjectionBuilderTests
     }
 
     #endregion
+
+    #region Boolean Function Tests (:any, :all)
+
+    [Fact]
+    public void VisitBooleanFunction_AnyWithoutCondition_ReturnsCorrectBsonDocument()
+    {
+        // Arrange - Orders:any
+        var expression = "Orders:any";
+        var node = ExpressionParser.Parse(expression);
+        var context = new BsonBuildContext(null);
+
+        // Act
+        var result = node.Accept(_builder, context);
+
+        // Assert - { $gt: [{ $size: { $ifNull: ["$Orders", []] } }, 0] }
+        result.ShouldBeOfType<BsonDocument>();
+        var doc = (BsonDocument)result;
+        doc.Contains("$gt").ShouldBeTrue();
+
+        var gtArray = doc["$gt"].AsBsonArray;
+        gtArray.Count.ShouldBe(2);
+        gtArray[1].ShouldBe(0);
+
+        var sizeDoc = gtArray[0].AsBsonDocument;
+        sizeDoc.Contains("$size").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void VisitBooleanFunction_AnyWithCondition_ReturnsCorrectBsonDocument()
+    {
+        // Arrange - Orders:any(Status = 'Done')
+        var expression = "Orders:any(Status = 'Done')";
+        var node = ExpressionParser.Parse(expression);
+        var context = new BsonBuildContext(null);
+
+        // Act
+        var result = node.Accept(_builder, context);
+
+        // Assert - Should contain $gt, $size, $filter
+        result.ShouldBeOfType<BsonDocument>();
+        var doc = (BsonDocument)result;
+        doc.Contains("$gt").ShouldBeTrue();
+
+        var gtArray = doc["$gt"].AsBsonArray;
+        var sizeDoc = gtArray[0].AsBsonDocument;
+        sizeDoc.Contains("$size").ShouldBeTrue();
+
+        var filterDoc = sizeDoc["$size"].AsBsonDocument;
+        filterDoc.Contains("$filter").ShouldBeTrue();
+
+        var filter = filterDoc["$filter"].AsBsonDocument;
+        filter.Contains("input").ShouldBeTrue();
+        filter.Contains("as").ShouldBeTrue();
+        filter.Contains("cond").ShouldBeTrue();
+        filter["as"].ShouldBe("item");
+    }
+
+    [Fact]
+    public void VisitBooleanFunction_AllWithoutCondition_ReturnsTrue()
+    {
+        // Arrange - Documents:all (vacuous truth)
+        var expression = "Documents:all";
+        var node = ExpressionParser.Parse(expression);
+        var context = new BsonBuildContext(null);
+
+        // Act
+        var result = node.Accept(_builder, context);
+
+        // Assert - Should return true constant
+        result.ShouldBeOfType<BsonBoolean>();
+        result.AsBoolean.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void VisitBooleanFunction_AllWithCondition_ReturnsCorrectBsonDocument()
+    {
+        // Arrange - Documents:all(IsApproved = true)
+        var expression = "Documents:all(IsApproved = true)";
+        var node = ExpressionParser.Parse(expression);
+        var context = new BsonBuildContext(null);
+
+        // Act
+        var result = node.Accept(_builder, context);
+
+        // Assert - Should contain $eq comparing filtered size with total size
+        result.ShouldBeOfType<BsonDocument>();
+        var doc = (BsonDocument)result;
+        doc.Contains("$eq").ShouldBeTrue();
+
+        var eqArray = doc["$eq"].AsBsonArray;
+        eqArray.Count.ShouldBe(2);
+
+        // Both should be $size expressions
+        var filteredSize = eqArray[0].AsBsonDocument;
+        var totalSize = eqArray[1].AsBsonDocument;
+
+        filteredSize.Contains("$size").ShouldBeTrue();
+        totalSize.Contains("$size").ShouldBeTrue();
+    }
+
+    #endregion
 }

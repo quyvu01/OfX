@@ -45,5 +45,19 @@ public enum FunctionType
     /// <summary>
     /// Maximum value: .Max(x => x.Property)
     /// </summary>
-    Max
+    Max,
+
+    /// <summary>
+    /// Any: Returns true if any item matches the condition (or if collection is not empty).
+    /// Without condition: .Any()
+    /// With condition: .Any(x => x.Status == "Done")
+    /// </summary>
+    Any,
+
+    /// <summary>
+    /// All: Returns true if all items match the condition (or if collection is empty).
+    /// Without condition: .All() - always true for empty, true for non-empty
+    /// With condition: .All(x => x.IsApproved == true)
+    /// </summary>
+    All
 }

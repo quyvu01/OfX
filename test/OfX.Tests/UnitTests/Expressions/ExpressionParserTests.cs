@@ -624,4 +624,144 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region Boolean Function Tests (:any, :all)
+
+    [Fact]
+    public void Parse_AnyWithoutCondition_ReturnsBooleanFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Orders:any");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.Any);
+        boolFunc.HasCondition.ShouldBeFalse();
+        boolFunc.Condition.ShouldBeNull();
+        boolFunc.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)boolFunc.Source).Name.ShouldBe("Orders");
+    }
+
+    [Fact]
+    public void Parse_AnyWithCondition_ReturnsBooleanFunctionNodeWithCondition()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Orders:any(Status = 'Pending')");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.Any);
+        boolFunc.HasCondition.ShouldBeTrue();
+        boolFunc.Condition.ShouldBeOfType<BinaryConditionNode>();
+
+        var condition = (BinaryConditionNode)boolFunc.Condition;
+        condition.Left.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)condition.Left).Name.ShouldBe("Status");
+        condition.Operator.ShouldBe(ComparisonOperator.Equal);
+        condition.Right.ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)condition.Right).Value.ShouldBe("Pending");
+    }
+
+    [Fact]
+    public void Parse_AllWithoutCondition_ReturnsBooleanFunctionNode()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Documents:all");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.All);
+        boolFunc.HasCondition.ShouldBeFalse();
+        boolFunc.Condition.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Parse_AllWithCondition_ReturnsBooleanFunctionNodeWithCondition()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Documents:all(IsApproved = true)");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.All);
+        boolFunc.HasCondition.ShouldBeTrue();
+        boolFunc.Condition.ShouldBeOfType<BinaryConditionNode>();
+
+        var condition = (BinaryConditionNode)boolFunc.Condition;
+        ((PropertyNode)condition.Left).Name.ShouldBe("IsApproved");
+        condition.Operator.ShouldBe(ComparisonOperator.Equal);
+        ((LiteralNode)condition.Right).Value.ShouldBe(true);
+    }
+
+    [Fact]
+    public void Parse_AnyWithComplexCondition_ReturnsBooleanFunctionNodeWithLogicalCondition()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Orders:any(Status = 'Done' || Status = 'Shipped')");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.Any);
+        boolFunc.Condition.ShouldBeOfType<LogicalConditionNode>();
+
+        var logicalCond = (LogicalConditionNode)boolFunc.Condition;
+        logicalCond.Operator.ShouldBe(LogicalOperator.Or);
+    }
+
+    [Fact]
+    public void Parse_AllWithAndCondition_ReturnsBooleanFunctionNodeWithLogicalCondition()
+    {
+        // Act
+        var result = ExpressionParser.Parse("Items:all(Price > 0 && Quantity > 0)");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.All);
+        boolFunc.Condition.ShouldBeOfType<LogicalConditionNode>();
+
+        var logicalCond = (LogicalConditionNode)boolFunc.Condition;
+        logicalCond.Operator.ShouldBe(LogicalOperator.And);
+    }
+
+    [Fact]
+    public void Parse_NavigationThenAny_ReturnsCorrectStructure()
+    {
+        // Act - User.Orders:any(Status = 'Done')
+        // The :any is applied to Orders segment, then wrapped in NavigationNode with User
+        var result = ExpressionParser.Parse("User.Orders:any(Status = 'Done')");
+
+        // Assert - Result is NavigationNode containing [User, BooleanFunctionNode(Orders)]
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        navNode.Segments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("User");
+
+        navNode.Segments[1].ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)navNode.Segments[1];
+        boolFunc.FunctionName.ShouldBe(BooleanFunctionType.Any);
+        boolFunc.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)boolFunc.Source).Name.ShouldBe("Orders");
+    }
+
+    [Fact]
+    public void Parse_FilterThenAny_ReturnsCorrectStructure()
+    {
+        // First filter, then check any on filtered result
+        var result = ExpressionParser.Parse("Orders(Year = 2024):any(Status = 'Done')");
+
+        // Assert
+        result.ShouldBeOfType<BooleanFunctionNode>();
+        var boolFunc = (BooleanFunctionNode)result;
+        boolFunc.Source.ShouldBeOfType<FilterNode>();
+    }
+
+    #endregion
 }

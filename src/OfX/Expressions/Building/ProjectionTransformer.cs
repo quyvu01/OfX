@@ -74,8 +74,7 @@ public static class ProjectionTransformer
     /// <summary>
     /// Transforms a single row using projection metadata.
     /// </summary>
-    private static OfXDataResponse TransformRowWithMetadata(
-        object[] row,
+    private static OfXDataResponse TransformRowWithMetadata(object[] row,
         IReadOnlyList<ProjectionMetadata> valueMetadata)
     {
         var id = row[0]?.ToString() ?? string.Empty;

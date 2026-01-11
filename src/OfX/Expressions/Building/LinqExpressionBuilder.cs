@@ -408,6 +408,106 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         };
     }
 
+    public ExpressionBuildResult VisitBooleanFunction(BooleanFunctionNode node, ExpressionBuildContext context)
+    {
+        var sourceResult = node.Source.Accept(this, context);
+
+        // Get element type from collection
+        if (!TryGetEnumerableElementType(sourceResult.Type, out var elementType))
+        {
+            throw new InvalidOperationException(
+                $"Cannot apply boolean function '{node.FunctionName}' to non-collection type '{sourceResult.Type.Name}'");
+        }
+
+        return node.FunctionName switch
+        {
+            BooleanFunctionType.Any => BuildAnyFunction(sourceResult, elementType, node.Condition, context),
+            BooleanFunctionType.All => BuildAllFunction(sourceResult, elementType, node.Condition, context),
+            _ => throw new InvalidOperationException($"Unknown boolean function: {node.FunctionName}")
+        };
+    }
+
+    /// <summary>
+    /// Builds an Any() call: collection.Any() or collection.Any(x => condition)
+    /// </summary>
+    private ExpressionBuildResult BuildAnyFunction(
+        ExpressionBuildResult sourceResult,
+        Type elementType,
+        ConditionNode condition,
+        ExpressionBuildContext context)
+    {
+        if (condition is null)
+        {
+            // collection.Any() - check if not empty
+            var anyMethod = typeof(Enumerable).GetMethods()
+                .First(m => m.Name == nameof(Enumerable.Any) && m.GetParameters().Length == 1)
+                .MakeGenericMethod(elementType);
+
+            var anyCall = Expression.Call(anyMethod, sourceResult.Expression);
+            return new ExpressionBuildResult(typeof(bool), anyCall);
+        }
+
+        // collection.Any(x => condition)
+        return BuildBooleanPredicateFunction(sourceResult, elementType, condition, context, nameof(Enumerable.Any));
+    }
+
+    /// <summary>
+    /// Builds an All() call: collection.All(x => condition)
+    /// Without condition, returns true (vacuous truth).
+    /// </summary>
+    private ExpressionBuildResult BuildAllFunction(
+        ExpressionBuildResult sourceResult,
+        Type elementType,
+        ConditionNode condition,
+        ExpressionBuildContext context)
+    {
+        if (condition is null)
+        {
+            // collection.All() without condition - return true constant
+            // This follows vacuous truth: "all elements satisfy no condition" is true
+            return new ExpressionBuildResult(typeof(bool), Expression.Constant(true));
+        }
+
+        // collection.All(x => condition)
+        return BuildBooleanPredicateFunction(sourceResult, elementType, condition, context, nameof(Enumerable.All));
+    }
+
+    /// <summary>
+    /// Builds a boolean predicate function: Any(x => condition) or All(x => condition)
+    /// </summary>
+    private ExpressionBuildResult BuildBooleanPredicateFunction(
+        ExpressionBuildResult sourceResult,
+        Type elementType,
+        ConditionNode condition,
+        ExpressionBuildContext context,
+        string methodName)
+    {
+        // Create lambda parameter: x
+        var param = Expression.Parameter(elementType, "x");
+
+        // Create new context for condition evaluation
+        var conditionContext = context with
+        {
+            CurrentExpression = param,
+            CurrentType = elementType
+        };
+
+        // Build condition expression
+        var conditionResult = condition.Accept(this, conditionContext);
+
+        // Create predicate: x => condition
+        var predicateFuncType = typeof(Func<,>).MakeGenericType(elementType, typeof(bool));
+        var predicate = Expression.Lambda(predicateFuncType, conditionResult.Expression, param);
+
+        // Get the method: Enumerable.Any<T>(source, predicate) or Enumerable.All<T>(source, predicate)
+        var method = typeof(Enumerable).GetMethods()
+            .First(m => m.Name == methodName && m.GetParameters().Length == 2)
+            .MakeGenericMethod(elementType);
+
+        var call = Expression.Call(method, sourceResult.Expression, predicate);
+        return new ExpressionBuildResult(typeof(bool), call);
+    }
+
     public ExpressionBuildResult VisitBinaryCondition(BinaryConditionNode node, ExpressionBuildContext context)
     {
         var leftResult = node.Left.Accept(this, context);

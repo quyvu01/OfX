@@ -278,6 +278,89 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
         };
     }
 
+    public BsonValue VisitBooleanFunction(BooleanFunctionNode node, BsonBuildContext context)
+    {
+        var sourceValue = node.Source.Accept(this, context);
+
+        return node.FunctionName switch
+        {
+            BooleanFunctionType.Any => BuildAnyFunction(sourceValue, node.Condition, context),
+            BooleanFunctionType.All => BuildAllFunction(sourceValue, node.Condition, context),
+            _ => throw new InvalidOperationException($"Unknown boolean function: {node.FunctionName}")
+        };
+    }
+
+    /// <summary>
+    /// Builds MongoDB $anyElementTrue or $filter + $gt for :any
+    /// </summary>
+    private BsonValue BuildAnyFunction(BsonValue sourceValue, ConditionNode condition, BsonBuildContext context)
+    {
+        if (condition is null)
+        {
+            // :any without condition - check if array has any elements
+            // { $gt: [{ $size: sourceValue }, 0] }
+            return new BsonDocument("$gt", new BsonArray
+            {
+                new BsonDocument("$size", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() })),
+                0
+            });
+        }
+
+        // :any(condition) - check if any element matches
+        // { $gt: [{ $size: { $filter: { input: source, as: "item", cond: condition } } }, 0] }
+        var conditionValue = BuildConditionForArrayElement(condition, context);
+
+        return new BsonDocument("$gt", new BsonArray
+        {
+            new BsonDocument("$size", new BsonDocument("$filter", new BsonDocument
+            {
+                { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+                { "as", "item" },
+                { "cond", conditionValue }
+            })),
+            0
+        });
+    }
+
+    /// <summary>
+    /// Builds MongoDB $allElementsTrue for :all
+    /// </summary>
+    private BsonValue BuildAllFunction(BsonValue sourceValue, ConditionNode condition, BsonBuildContext context)
+    {
+        if (condition is null)
+        {
+            // :all without condition - always true (vacuous truth)
+            return new BsonBoolean(true);
+        }
+
+        // :all(condition) - check if all elements match
+        // Use $reduce to check all elements
+        // { $eq: [{ $size: { $filter: { input: source, cond: condition } } }, { $size: source }] }
+        var conditionValue = BuildConditionForArrayElement(condition, context);
+        var safeSource = new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() });
+
+        return new BsonDocument("$eq", new BsonArray
+        {
+            new BsonDocument("$size", new BsonDocument("$filter", new BsonDocument
+            {
+                { "input", safeSource },
+                { "as", "item" },
+                { "cond", conditionValue }
+            })),
+            new BsonDocument("$size", safeSource)
+        });
+    }
+
+    /// <summary>
+    /// Builds a condition expression for array element (using $$item prefix).
+    /// </summary>
+    private BsonValue BuildConditionForArrayElement(ConditionNode condition, BsonBuildContext context)
+    {
+        // Create a context that uses $$item for field references
+        var arrayContext = new BsonBuildContext("$$item");
+        return BuildCondition(condition, arrayContext);
+    }
+
     public BsonValue VisitBinaryCondition(BinaryConditionNode node, BsonBuildContext context) =>
         BuildCondition(node, context);
 

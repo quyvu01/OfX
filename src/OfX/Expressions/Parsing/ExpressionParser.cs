@@ -25,8 +25,8 @@ namespace OfX.Expressions.Parsing;
 /// Value            := String | Number | Boolean | Null
 /// Indexer          := '[' Number (Number)? ('asc' | 'desc') Identifier ']'
 /// Projection       := '.{' Identifier (',' Identifier)* '}'
-/// Function         := ':' FunctionName ('(' Identifier ')')?
-/// FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max'
+/// Function         := ':' FunctionName ('(' Identifier ')' | '(' Condition ')')?
+/// FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max' | 'any' | 'all'
 /// </code>
 /// </remarks>
 public sealed class ExpressionParser
@@ -50,6 +50,12 @@ public sealed class ExpressionParser
         ["avg"] = AggregationType.Average,
         ["min"] = AggregationType.Min,
         ["max"] = AggregationType.Max
+    };
+
+    private static readonly Dictionary<string, BooleanFunctionType> BooleanFunctionNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["any"] = BooleanFunctionType.Any,
+        ["all"] = BooleanFunctionType.All
     };
 
     public ExpressionParser(IReadOnlyList<Token> tokens)
@@ -140,12 +146,18 @@ public sealed class ExpressionParser
     }
 
     /// <summary>
-    /// Parses a function or aggregation: :count, :sum(Total)
+    /// Parses a function or aggregation: :count, :sum(Total), :any, :any(Status = 'Done'), :all(IsApproved = true)
     /// </summary>
     private ExpressionNode ParseFunctionOrAggregation(ExpressionNode source)
     {
         var funcToken = Consume(TokenType.Identifier, "Expected function name after ':'");
         var funcName = funcToken.Value.ToLowerInvariant();
+
+        // Check for boolean functions first: :any, :all
+        if (BooleanFunctionNames.TryGetValue(funcName, out var boolFuncType))
+        {
+            return ParseBooleanFunction(source, boolFuncType);
+        }
 
         if (!FunctionNames.TryGetValue(funcName, out var functionType))
         {
@@ -168,6 +180,23 @@ public sealed class ExpressionParser
         }
 
         return new FunctionNode(source, functionType, argument);
+    }
+
+    /// <summary>
+    /// Parses a boolean function: :any, :any(condition), :all, :all(condition)
+    /// </summary>
+    private BooleanFunctionNode ParseBooleanFunction(ExpressionNode source, BooleanFunctionType functionType)
+    {
+        ConditionNode condition = null;
+
+        // Check for condition: :any(Status = 'Done'), :all(IsApproved = true)
+        if (Match(TokenType.OpenParen))
+        {
+            condition = ParseCondition();
+            Consume(TokenType.CloseParen, "Expected ')' after boolean function condition");
+        }
+
+        return new BooleanFunctionNode(source, functionType, condition);
     }
 
     /// <summary>

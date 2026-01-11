@@ -547,11 +547,11 @@ Project specific fields from objects or collections:
 ```csharp
 // Select only Id and Status from each order
 [UserOf(nameof(UserId), Expression = "Orders.{Id, Status}")]
-public List<Dictionary<string, object>> OrderSummaries { get; set; }
+public List<OrderSumary> OrderSummaries { get; set; }
 
 // With filter
 [UserOf(nameof(UserId), Expression = "Orders(Status = 'Done').{Id, Total}")]
-public List<Dictionary<string, object>> CompletedOrderSummaries { get; set; }
+public List<OrderSumary> CompletedOrderSummaries { get; set; }
 ```
 
 #### Single Object Projection
@@ -559,7 +559,7 @@ public List<Dictionary<string, object>> CompletedOrderSummaries { get; set; }
 ```csharp
 // Project from navigation property
 [ProvinceOf(nameof(ProvinceId), Expression = "Country.{Id, Name}")]
-public Dictionary<string, object> CountryInfo { get; set; }
+public CountryLessDataInfo CountryInfo { get; set; }
 ```
 
 #### Root Projection with Navigation & Alias

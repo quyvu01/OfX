@@ -23,6 +23,7 @@ public interface IExpressionNodeVisitor<out TResult, in TContext>
     TResult VisitProjection(ProjectionNode node, TContext context);
     TResult VisitRootProjection(RootProjectionNode node, TContext context);
     TResult VisitFunction(FunctionNode node, TContext context);
+    TResult VisitBooleanFunction(BooleanFunctionNode node, TContext context);
     TResult VisitBinaryCondition(BinaryConditionNode node, TContext context);
     TResult VisitLogicalCondition(LogicalConditionNode node, TContext context);
     TResult VisitLiteral(LiteralNode node, TContext context);
