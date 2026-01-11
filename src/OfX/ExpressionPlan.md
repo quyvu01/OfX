@@ -34,7 +34,7 @@
 - Let thing about this one:
 
     1. Expression resolver?
-    2. Example, if we have the expression like this one: "Country.Provinces[Name:count > 3][0 10 asc Name].{Id, Name,
+    2. Example, if we have the expression like this one: "Country.Provinces(Name:count > 3)[0 10 asc Name].{Id, Name,
        Description}" - The first entity is National? It can be:
        x => x.Country.Provinces.Where(a => a.Name.Length > 3)
        .OrderBy(a => a.Name).Skip(0)
