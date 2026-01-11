@@ -24,11 +24,11 @@ public class MemberResponse
     public string UserId { get; set; }
     [UserOf(nameof(UserId))] public string UserName { get; set; }
 
-    [UserOf(nameof(UserId), Expression = "${UserAlias|Email}")]
+    [UserOf(nameof(UserId), Expression = "${UserAlias|UserEmail}")]
     public string UserEmail { get; set; }
 
-    [UserOf(nameof(UserId), Expression = "CustomExpression")]
-    public string UserCustomExpression { get; set; }
+    // [UserOf(nameof(UserId), Expression = "CustomExpression")]
+    // public string UserCustomExpression { get; set; }
 
     [UserOf(nameof(UserId), Expression = "ProvinceId")]
     public string ProvinceId { get; set; }

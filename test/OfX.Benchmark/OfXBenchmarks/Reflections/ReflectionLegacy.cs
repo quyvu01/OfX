@@ -18,7 +18,7 @@ internal static class ReflectionLegacy
 
     internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
     {
-        if (rootObject is null || GeneralHelpers.IsPrimitiveType(rootObject)) yield break;
+        if (rootObject.IsNullOrPrimitive()) yield break;
         Stack<object> stack = [];
         switch (rootObject)
         {
@@ -33,7 +33,7 @@ internal static class ReflectionLegacy
         while (stack.Count > 0)
         {
             var obj = stack.Pop();
-            if (obj is null || GeneralHelpers.IsPrimitiveType(obj)) continue;
+            if (obj.IsNullOrPrimitive()) continue;
             var objType = obj.GetType();
             var isCached = Graphs.TryGetValue(objType, out var graphs);
             if (isCached)
@@ -111,7 +111,7 @@ internal static class ReflectionLegacy
     {
         foreach (var item in propertyValue)
         {
-            if (item is null || GeneralHelpers.IsPrimitiveType(item)) continue;
+            if (item.IsNullOrPrimitive()) continue;
             if (item is IEnumerable enumerable)
             {
                 EnumerableObject(enumerable, stack);

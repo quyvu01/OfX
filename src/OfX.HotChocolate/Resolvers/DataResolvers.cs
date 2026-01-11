@@ -9,8 +9,22 @@ using OfX.HotChocolate.Implementations;
 
 namespace OfX.HotChocolate.Resolvers;
 
+/// <summary>
+/// GraphQL resolver class that handles data fetching for OfX-decorated properties.
+/// </summary>
+/// <typeparam name="TResponse">The GraphQL object type being resolved.</typeparam>
+/// <remarks>
+/// This resolver uses the <see cref="DataMappingLoader"/> to batch and cache data fetching,
+/// ensuring efficient N+1 query resolution in GraphQL.
+/// </remarks>
 public sealed class DataResolvers<TResponse> where TResponse : class
 {
+    /// <summary>
+    /// Resolves OfX-decorated field data asynchronously.
+    /// </summary>
+    /// <param name="response">The parent object being resolved.</param>
+    /// <param name="resolverContext">The HotChocolate resolver context.</param>
+    /// <returns>The resolved field value.</returns>
     public async Task<object> GetDataAsync(
         [Parent] TResponse response, IResolverContext resolverContext)
     {

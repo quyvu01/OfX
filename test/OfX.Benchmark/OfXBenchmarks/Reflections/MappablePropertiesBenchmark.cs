@@ -1,5 +1,4 @@
 using BenchmarkDotNet.Attributes;
-using OfX.Benchmark.OfXBenchmarks.Reflections.Models;
 
 namespace OfX.Benchmark.OfXBenchmarks.Reflections;
 

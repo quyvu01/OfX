@@ -17,7 +17,7 @@ namespace OfX.Abstractions;
 /// This interface is implemented on the **server side** of the OfX framework.  
 /// Its primary purpose is to fetch data from the underlying data provider 
 /// (e.g., Entity Framework, MongoDB...) in response to
-/// a client request sent via <see cref="IMappableRequestHandler{TAttribute}"/>.
+/// a client request sent via <see cref="IClientRequestHandler{TAttribute}"/>.
 /// </remarks>
 public interface IQueryOfHandler<TModel, TAttribute> where TModel : class where TAttribute : OfXAttribute
 {

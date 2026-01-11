@@ -5,6 +5,14 @@ using OfX.Exceptions;
 
 namespace OfX.Services;
 
+/// <summary>
+/// Abstract base class providing common ID conversion functionality for the OfX framework.
+/// </summary>
+/// <remarks>
+/// This class contains a dictionary of built-in converters for primitive types (string, Guid, int, long, etc.)
+/// and provides methods for parsing strongly-typed IDs. The converters transform string arrays
+/// into typed arrays suitable for database queries.
+/// </remarks>
 internal abstract class AbstractIdConverter
 {
     protected static readonly Dictionary<Type, Func<string[], object>> IdConverters = new()
@@ -70,8 +78,18 @@ internal abstract class AbstractIdConverter
     }
 }
 
+/// <summary>
+/// Converts string-based selector IDs to the strongly-typed ID format required by the data source.
+/// </summary>
+/// <typeparam name="TId">The target ID type (e.g., Guid, int, long, or a custom strongly-typed ID).</typeparam>
+/// <param name="serviceProvider">The service provider for resolving custom ID converters.</param>
+/// <remarks>
+/// This converter handles both built-in primitive types and custom strongly-typed IDs.
+/// For custom ID types, it delegates to <see cref="IStronglyTypeConverter{TId}"/> implementations.
+/// </remarks>
 internal class IdConverter<TId>(IServiceProvider serviceProvider) : AbstractIdConverter, IIdConverter<TId>
 {
+    /// <inheritdoc />
     public object ConvertIds(string[] selectorIds) => IdConverters.TryGetValue(typeof(TId), out var converter)
         ? converter(selectorIds)
         : ParseStronglyTypeIds<TId>(serviceProvider, selectorIds);

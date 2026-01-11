@@ -1,17 +1,23 @@
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
 using OfX.Implementations;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.InternalPipelines;
 
 /// <summary>
-/// This internal pipeline is used for routing the request to the correct handler!
-/// If we found the handler, we will call the ReceivedPipelinesImpl instead of sending via the message!
+/// Internal send pipeline behavior that routes requests to local handlers when available.
 /// </summary>
-/// <param name="serviceProvider"></param>
-/// <typeparam name="TAttribute"></typeparam>
+/// <typeparam name="TAttribute">The OfX attribute type.</typeparam>
+/// <param name="serviceProvider">The service provider for resolving handlers.</param>
+/// <remarks>
+/// This behavior implements the "short-circuit" optimization pattern. When the application
+/// has a local handler registered for the requested attribute type, the request is processed
+/// locally through <see cref="ReceivedPipelinesOrchestrator{TModel,TAttribute}"/> instead of
+/// being sent over the network transport. This provides significant performance improvements
+/// for monolithic deployments or services that handle their own data.
+/// </remarks>
 internal sealed class SendPipelineRoutingBehavior<TAttribute>(
     IServiceProvider serviceProvider) :
     ISendPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
@@ -22,7 +28,7 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
         Func<Task<ItemsResponse<OfXDataResponse>>> next)
     {
         // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesOrchestrator<,> instead of sending via the message!
-        var existedHandler = OfXCached.AttributeMapHandlers;
+        var existedHandler = OfXStatics.AttributeMapHandlers;
         if (!existedHandler.TryGetValue(typeof(TAttribute), out var handlerType) || !handlerType.IsGenericType)
             return await next.Invoke();
         _receivedPipelinesOrchestratorType ??= typeof(ReceivedPipelinesOrchestrator<,>)

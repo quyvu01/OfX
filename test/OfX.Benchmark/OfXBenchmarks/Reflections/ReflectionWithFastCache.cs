@@ -1,6 +1,6 @@
 using System.Collections;
 using OfX.Cached;
-using OfX.Helpers;
+using OfX.Extensions;
 
 namespace OfX.Benchmark.OfXBenchmarks.Reflections;
 
@@ -43,7 +43,7 @@ internal static class ReflectionWithFastCache
         }
     }
 
-    private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
+    private static bool InvalidObject(object obj) => obj.IsNullOrPrimitive();
 
     private static void EnumerableObject(IEnumerable propertyValue, Stack<object> stack)
     {

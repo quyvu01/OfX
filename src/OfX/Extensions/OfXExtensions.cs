@@ -1,11 +1,10 @@
-using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
 using OfX.Delegates;
 using OfX.Exceptions;
+using OfX.Handlers;
 using OfX.Implementations;
 using OfX.InternalPipelines;
 using OfX.Registries;
@@ -15,50 +14,76 @@ using OfX.Wrappers;
 
 namespace OfX.Extensions;
 
+/// <summary>
+/// Provides the main extension method for adding OfX services to the dependency injection container.
+/// </summary>
 public static class OfXExtensions
 {
-    public static OfXRegisterWrapped AddOfX(this IServiceCollection serviceCollection, Action<OfXRegister> options)
+    /// <summary>
+    /// Adds the OfX distributed mapping framework to the service collection.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    /// <param name="options">Configuration action for setting up OfX.</param>
+    /// <returns>A wrapped registration object for chaining transport extensions.</returns>
+    /// <exception cref="OfXException.OfXAttributesMustBeSet">
+    /// Thrown when no OfX attributes are registered.
+    /// </exception>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.AddAttributesContainNamespaces(typeof(UserOfAttribute).Assembly);
+    ///     cfg.AddModelConfigurationsFromNamespaceContaining&lt;User&gt;();
+    /// })
+    /// .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context)));
+    /// </code>
+    /// </example>
+    public static OfXRegisterWrapped AddOfX(this IServiceCollection services, Action<OfXRegister> options)
     {
         OfXStatics.Clear();
-        var newOfRegister = new OfXRegister(serviceCollection);
+        var newOfRegister = new OfXRegister(services);
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
-        var modelMapOfXConfigs =
-            new ConcurrentDictionary<(Type ModelType, Type OfXAttributeType), IOfXConfigAttribute>();
-
-        var mappableRequestHandlerType = typeof(IMappableRequestHandler<>);
-        var defaultMappableRequestHandlerType = typeof(DefaultMappableRequestHandler<>);
+        var defaultClientRequestHandlerType = typeof(DefaultClientRequestHandler<>);
 
         var modelConfigurations = OfXStatics.ModelConfigurations.Value;
         var attributeTypes = OfXStatics.OfXAttributeTypes.Value;
-        attributeTypes.ForEach(attributeType =>
+
+        var clientHandlerGenericType = typeof(ClientRequestHandler<>);
+        attributeTypes
+            .Select(a => (AttributeType: a, HandlerType: clientHandlerGenericType.MakeGenericType(a),
+                ServiceType: typeof(IClientRequestHandler<>).MakeGenericType(a)))
+            .ForEach(x =>
+            {
+                var existedService = services.FirstOrDefault(a => a.ServiceType == x.ServiceType);
+                if (existedService is not null)
+                {
+                    var implType = defaultClientRequestHandlerType.MakeGenericType(x.AttributeType);
+                    if (existedService.ImplementationType != implType) return;
+                    services.Replace(new ServiceDescriptor(x.ServiceType, x.HandlerType, ServiceLifetime.Transient));
+                    return;
+                }
+
+                services.AddTransient(x.ServiceType, x.HandlerType);
+            });
+
+
+        services.AddTransient<IDistributedMapper, DistributedMapper>();
+
+        services.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
+
+        services.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
+
+        services.AddTransient(typeof(SendPipelinesOrchestrator<>));
+
+        services.AddTransient(typeof(DefaultQueryOfHandler<,>));
+
+        services.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
         {
-            // I have to create a default handler, which is typically return an empty collection. Great!
-            // So the interface with the default method is the best choice!
-            var serviceType = mappableRequestHandlerType.MakeGenericType(attributeType);
-            var defaultImplementedType = defaultMappableRequestHandlerType.MakeGenericType(attributeType);
-            // Using TryAddScoped is pretty cool. We don't need to check if the service is registered or not!
-            // So we have to replace the default service if it existed -> Good!
-            serviceCollection.TryAddScoped(serviceType, defaultImplementedType);
-        });
-
-        modelConfigurations.ForEach(m =>
-            modelMapOfXConfigs.TryAdd((m.ModelType, m.OfXAttributeType), m.OfXConfigAttribute));
-
-        serviceCollection.AddTransient<IDistributedMapper, DistributedMapper>();
-
-        serviceCollection.AddSingleton(typeof(IIdConverter<>), typeof(IdConverter<>));
-
-        serviceCollection.AddTransient(typeof(ReceivedPipelinesOrchestrator<,>));
-
-        serviceCollection.AddTransient(typeof(SendPipelinesOrchestrator<>));
-
-        serviceCollection.AddTransient(typeof(DefaultQueryOfHandler<,>));
-
-        serviceCollection.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
-        {
-            var config = modelMapOfXConfigs[(mt, at)];
+            var config = modelConfigurations
+                .First(a => a.ModelType == mt && a.OfXAttributeType == at)
+                .OfXConfigAttribute;
             return new OfXConfig(config.IdProperty, config.DefaultProperty);
         });
 
@@ -71,7 +96,7 @@ public static class OfXExtensions
         modelConfigurations.ForEach(m =>
         {
             var serviceInterfaceType = OfXStatics.QueryOfHandlerType.MakeGenericType(m.ModelType, m.OfXAttributeType);
-            OfXCached.InternalQueryMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
+            OfXStatics.InternalAttributeMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
 
         return new OfXRegisterWrapped(newOfRegister);

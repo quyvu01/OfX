@@ -1,5 +1,3 @@
-using NATS.Client.Core;
-
 namespace OfX.Nats.Statics;
 
 internal static class NatsStatics

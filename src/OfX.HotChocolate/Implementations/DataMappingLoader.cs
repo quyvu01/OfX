@@ -7,6 +7,20 @@ using OfX.Queries;
 
 namespace OfX.HotChocolate.Implementations;
 
+/// <summary>
+/// HotChocolate DataLoader that batches and caches OfX data fetching operations.
+/// </summary>
+/// <param name="batchScheduler">The batch scheduler for DataLoader.</param>
+/// <param name="options">DataLoader options.</param>
+/// <param name="distributedMapper">The OfX distributed mapper for fetching data.</param>
+/// <remarks>
+/// This DataLoader:
+/// <list type="bullet">
+///   <item><description>Groups requests by attribute type and order for efficient batching</description></item>
+///   <item><description>Handles dependency resolution between fields</description></item>
+///   <item><description>Caches results per request to avoid duplicate fetches</description></item>
+/// </list>
+/// </remarks>
 internal class DataMappingLoader(
     IBatchScheduler batchScheduler,
     DataLoaderOptions options,

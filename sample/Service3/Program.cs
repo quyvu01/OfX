@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Nats.Extensions;
-using OfX.RabbitMq.Extensions;
 using Serilog;
 using Service3Api;
 using Service3Api.Contexts;
@@ -17,8 +16,8 @@ Log.Logger = new LoggerConfiguration()
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
-        cfg.AddNats(config => config.Url("nats://localhost:4222"));
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
+        cfg.AddNats(config => config.Url("nats://localhost:4222"));
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));

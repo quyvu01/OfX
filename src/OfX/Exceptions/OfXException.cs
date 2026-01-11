@@ -1,8 +1,16 @@
+using System.Reflection;
 using OfX.Abstractions;
 using OfX.Statics;
 
 namespace OfX.Exceptions;
 
+/// <summary>
+/// Contains all custom exception types used by the OfX framework.
+/// </summary>
+/// <remarks>
+/// These exceptions provide detailed error messages for common configuration
+/// and runtime issues encountered when using the OfX framework.
+/// </remarks>
 public static class OfXException
 {
     public sealed class OfXAttributesMustBeSet()
@@ -68,4 +76,9 @@ public static class OfXException
 
     public sealed class AmbiguousHandlers(Type interfaceType) :
         Exception($"Ambiguous handlers for interface '{interfaceType.FullName}'.");
+
+    public sealed class NoHandlerForAttribute(Type type) : Exception($"There is no handler for '{type.FullName}'!");
+
+    public sealed class DuplicatedNameByExposedName(Type type, PropertyInfo[] propertyInfos) : Exception(
+        $"Properties: {string.Join(", ", propertyInfos.Select(p => p.Name))} cannot be dupplicated for type '{type.FullName}'.");
 }

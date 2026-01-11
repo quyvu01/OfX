@@ -5,7 +5,7 @@ using OfX.Responses;
 
 namespace OfX.Benchmark.OfXBenchmarks.Handlers;
 
-public sealed class UserOfHandler : IMappableRequestHandler<UserOfAttribute>
+public sealed class UserOfHandler : IClientRequestHandler<UserOfAttribute>
 {
     public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<UserOfAttribute> requestContext)
     {

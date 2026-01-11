@@ -1,134 +1,176 @@
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Cached;
 using OfX.Delegates;
-using OfX.DynamicExpression;
-using OfX.Exceptions;
-using OfX.Helpers;
-using OfX.Internals;
-using OfX.Responses;
-using OfX.Serializable;
-using OfX.Statics;
+using OfX.Expressions.Building;
 
 namespace OfX.Builders;
 
-public abstract class QueryHandlerBuilder<TModel, TAttribute>(
-    IServiceProvider serviceProvider)
+/// <summary>
+/// Version 2 of QueryHandlerBuilder using the new Expression DSL system.
+/// </summary>
+/// <typeparam name="TModel">The entity model type being queried.</typeparam>
+/// <typeparam name="TAttribute">The OfX attribute type associated with this handler.</typeparam>
+/// <remarks>
+/// <para>
+/// This builder uses a two-step approach for better database compatibility:
+/// </para>
+/// <list type="bullet">
+///   <item>Step 1: Build projection to object[] and execute database query</item>
+///   <item>Step 2: Transform object[] to OfXDataResponse in memory</item>
+/// </list>
+/// <para>
+/// Key improvements over V1:
+/// </para>
+/// <list type="bullet">
+///   <item>Support for complex expressions: filters, indexers, aggregations</item>
+///   <item>Support for ExposedName attribute for property masking</item>
+///   <item>Support for null-safe navigation (?. operator)</item>
+///   <item>Better error handling per expression</item>
+/// </list>
+/// </remarks>
+public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider serviceProvider)
     where TModel : class
     where TAttribute : OfXAttribute
 {
-    private const string ModelName = "x";
-    private const string IdsNaming = "ids";
-    private static Type _idConverterType;
-    private static MemberAssignment _idToStringMemberAssignment;
+    private const string ParameterName = "x";
 
     protected readonly IOfXConfigAttribute OfXConfigAttribute = serviceProvider
         .GetRequiredService<GetOfXConfiguration>()
         .Invoke(typeof(TModel), typeof(TAttribute));
 
-    private static readonly ParameterExpression ModelParameterExpression =
-        Expression.Parameter(typeof(TModel), ModelName);
-
-    private static readonly Lazy<ConcurrentDictionary<ExpressionValue, Expression<Func<TModel, OfXValueResponse>>>>
-        ExpressionMapValueStorage = new(() => []);
+    // Static cache per generic type combination - this is correct behavior in C#
+    // Each QueryHandlerBuilder<User, UserOfAttribute> gets its own static fields
+    private static readonly Lazy<FilterExpressionCache> FilterCache = new(() => new FilterExpressionCache());
+    private static readonly ConcurrentDictionary<int, Expression<Func<TModel, object[]>>> ProjectionCache = new();
 
     /// <summary>
-    /// We are using DynamicExpression to convert string to Expression
+    /// Builds a filter expression for the given query using native Expression building.
     /// </summary>
-    /// <param name="query">is an instance of RequestOf&lt;TAttribute&gt;, contains SelectorIds and Expression</param>
-    /// <returns></returns>
+    /// <remarks>
+    /// Generates: x => ids.Contains(x.Id)
+    /// Uses cached MethodInfo and ParameterExpression for better performance.
+    /// </remarks>
     protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
     {
-        _idConverterType ??= typeof(IIdConverter<>)
-            .MakeGenericType(Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty).Type);
-        var idConverterService = (IIdConverter)serviceProvider.GetService(_idConverterType)!;
-        var idsConverted = idConverterService.ConvertIds(query.SelectorIds);
-        var interpreter = new Interpreter();
-        interpreter.SetVariable(IdsNaming, idsConverted);
-        return interpreter.ParseAsExpression<Func<TModel, bool>>(
-            $"{IdsNaming}.{nameof(IList.Contains)}({ModelName}.{OfXConfigAttribute.IdProperty})", ModelName);
+        var cache = FilterCache.Value;
+        // Initialize cache on first use (lazy, thread-safe)
+        cache.EnsureInitialized(OfXConfigAttribute.IdProperty, serviceProvider);
+        // Convert selector ids using cached converter
+        var idsConverted = cache.IdConverter.ConvertIds(query.SelectorIds);
+        // Build expression using cached metadata
+        return cache.BuildFilterExpression(idsConverted);
     }
 
     /// <summary>
-    /// For almost cases, we can use this one as the response building.
-    /// If this is not support by driver (i.e: MongoDb Driver), we should build the specific response for them... 
+    /// Builds a projection expression that returns object[].
     /// </summary>
-    /// <param name="request">is an instance of RequestOf&lt;TAttribute&gt;, contains SelectorIds and Expression</param>
-    /// <returns></returns>
-    protected Expression<Func<TModel, OfXDataResponse>> BuildResponse(RequestOf<TAttribute> request)
+    /// <param name="request">The request containing expression strings.</param>
+    /// <returns>A projection expression and the list of expressions for transformation.</returns>
+    protected (Expression<Func<TModel, object[]>> Projection, IReadOnlyList<string> Expressions) BuildProjection(
+        RequestOf<TAttribute> request)
     {
-        var expressions = JsonSerializer.Deserialize<List<string>>(request.Expression);
-        _idToStringMemberAssignment ??= Expression.Bind(OfXStatics.OfXIdProp, IdToStringCall());
-        var valueExpression = expressions
-            .Select(expr => ExpressionMapValueStorage.Value.GetOrAdd(new ExpressionValue(expr), expression =>
-            {
-                try
-                {
-                    var expOrDefault = expression.Expression ?? OfXConfigAttribute.DefaultProperty;
-                    var segments = expOrDefault.Split('.');
-                    var expressionQueryableData = new ExpressionQueryableData(typeof(TModel), ModelParameterExpression);
-                    var expressionQueryableResult = segments
-                        .Aggregate(expressionQueryableData, (acc, segment) =>
-                        {
-                            if (segment.Contains('['))
-                            {
-                                var data = ExpressionHelpers.GetCollectionQueryableData(acc.Expression, segment);
-                                return new ExpressionQueryableData(data.TargetType, data.Expression);
-                            }
+        var expressions = JsonSerializer.Deserialize<string[]>(request.Expression) ?? [];
+        var expressionList = expressions.ToList();
 
-                            if (segment == nameof(IList.Count))
-                                return new ExpressionQueryableData(typeof(int),
-                                    Expression.Property(acc.Expression, nameof(IList.Count)));
+        // Try get from cache
+        var cacheKey = ComputeCacheKey(expressionList);
+        if (ProjectionCache.TryGetValue(cacheKey, out var cached))
+            return (cached, expressionList);
 
-                            // Handle normal property access
-                            var propertyInfo = acc.TargetType.GetProperty(segment);
-                            if (propertyInfo is null)
-                                throw new OfXException.NavigatorIncorrect(segment, acc.TargetType.FullName);
-                            return new ExpressionQueryableData(propertyInfo.PropertyType,
-                                Expression.Property(acc.Expression, propertyInfo));
-                        });
+        // Build new projection
+        var builder = new ProjectionBuilder<TModel>(
+            OfXConfigAttribute.IdProperty,
+            OfXConfigAttribute.DefaultProperty,
+            OfXTypeCache.GetTypeAccessor);
 
-                    // Serialize the final value expression using System.Text.Json
-                    var serializeCall = Expression.Call(SerializeObjects.SerializeObjectMethod,
-                        Expression.Convert(expressionQueryableResult.Expression, typeof(object)));
+        var projection = builder.Build(expressionList);
 
-                    var bindings = new List<MemberBinding>();
-                    if (expr is not null)
-                        bindings.Add(
-                            Expression.Bind(OfXStatics.ValueExpressionTypeProp!, Expression.Constant(expr)));
-                    bindings.Add(Expression.Bind(OfXStatics.ValueValueTypeProp!, serializeCall));
-
-                    // Create a new OfXDataResponse object
-                    var newExpression = Expression.MemberInit(Expression.New(OfXStatics.OfXValueType), bindings);
-
-                    return Expression.Lambda<Func<TModel, OfXValueResponse>>(newExpression, ModelParameterExpression);
-                }
-                catch (Exception)
-                {
-                    if (OfXStatics.ThrowIfExceptions) throw;
-                    return null;
-                }
-            }));
-
-        // Create new OfXValueResponse[] then extract body expressions
-        var ofXValuesArray = Expression.NewArrayInit(typeof(OfXValueResponse),
-            valueExpression.Where(x => x is not null).Select(expr => expr.Body));
-
-        var responseExpression = Expression.MemberInit(Expression.New(typeof(OfXDataResponse)),
-            _idToStringMemberAssignment, Expression.Bind(OfXStatics.OfXValuesProp, ofXValuesArray));
-
-        return Expression.Lambda<Func<TModel, OfXDataResponse>>(responseExpression, ModelParameterExpression);
+        // Cache it
+        ProjectionCache.TryAdd(cacheKey, projection);
+        return (projection, expressionList);
     }
 
-    private MethodCallExpression IdToStringCall()
+    private static int ComputeCacheKey(IReadOnlyList<string> expressions)
     {
-        var idProperty = Expression.Property(ModelParameterExpression, OfXConfigAttribute.IdProperty);
-        var toStringMethod = typeof(object).GetMethod(nameof(ToString), Type.EmptyTypes);
-        return Expression.Call(idProperty, toStringMethod!);
+        var hash = new HashCode();
+        foreach (var expr in expressions) hash.Add(expr);
+        return hash.ToHashCode();
+    }
+
+    /// <summary>
+    /// Caches all metadata needed for building filter expressions.
+    /// Thread-safe, initialized once per generic type combination.
+    /// </summary>
+    private sealed class FilterExpressionCache
+    {
+        private volatile bool _isInitialized;
+        private readonly object _initLock = new();
+
+        // Cached metadata
+        private ParameterExpression ModelParameter { get; set; }
+        private PropertyInfo IdPropertyInfo { get; set; }
+        private Type IdPropertyType { get; set; }
+        private MethodInfo ContainsMethod { get; set; }
+        public IIdConverter IdConverter { get; private set; }
+        private MemberExpression IdPropertyAccess { get; set; }
+
+        public void EnsureInitialized(string idPropertyName, IServiceProvider serviceProvider)
+        {
+            lock (_initLock)
+                if (_isInitialized)
+                    return;
+
+            lock (_initLock)
+            {
+                if (_isInitialized) return;
+
+                // Create parameter expression
+                ModelParameter = Expression.Parameter(typeof(TModel), ParameterName);
+
+                // Get Id property info - use GetPropertyInfoDirect to bypass ExposedName
+                var typeAccessor = OfXTypeCache.GetTypeAccessor(typeof(TModel));
+                IdPropertyInfo = typeAccessor.GetPropertyInfoDirect(idPropertyName)
+                                 ?? throw new InvalidOperationException(
+                                     $"Id property '{idPropertyName}' not found on type '{typeof(TModel).Name}'");
+
+                IdPropertyType = IdPropertyInfo.PropertyType;
+
+                // Cache Id property access expression
+                IdPropertyAccess = Expression.Property(ModelParameter, IdPropertyInfo);
+
+                // Get IdConverter
+                var idConverterType = typeof(IIdConverter<>).MakeGenericType(IdPropertyType);
+                IdConverter = (IIdConverter)serviceProvider.GetService(idConverterType)!;
+
+                // Cache Contains method - we'll use Enumerable.Contains<T> which works with any IEnumerable<T>
+                ContainsMethod = typeof(Enumerable)
+                    .GetMethods()
+                    .First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2)
+                    .MakeGenericMethod(IdPropertyType);
+
+                _isInitialized = true;
+            }
+        }
+
+        /// <summary>
+        /// Builds filter expression using cached metadata.
+        /// Only the idsConverted constant changes between calls.
+        /// </summary>
+        public Expression<Func<TModel, bool>> BuildFilterExpression(object idsConverted)
+        {
+            // Enumerable.Contains(ids, x.Id)
+            var containsCall = Expression.Call(
+                ContainsMethod,
+                Expression.Constant(idsConverted),
+                IdPropertyAccess);
+
+            return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameter);
+        }
     }
 }

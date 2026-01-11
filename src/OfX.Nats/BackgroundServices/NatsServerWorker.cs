@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OfX.Cached;
 using OfX.Nats.Abstractions;
+using OfX.Statics;
 
 namespace OfX.Nats.BackgroundServices;
 
@@ -14,7 +14,7 @@ internal sealed class NatsServerWorker(IServiceProvider serviceProvider, ILogger
         {
             try
             {
-                var tasks = OfXCached.AttributeMapHandlers.Select(async x =>
+                var tasks = OfXStatics.AttributeMapHandlers.Select(async x =>
                 {
                     var attributeType = x.Key;
                     var handlerType = x.Value;

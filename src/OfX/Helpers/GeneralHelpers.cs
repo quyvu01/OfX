@@ -1,16 +1,19 @@
 namespace OfX.Helpers;
 
+/// <summary>
+/// Provides general-purpose helper methods used throughout the OfX framework.
+/// </summary>
 public static class GeneralHelpers
 {
-    public static string GetAssemblyName(this Type type) => $"{type.FullName},{type.Assembly.GetName().Name}";
-
-    public static bool IsPrimitiveType(object obj)
-    {
-        if (obj == null) return false;
-        var type = obj.GetType();
-        return IsPrimitiveType(type);
-    }
-
+    /// <summary>
+    /// Determines if a type is a primitive or value type.
+    /// </summary>
+    /// <param name="objectType">The type to check.</param>
+    /// <returns>True if the type is a primitive, string, DateTime, enum, decimal, or any value type.</returns>
+    /// <remarks>
+    /// This method is used to determine whether a type should be recursively processed
+    /// for OfX attribute mapping or treated as a leaf value.
+    /// </remarks>
     public static bool IsPrimitiveType(Type objectType) =>
         objectType.IsPrimitive ||
         objectType == typeof(string) ||

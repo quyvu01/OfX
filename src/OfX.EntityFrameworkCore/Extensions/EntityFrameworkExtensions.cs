@@ -10,8 +10,33 @@ using OfX.Wrappers;
 
 namespace OfX.EntityFrameworkCore.Extensions;
 
+/// <summary>
+/// Provides extension methods for integrating Entity Framework Core with the OfX framework.
+/// </summary>
 public static class EntityFrameworkExtensions
 {
+    /// <summary>
+    /// Adds Entity Framework Core support for OfX data fetching.
+    /// </summary>
+    /// <param name="ofXServiceInjector">The OfX registration wrapper.</param>
+    /// <param name="registrarAction">Configuration action for registering DbContexts.</param>
+    /// <returns>The OfX registration wrapper for method chaining.</returns>
+    /// <exception cref="OfXException.ModelConfigurationMustBeSet">
+    /// Thrown when model configurations have not been set up before calling this method.
+    /// </exception>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.AddAttributesContainNamespaces(typeof(UserOfAttribute).Assembly);
+    ///     cfg.AddModelConfigurationsFromNamespaceContaining&lt;User&gt;();
+    /// })
+    /// .AddOfXEFCore(cfg =>
+    /// {
+    ///     cfg.AddDbContexts(typeof(ApplicationDbContext));
+    /// });
+    /// </code>
+    /// </example>
     public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
         Action<OfXEfCoreRegistrar> registrarAction)
     {
@@ -25,8 +50,8 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped(typeof(IDbContextResolver<>), typeof(DbContextResolverInternal<>));
 
+        // var efQueryHandler = typeof(EfQueryHandler<,>);
         var efQueryHandler = typeof(EfQueryHandler<,>);
-
         serviceCollection.AddScoped(efQueryHandler);
 
         OfXStatics.ModelConfigurations.Value

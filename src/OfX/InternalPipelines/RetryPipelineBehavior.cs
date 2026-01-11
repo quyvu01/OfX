@@ -5,6 +5,19 @@ using OfX.Statics;
 
 namespace OfX.InternalPipelines;
 
+/// <summary>
+/// Internal send pipeline behavior that implements retry logic with configurable backoff.
+/// </summary>
+/// <typeparam name="TAttribute">The OfX attribute type.</typeparam>
+/// <remarks>
+/// This behavior uses the <see cref="OfXStatics.RetryPolicy"/> configuration to retry failed requests.
+/// Features include:
+/// <list type="bullet">
+///   <item><description>Configurable retry count</description></item>
+///   <item><description>Custom sleep duration provider for backoff strategies</description></item>
+///   <item><description>Optional callback for retry notifications</description></item>
+/// </list>
+/// </remarks>
 internal sealed class RetryPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {

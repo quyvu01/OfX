@@ -16,9 +16,5 @@
       <ProjectReference Include="..\..\src\OfX\OfX.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Reflections\" />
-    </ItemGroup>
-
 
 </Project>

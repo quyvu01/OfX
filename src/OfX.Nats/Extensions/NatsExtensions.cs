@@ -1,13 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Net;
-using OfX.Extensions;
+using OfX.Abstractions.Transporting;
 using OfX.Nats.Abstractions;
 using OfX.Nats.ApplicationModels;
 using OfX.Nats.BackgroundServices;
 using OfX.Nats.Implementations;
 using OfX.Nats.Wrappers;
 using OfX.Registries;
-using OfX.Wrappers;
 
 namespace OfX.Nats.Extensions;
 
@@ -29,7 +28,6 @@ public static class NatsExtensions
         });
         services.AddSingleton(typeof(INatsServer<,>), typeof(NatsServer<,>));
         services.AddHostedService<NatsServerWorker>();
-        services.AddTransient(typeof(INatsClient<>), typeof(NatsClient<>));
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(NatsRequestHandler<>));
+        services.AddTransient<IRequestClient, NatsRequestClient>();
     }
 }

@@ -5,23 +5,49 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
+using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Extensions;
 using OfX.Grpc.ApplicationModels;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Implementations;
-using OfX.Helpers;
 using OfX.Registries;
 using OfX.Responses;
 using OfX.Statics;
-using OfX.Wrappers;
 
 namespace OfX.Grpc.Extensions;
 
+/// <summary>
+/// Provides extension methods for integrating gRPC transport with the OfX framework.
+/// </summary>
 public static class GrpcExtensions
 {
-    private static readonly TimeSpan defaultRequestTimeout = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(3);
 
+    /// <summary>
+    /// Adds gRPC client configuration for OfX distributed data fetching.
+    /// </summary>
+    /// <param name="ofXRegister">The OfX registration instance.</param>
+    /// <param name="options">Configuration action for specifying gRPC server hosts.</param>
+    /// <remarks>
+    /// This method configures the client side of gRPC transport. The client will:
+    /// <list type="bullet">
+    ///   <item><description>Probe configured hosts to discover which attributes each server handles</description></item>
+    ///   <item><description>Route requests to the appropriate server based on attribute type</description></item>
+    ///   <item><description>Handle failover and retry logic through the pipeline behaviors</description></item>
+    /// </list>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.AddGrpcClients(grpc =>
+    ///     {
+    ///         grpc.AddGrpcHosts("https://users-service:5001", "https://products-service:5002");
+    ///     });
+    /// });
+    /// </code>
+    /// </example>
     public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -31,55 +57,55 @@ public static class GrpcExtensions
         ConcurrentDictionary<HostProbe, Type[]> hostMapAttributes = [];
         serviceHosts.Distinct().ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
         var semaphore = new SemaphoreSlim(1, 1);
-
-        ofXRegister.ServiceCollection
-            .TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
+        var services = ofXRegister.ServiceCollection;
+        services.TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
+        {
+            if (!hostMapAttributes.Any(a => a.Value.Contains(attributeType)))
             {
-                if (!hostMapAttributes.Any(a => a.Value.Contains(attributeType)))
+                await semaphore.WaitAsync().ConfigureAwait(false);
+                try
                 {
-                    await semaphore.WaitAsync().ConfigureAwait(false);
-                    try
-                    {
-                        if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                        var probeHosts = hostMapAttributes
-                            .Where(a => !a.Key.IsProbed)
-                            .Select(a => a.Key.ServiceHost);
-                        var missingTypes = await GetHostMapAttributesAsync(probeHosts, context);
-                        missingTypes.Where(a => a.Key.IsProbed)
-                            .ForEach(x =>
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    var probeHosts = hostMapAttributes
+                        .Where(a => !a.Key.IsProbed)
+                        .Select(a => a.Key.ServiceHost);
+                    var missingTypes = await GetHostMapAttributesAsync(probeHosts, context);
+                    missingTypes.Where(a => a.Key.IsProbed)
+                        .ForEach(x =>
+                        {
+                            if (hostMapAttributes.Any(a => a.Key.ServiceHost == x.Key.ServiceHost))
                             {
-                                if (hostMapAttributes.Any(a => a.Key.ServiceHost == x.Key.ServiceHost))
-                                {
-                                    var hostProbeKey = hostMapAttributes
-                                        .First(a => a.Key.ServiceHost == x.Key.ServiceHost);
-                                    hostMapAttributes.TryRemove(hostProbeKey);
-                                }
+                                var hostProbeKey = hostMapAttributes
+                                    .First(a => a.Key.ServiceHost == x.Key.ServiceHost);
+                                hostMapAttributes.TryRemove(hostProbeKey);
+                            }
 
-                                hostMapAttributes.TryAdd(x.Key, x.Value);
-                            });
-                        if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                        return new ItemsResponse<OfXDataResponse>([]);
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
+                            hostMapAttributes.TryAdd(x.Key, x.Value);
+                        });
+                    if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
+                    return new ItemsResponse<OfXDataResponse>([]);
                 }
-
-                resolveData:
-                var host = hostMapAttributes
-                    .FirstOrDefault(a => a.Value.Contains(attributeType))
-                    .Key;
-                var result = await GetOfXItemsAsync(host.ServiceHost, context, query, attributeType);
-                var dataResponse = result.Items.Select(x =>
+                finally
                 {
-                    var values = x.OfxValues
-                        .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
-                    return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
-                });
-                return new ItemsResponse<OfXDataResponse>([..dataResponse]);
+                    semaphore.Release();
+                }
+            }
+
+            resolveData:
+            var host = hostMapAttributes
+                .FirstOrDefault(a => a.Value.Contains(attributeType))
+                .Key;
+            var result = await GetOfXItemsAsync(host.ServiceHost, context, query, attributeType);
+            var dataResponse = result.Items.Select(x =>
+            {
+                var values = x.OfxValues
+                    .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
+                return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
             });
-        OfXForClientWrapped.Of(ofXRegister).InstallRequestHandlers(typeof(GrpcClient<>));
+            return new ItemsResponse<OfXDataResponse>([..dataResponse]);
+        });
+
+        services.TryAddTransient<IRequestClient, GrpcRequestClient>();
     }
 
     private static async Task<Dictionary<HostProbe, Type[]>> GetHostMapAttributesAsync(
@@ -108,7 +134,7 @@ public static class GrpcExtensions
         var grpcQuery = new GetOfXGrpcQuery();
         using var cancellationTokenSource = CancellationTokenSource
             .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
-        cancellationTokenSource.CancelAfter(defaultRequestTimeout);
+        cancellationTokenSource.CancelAfter(DefaultRequestTimeout);
         grpcQuery.SelectorIds.AddRange(query.SelectorIds ?? []);
         grpcQuery.Expression = query.Expression;
         grpcQuery.AttributeAssemblyType = attributeType.GetAssemblyName();
@@ -124,7 +150,7 @@ public static class GrpcExtensions
             var query = new GetAttributesQuery();
             using var cancellationTokenSource = CancellationTokenSource
                 .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
-            cancellationTokenSource.CancelAfter(defaultRequestTimeout);
+            cancellationTokenSource.CancelAfter(DefaultRequestTimeout);
             var response = await client.GetAttributesAsync(query, cancellationToken: cancellationTokenSource.Token);
             return new AttributesProbe(true, [..response.AttributeTypes.Select(Type.GetType)]);
         }
@@ -135,5 +161,18 @@ public static class GrpcExtensions
         }
     }
 
+    /// <summary>
+    /// Maps the OfX gRPC service endpoint for handling incoming OfX requests.
+    /// </summary>
+    /// <param name="builder">The endpoint route builder.</param>
+    /// <remarks>
+    /// This method should be called in the server application's startup to enable
+    /// handling of incoming OfX gRPC requests.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// app.MapOfXGrpcService();
+    /// </code>
+    /// </example>
     public static void MapOfXGrpcService(this IEndpointRouteBuilder builder) => builder.MapGrpcService<GrpcServer>();
 }

@@ -323,223 +323,338 @@ public class UserRequestHandler(): IMappableRequestHandler<UserOfAttribute>
 
 ### 5. Unlock the Full Power of `Expressions`
 
-Expressions in **OfX** enable you to fetch external data dynamically and powerfully. By leveraging these, you can go
-beyond default data fetching and define specific rules to access external resources effortlessly. Let’s dive into how *
-*Expressions** work and what makes them so versatile.
+Expressions in **OfX** enable you to fetch external data dynamically and powerfully. The Expression DSL (Domain Specific
+Language) provides a rich set of features for querying, filtering, aggregating, and projecting data.
+
+#### Expression DSL Grammar
+
+```
+Expression       := RootProjection | Segment ('.' Segment)*
+RootProjection   := '{' ProjectionProperty (',' ProjectionProperty)* '}'
+ProjectionProperty := PropertyPath ('as' Identifier)?
+PropertyPath     := Identifier ('.' Identifier)*
+Segment          := PropertyAccess Filter? Indexer? Projection? Function?
+PropertyAccess   := Identifier ('?')?
+Filter           := '(' Condition ')'
+Condition        := Comparison (('&&' | ',' | 'and' | '||' | 'or') Comparison)*
+Comparison       := FieldPath Operator Value
+Operator         := '=' | '!=' | '>' | '<' | '>=' | '<=' | 'contains' | 'startswith' | 'endswith'
+Indexer          := '[' Number (Number)? ('asc' | 'desc') Identifier ']'
+Projection       := '.{' Identifier (',' Identifier)* '}'
+Function         := ':' FunctionName ('(' Identifier ')')?
+FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max'
+```
 
 #### Default Data vs. External Data
 
 - **Default Data**: Automatically fetched using `OfX Attribute`. No `Expression` is required.
 - **External Data**: Define an `Expression` to fetch specific or relational data from other tables.
 
-Here’s how you can harness the power of **Expressions** in different scenarios:
+---
 
-#### Fetching Data on the Same Table
+### Expression Features
 
-Simple case: fetching additional fields from the same table.
+#### 1. Simple Property Access
+
+Fetching fields from the same table:
 
 ```csharp
 public sealed class SomeDataResponse
 {
-    public string Id { get; set; }
     public string UserId { get; set; }
 
     [UserOf(nameof(UserId), Expression = "Email")]
     public string UserEmail { get; set; }
 
-    [UserOf(nameof(UserId))]
+    [UserOf(nameof(UserId))]  // Uses default property (Name)
     public string UserName { get; set; }
 }
 ```
 
-`User` structure:
+#### 2. Navigation Properties
+
+Navigate through related tables using dot notation:
 
 ```csharp
-[OfXConfigFor<UserOfAttribute>(nameof(Id), nameof(Name))]
-public sealed class User
-{
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Email { get; set; }
-    ...
-}
+[ProvinceOf(nameof(ProvinceId), Expression = "Country.Name")]
+public string CountryName { get; set; }
+
+// Deep navigation
+[ProvinceOf(nameof(ProvinceId), Expression = "Country.Region.Continent.Name")]
+public string ContinentName { get; set; }
 ```
 
-Generated SQL:
+#### 3. Null-Safe Navigation
 
-```SQL
- SELECT u."Id", u.Name, u."Email"
- FROM "Users" AS u
- WHERE u."Id" IN (@__SomeUserIds__)
-```
-
-#### Fetching Data from Navigated Tables
-
-Expressions also support navigation through navigated tables.
+Use `?` for null-safe property access:
 
 ```csharp
-public sealed class SomeDataResponse
-{
-    ...
-    [UserOf(nameof(UserId), Expression = "ProvinceId")]
-    public string ProvinceId { get; set; }
-    
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country.Name")]
-    public string CountryName { get; set; }
-    ...
-}    
-
+[UserOf(nameof(UserId), Expression = "Address?.City?.Name")]
+public string CityName { get; set; }
 ```
 
-In this case, `Expression = "Country.Name"` means:
+---
 
-- Start from the `Provinces` table.
+### Filtering: `(Condition)`
 
-- Navigate to the `Country` property.
+Filter collections using conditions inside parentheses:
 
-- Fetch the `Name` field from the Countries table.
-
-Structures:
+#### Simple Filter
 
 ```csharp
-[OfXConfigFor<ProvinceOfAttribute>(nameof(Id), nameof(Name))]
-public sealed class Province
-{
-    public ProvinceId Id { get; set; }
-    public string Name { get; set; }
-    public CountryId CountryId { get; set; }
-    public Country Country { get; set; }
-}
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done')")]
+public List<OrderDTO> CompletedOrders { get; set; }
 ```
+
+#### Multiple Conditions (AND)
 
 ```csharp
-[OfXConfigFor<CountryOfAttribute>(nameof(Id), nameof(Name))]
-public class Country
-{
-    public CountryId Id { get; set; }
-    public string Name { get; set; }
-    public List<Province> Provinces { get; set; }
-}
+// Using comma or && or 'and'
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done' and Total > 100)")]
+public List<OrderDTO> LargeCompletedOrders { get; set; }
+
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done' && Total > 100)")]
+public List<OrderDTO> LargeCompletedOrders { get; set; }
 ```
 
-If the `Countries` table have the single navigator(like `Country` on the table `Provinces`) to other table, you can
-extend the `Expression` to *thousand kilometers :D*. Like this one:
-`Expression = "Country.[SingleNavigator]...[Universal]`.
-
-Generated SQL:
-
-```SQL
-SELECT p."Id", c."Name"
-FROM "Provinces" AS p
-         LEFT JOIN "Countries" AS c ON p."CountryId" = c."Id"
-WHERE p."Id" IN (@__SomeProvinceIds___)
-```
-
-#### Mapping Objects Dynamically.
+#### OR Conditions
 
 ```csharp
-public sealed class SomeDataResponse
-{
-    ...
-    [UserOf(nameof(UserId), Expression = "ProvinceId")]
-    public string ProvinceId { get; set; }
-    
-    [ProvinceOf(nameof(ProvinceId), Expression = "Country")]
-    public CountryDTO Country { get; set; }
-    ...
-}    
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done' || Status = 'Shipped')")]
+public List<OrderDTO> ProcessedOrders { get; set; }
+
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done' or Status = 'Shipped')")]
+public List<OrderDTO> ProcessedOrders { get; set; }
 ```
+
+#### String Operators
 
 ```csharp
-public sealed class CountryDTO
-{
-    public string Id { get; set; }
-    public string Name {get; set;}
-}
+// Contains
+[UserOf(nameof(UserId), Expression = "Orders(ProductName contains 'Phone')")]
+public List<OrderDTO> PhoneOrders { get; set; }
+
+// StartsWith
+[UserOf(nameof(UserId), Expression = "Orders(ProductName startswith 'Apple')")]
+public List<OrderDTO> AppleOrders { get; set; }
+
+// EndsWith
+[UserOf(nameof(UserId), Expression = "Orders(Email endswith '@gmail.com')")]
+public List<OrderDTO> GmailOrders { get; set; }
 ```
 
-`Note`: The DTO structure (e.g., `CountryDTO`) must match the source model's structure.
+#### Comparison Operators
 
-- Only properties directly on the source model (e.g., `Id`, `Name`) are selected.
-- Navigators (e.g., `Provinces`) are ignored.
+```csharp
+[UserOf(nameof(UserId), Expression = "Orders(Total >= 100 and Total <= 500)")]
+public List<OrderDTO> MidRangeOrders { get; set; }
 
-`Note`: When you map an object, the correlation DTO should have the same structure with `Model` like the `CountryDTO`
-above.
+[UserOf(nameof(UserId), Expression = "Orders(Quantity != 0)")]
+public List<OrderDTO> NonEmptyOrders { get; set; }
+```
 
-#### Array Mapping:
+---
 
-Unlock powerful features for mapping collections!
+### Indexer: `[skip (take)? asc|desc Property]`
 
-#### 1. All Items: [`asc|desc` `Property`]
+Access specific items or ranges from collections:
 
-- Retrieves all items ordered by the specified property.
-- Example:
+#### All Items (Sorted)
 
 ```csharp
 [CountryOf(nameof(CountryId), Expression = "Provinces[asc Name]")]
 public List<ProvinceDTO> Provinces { get; set; }
 ```
 
-`Note`: We will retrieve all the items of a collection on navigator property, like the `Provinces` on the `Countries`
-table.
-
-#### 2.Single Item: [`0|-1` `asc|desc` `Property`]example above:
-
-- Fetches the first (`0`) or last (`-1`) item in the collection.
-- Example:
+#### First Item
 
 ```csharp
-public sealed class SomeDataResponse
-{
-    ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
-    public string CountryId { get; set; }
+[CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]")]
+public ProvinceDTO FirstProvince { get; set; }
+```
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name]")]
-    public ProvinceDTO Province { get; set; }
-    ...
+#### Last Item
+
+```csharp
+[CountryOf(nameof(CountryId), Expression = "Provinces[-1 desc CreatedAt]")]
+public ProvinceDTO LatestProvince { get; set; }
+```
+
+#### Pagination (Skip & Take)
+
+```csharp
+[CountryOf(nameof(CountryId), Expression = "Provinces[10 5 asc Name]")]  // Skip 10, Take 5
+public List<ProvinceDTO> PagedProvinces { get; set; }
+```
+
+#### Chaining After Indexer
+
+```csharp
+[CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Cities[0 asc Population].Name")]
+public string LargestCityName { get; set; }
+```
+
+---
+
+### Aggregation Functions: `:function`
+
+Perform calculations on collections:
+
+#### Count
+
+```csharp
+[UserOf(nameof(UserId), Expression = "Orders:count")]
+public int TotalOrders { get; set; }
+
+// Count with filter
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done'):count")]
+public int CompletedOrderCount { get; set; }
+```
+
+#### Sum
+
+```csharp
+[UserOf(nameof(UserId), Expression = "Orders:sum(Total)")]
+public decimal TotalSpent { get; set; }
+
+// Sum with filter
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done'):sum(Total)")]
+public decimal CompletedOrdersTotal { get; set; }
+```
+
+#### Average
+
+```csharp
+[UserOf(nameof(UserId), Expression = "Orders:avg(Total)")]
+public decimal AverageOrderValue { get; set; }
+```
+
+#### Min/Max
+
+```csharp
+[UserOf(nameof(UserId), Expression = "Orders:min(Total)")]
+public decimal SmallestOrder { get; set; }
+
+[UserOf(nameof(UserId), Expression = "Orders:max(Total)")]
+public decimal LargestOrder { get; set; }
+```
+
+---
+
+### Object Projection: `.{Properties}` and `{Properties}`
+
+Project specific fields from objects or collections:
+
+#### Collection Projection
+
+```csharp
+// Select only Id and Status from each order
+[UserOf(nameof(UserId), Expression = "Orders.{Id, Status}")]
+public List<Dictionary<string, object>> OrderSummaries { get; set; }
+
+// With filter
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done').{Id, Total}")]
+public List<Dictionary<string, object>> CompletedOrderSummaries { get; set; }
+```
+
+#### Single Object Projection
+
+```csharp
+// Project from navigation property
+[ProvinceOf(nameof(ProvinceId), Expression = "Country.{Id, Name}")]
+public Dictionary<string, object> CountryInfo { get; set; }
+```
+
+#### Root Projection with Navigation & Alias
+
+```csharp
+// Project from root with nested navigation and aliases
+[ProvinceOf(nameof(ProvinceId), Expression = "{Id, Name, Country.Name as CountryName}")]
+public ProvinceComplexResponse ProvinceData { get; set; }
+```
+
+**ProvinceComplexResponse structure:**
+
+```csharp
+public class ProvinceComplexResponse
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string CountryName { get; set; }  // Mapped from Country.Name
 }
 ```
 
-When you select one item, you can navigate to the next level of the Table. Like this one:
+#### Advanced Root Projection
 
 ```csharp
-public sealed class SomeDataResponse
-{
-    ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
-    public string CountryId { get; set; }
+// Multiple navigation paths with aliases
+[UserOf(nameof(UserId), Expression = "{Id, Name, Address.City.Name as CityName, Department.Manager.Name as ManagerName}")]
+public UserDetailResponse UserDetails { get; set; }
+```
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[0 asc Name].Name")]
-    public string ProvinceName { get; set; }
-    ...
+**Output:**
+
+```json
+{
+  "Id": "user_123",
+  "Name": "John Doe",
+  "CityName": "New York",
+  "ManagerName": "Jane Smith"
 }
 ```
 
-#### 3.Offset & Limit: [`Offset` `Limit` `asc|desc` `Property`]
+---
 
-- Retrieves a slice of the collection.
-- Example:
+### Combining Features
+
+Chain multiple features together for powerful queries:
 
 ```csharp
-public sealed class SomeDataResponse
-{
-    ...
-    [ProvinceOf(nameof(ProvinceId), Expression = "CountryId")]
-    public string CountryId { get; set; }
+// Filter → Sort → Take First → Navigate → Get Property
+[CountryOf(nameof(CountryId), Expression = "Provinces(Population > 1000000)[0 desc Population].Capital.Name")]
+public string LargestProvinceCapital { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces[2 10 asc Name]")]
-    public List<ProvinceDTO> Provinces { get; set; }
-    ...
+// Filter → Aggregate
+[UserOf(nameof(UserId), Expression = "Orders(Status = 'Done', CreatedAt > '2024-01-01'):sum(Total)")]
+public decimal RecentCompletedTotal { get; set; }
+
+// Navigate → Filter → Project
+[UserOf(nameof(UserId), Expression = "Department.Employees(IsActive = true).{Id, Name, Email}")]
+public List<Dictionary<string, object>> ActiveColleagues { get; set; }
+```
+
+---
+
+### Object Mapping
+
+Map entire objects dynamically:
+
+```csharp
+[ProvinceOf(nameof(ProvinceId), Expression = "Country")]
+public CountryDTO Country { get; set; }
+```
+
+```csharp
+public sealed class CountryDTO
+{
+    public string Id { get; set; }
+    public string Name { get; set; }
 }
 ```
 
-### 6. Runtime Parameters (New!)
+**Note**: The DTO structure must match the source model's structure. Only direct properties are selected; navigation
+properties are ignored.
+
+### 6. Runtime Parameters
+
 #### 1. Expressions now support dynamic runtime values:
+
 ```bash
 ${parameter|default}
 ```
+
 Example:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -547,11 +662,15 @@ public sealed class SomeDataResponse
     public ProvinceResponse Province { get; set; }
 }
 ```
+
 Runtime input:
+
 ```csharp
 await mapper.MapDataAsync(response, new { index = -1, order = "desc" });
 ```
+
 Resolved expression:
+
 ```csharp
 public sealed class SomeDataResponse
 {
@@ -559,19 +678,26 @@ public sealed class SomeDataResponse
     public ProvinceResponse Province { get; set; }
 }
 ```
+
 #### 2. MapDataAsync with Parameters
+
 ```csharp
 await mapper.MapDataAsync(response, new { index = 1, order = "desc" }, cancellationToken);
 ```
+
 #### 3. GraphQL Parameters
+
 Use the `[Parameters]` attribute:
+
 ```csharp
 public List<MemberResponse> GetMembers([Parameters] GetMembersParameters parameters)
 {
     // Execute logic here, the parameters will be passed to all Expression
 }
 ```
+
 Run query:
+
 ```bash
 {
   members(parameters: {
@@ -587,11 +713,40 @@ Run query:
 }
 ```
 
-### Conclusion:
+### Expression Quick Reference
 
-The Expression feature in `OfX` opens up endless possibilities for querying and mapping data across complex
-relationships. Whether you're working with single properties, nested objects, or collections, `OfX` has you covered.
-Stay tuned for even more exciting updates as we expand the capabilities of `Expressions`!
+| Feature               | Syntax                 | Example                       |
+|-----------------------|------------------------|-------------------------------|
+| Property              | `PropertyName`         | `Email`                       |
+| Navigation            | `A.B.C`                | `Country.Region.Name`         |
+| Null-safe             | `A?.B`                 | `Address?.City`               |
+| Filter                | `(condition)`          | `Orders(Status = 'Done')`     |
+| AND                   | `,` or `&&` or `and`   | `(A = 1, B = 2)`              |
+| OR                    | `\|\|` or `or`         | `(A = 1 \|\| B = 2)`          |
+| Indexer (first)       | `[0 asc Prop]`         | `Orders[0 asc Date]`          |
+| Indexer (last)        | `[-1 desc Prop]`       | `Orders[-1 desc Date]`        |
+| Indexer (range)       | `[skip take asc Prop]` | `Orders[10 5 asc Date]`       |
+| Count                 | `:count`               | `Orders:count`                |
+| Sum                   | `:sum(Prop)`           | `Orders:sum(Total)`           |
+| Avg                   | `:avg(Prop)`           | `Orders:avg(Total)`           |
+| Min/Max               | `:min(Prop)`           | `Orders:min(Total)`           |
+| Collection Projection | `.{A, B}`              | `Orders.{Id, Status}`         |
+| Root Projection       | `{A, B}`               | `{Id, Name}`                  |
+| Alias                 | `A.B as C`             | `Country.Name as CountryName` |
+
+### Conclusion
+
+The Expression DSL in **OfX** provides a powerful, SQL-like syntax for querying and mapping data across complex
+relationships. Key features include:
+
+- **Navigation**: Access nested properties with dot notation
+- **Filtering**: Filter collections with conditions
+- **Indexing**: Access specific items or ranges
+- **Aggregation**: Count, sum, average, min, max
+- **Projection**: Select specific fields with aliases
+- **Runtime Parameters**: Dynamic values at execution time
+
+Whether you're working with single properties, nested objects, or collections, OfX has you covered!
 
 That all, Enjoy your moment!
 

@@ -8,22 +8,33 @@ using OfX.Statics;
 
 namespace OfX.Helpers;
 
+/// <summary>
+/// Provides reflection-based helper methods for discovering and mapping OfX-decorated properties.
+/// </summary>
+/// <remarks>
+/// This class handles the core reflection logic for:
+/// <list type="bullet">
+///   <item><description>Discovering properties with OfX attributes on objects</description></item>
+///   <item><description>Grouping properties by attribute type and execution order</description></item>
+///   <item><description>Mapping response data back to object properties</description></item>
+/// </list>
+/// </remarks>
 internal static class ReflectionHelpers
 {
-    internal static IEnumerable<MappableDataProperty> GetMappableProperties(object rootObject)
+    internal static IEnumerable<PropertyDescriptor> DiscoverResolvableProperties(object rootObject)
     {
-        if (InvalidObject(rootObject)) yield break;
+        if (rootObject.IsNullOrPrimitive()) yield break;
         Stack<object> stack = [];
         ObjectProcessing(rootObject, stack);
 
         while (stack.TryPop(out var obj))
-            foreach (var mappableDataProperty in GetMappablePropertiesRecursive(obj, stack))
+            foreach (var mappableDataProperty in GetResolvablePropertiesRecursive(obj, stack))
                 yield return mappableDataProperty;
     }
 
-    private static IEnumerable<MappableDataProperty> GetMappablePropertiesRecursive(object obj, Stack<object> stack)
+    private static IEnumerable<PropertyDescriptor> GetResolvablePropertiesRecursive(object obj, Stack<object> stack)
     {
-        if (InvalidObject(obj)) yield break;
+        if (obj.IsNullOrPrimitive()) yield break;
         if (obj is IEnumerable enumerable)
         {
             EnumerableObject(enumerable, stack);
@@ -37,17 +48,17 @@ internal static class ReflectionHelpers
             var propertyInformation = objectCached.GetInformation(propertyInfo);
             if (propertyInformation.RequiredAccessor is not null)
             {
-                yield return new MappableDataProperty(propertyInfo, obj, propertyInformation);
+                yield return new PropertyDescriptor(propertyInfo, obj, propertyInformation);
                 continue;
             }
 
             var propValue = accessor.Get(obj);
-            if (InvalidObject(propValue)) continue;
-            foreach (var value in GetMappablePropertiesRecursive(propValue, stack)) yield return value;
+            if (propValue.IsNullOrPrimitive()) continue;
+            foreach (var value in GetResolvablePropertiesRecursive(propValue, stack)) yield return value;
         }
     }
 
-    private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
+    // private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
 
     private static void EnumerableObject(IEnumerable enumerableObject, Stack<object> stack)
     {
@@ -62,7 +73,7 @@ internal static class ReflectionHelpers
 
     private static void ObjectProcessing(object obj, Stack<object> stack)
     {
-        if (InvalidObject(obj)) return;
+        if (obj.IsNullOrPrimitive()) return;
         switch (obj)
         {
             case IEnumerable enumerable:
@@ -75,17 +86,17 @@ internal static class ReflectionHelpers
     }
 
     // To use merge-expression, we have to group by attribute only, exclude expression as the older version!
-    internal static IEnumerable<MappableTypeData> GetOfXTypesData
-        (IEnumerable<MappableDataProperty> mappableDataProperties, IEnumerable<Type> attributeTypes) =>
+    internal static IEnumerable<AttributeTypeInfo> GetOfXTypesData
+        (IEnumerable<PropertyDescriptor> mappableDataProperties, IEnumerable<Type> attributeTypes) =>
         mappableDataProperties
             .GroupBy(mdp => (AttributeType: mdp.PropertyInformation?.RuntimeAttributeType,
                 Order: mdp.PropertyInformation?.Order ?? 0))
             .Join(attributeTypes, gr => gr.Key.AttributeType, at => at,
                 (d, x) =>
-                    new MappableTypeData(x, d
+                    new AttributeTypeInfo(x, d
                         .Select(a => new PropertyAssessorData(a.Model, a.PropertyInformation)), d.Key.Order));
 
-    internal static void MapResponseData(IEnumerable<MappableDataProperty> mappableProperties,
+    internal static void MapResponseData(IEnumerable<PropertyDescriptor> mappableProperties,
         IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
     {
         var dataWithExpression = dataFetched

@@ -4,6 +4,13 @@ using OfX.Helpers;
 
 namespace OfX.Extensions;
 
+/// <summary>
+/// Provides extension methods for Type reflection and introspection.
+/// </summary>
+/// <remarks>
+/// These utilities support the OfX framework's reflection-based property discovery
+/// and type analysis capabilities.
+/// </remarks>
 public static class TypeExtensions
 {
     /// <param name="type"></param>
@@ -11,8 +18,19 @@ public static class TypeExtensions
     {
         public IEnumerable<PropertyInfo> GetAllProperties() => type.GetTypeInfo().GetAllProperties();
         internal bool IsPrimitiveType() => GeneralHelpers.IsPrimitiveType(type);
+
+        /// <summary>
+        /// Gets the assembly-qualified name of a type in the format "FullName,AssemblyName".
+        /// </summary>
+        /// <returns>A string containing the type's full name and assembly name.</returns>
+        public string GetAssemblyName() => $"{type.FullName},{type.Assembly.GetName().Name}";
     }
 
+    /// <summary>
+    /// Gets all properties from a TypeInfo, including inherited properties.
+    /// </summary>
+    /// <param name="typeInfo">The TypeInfo to inspect.</param>
+    /// <returns>An enumerable of all properties including those from base types.</returns>
     public static IEnumerable<PropertyInfo> GetAllProperties(this TypeInfo typeInfo)
     {
         if (typeInfo.BaseType != null)
@@ -108,10 +126,8 @@ public static class TypeExtensions
         /// <returns>
         /// True if the type is concrete and can be assigned to the assignableType, otherwise false.
         /// </returns>
-        public bool IsConcreteAndAssignableTo(Type assignableType)
-        {
-            return IsConcrete(type) && assignableType.IsAssignableFrom(type);
-        }
+        public bool IsConcreteAndAssignableTo(Type assignableType) =>
+            type.IsConcrete() && assignableType.IsAssignableFrom(type);
 
         /// <summary>
         /// Determines if a type can be constructed, and if it can, additionally determines
@@ -121,10 +137,7 @@ public static class TypeExtensions
         /// <returns>
         /// True if the type is concrete and can be assigned to the assignableType, otherwise false.
         /// </returns>
-        public bool IsConcreteAndAssignableTo<T>()
-        {
-            return IsConcrete(type) && typeof(T).IsAssignableFrom(type);
-        }
+        public bool IsConcreteAndAssignableTo<T>() => type.IsConcrete() && typeof(T).IsAssignableFrom(type);
 
         /// <summary>
         /// Determines if the type is a nullable type
@@ -143,10 +156,7 @@ public static class TypeExtensions
         /// Determines if the type is an open generic with at least one unspecified generic argument
         /// </summary>
         /// <returns>True if the type is an open generic</returns>
-        public bool IsOpenGeneric()
-        {
-            return type.IsGenericTypeDefinition || type.ContainsGenericParameters;
-        }
+        public bool IsOpenGeneric() => type.IsGenericTypeDefinition || type.ContainsGenericParameters;
 
         /// <summary>
         /// Determines if a type can be null
@@ -166,12 +176,9 @@ public static class TypeExtensions
         /// </summary>
         /// <typeparam name="T">The type of attribute</typeparam>
         /// <returns>The attribute instance if found, or null</returns>
-        public IEnumerable<T> GetAttribute<T>()
-            where T : Attribute
-        {
-            return provider.GetCustomAttributes(typeof(T), true)
+        public IEnumerable<T> GetAttribute<T>() where T : Attribute =>
+            provider.GetCustomAttributes(typeof(T), true)
                 .Cast<T>();
-        }
 
         /// <summary>
         /// Determines if the target has the specified attribute
@@ -188,11 +195,9 @@ public static class TypeExtensions
         /// Returns true if the type is an anonymous type
         /// </summary>
         /// <returns></returns>
-        public bool IsAnonymousType()
-        {
-            return type.FullName != null && type.HasAttribute<CompilerGeneratedAttribute>() &&
-                   type.FullName.Contains("AnonymousType");
-        }
+        public bool IsAnonymousType() =>
+            type.FullName != null && type.HasAttribute<CompilerGeneratedAttribute>() &&
+            type.FullName.Contains("AnonymousType");
 
         /// <summary>
         /// Returns true if the type is an FSharp type (maybe?)

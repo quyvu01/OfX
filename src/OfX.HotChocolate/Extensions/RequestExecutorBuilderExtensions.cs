@@ -9,8 +9,17 @@ using OfX.HotChocolate.Constants;
 
 namespace OfX.HotChocolate.Extensions;
 
+/// <summary>
+/// Internal extension methods for configuring the HotChocolate request executor builder.
+/// </summary>
 internal static class RequestExecutorBuilderExtensions
 {
+    /// <summary>
+    /// Adds middleware that extracts parameters marked with <see cref="ParametersAttribute"/>
+    /// and makes them available in the resolver context for OfX expression parameter resolution.
+    /// </summary>
+    /// <param name="builder">The request executor builder.</param>
+    /// <returns>The builder for method chaining.</returns>
     internal static IRequestExecutorBuilder UseInternalParametersMiddleware(this IRequestExecutorBuilder builder)
     {
         ConcurrentDictionary<MethodInfo, ParameterInfo> methodInfoLookup = [];
