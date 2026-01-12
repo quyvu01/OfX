@@ -1,3 +1,4 @@
+using System.Globalization;
 using OfX.Expressions.Nodes;
 using OfX.Expressions.Tokens;
 
@@ -33,9 +34,9 @@ namespace OfX.Expressions.Parsing;
 /// FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max' | 'any' | 'all'
 /// </code>
 /// </remarks>
-public sealed class ExpressionParser
+public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
 {
-    private readonly IReadOnlyList<Token> _tokens;
+    private readonly IReadOnlyList<Token> _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
     private int _position;
 
     private static readonly Dictionary<string, FunctionType> FunctionNames = new(StringComparer.OrdinalIgnoreCase)
@@ -63,7 +64,18 @@ public sealed class ExpressionParser
         ["second"] = FunctionType.Second,
         ["dayofweek"] = FunctionType.DayOfWeek,
         ["daysago"] = FunctionType.DaysAgo,
-        ["format"] = FunctionType.Format
+        ["format"] = FunctionType.Format,
+        // Math functions
+        ["round"] = FunctionType.Round,
+        ["floor"] = FunctionType.Floor,
+        ["ceil"] = FunctionType.Ceil,
+        ["abs"] = FunctionType.Abs,
+        ["add"] = FunctionType.Add,
+        ["subtract"] = FunctionType.Subtract,
+        ["multiply"] = FunctionType.Multiply,
+        ["divide"] = FunctionType.Divide,
+        ["mod"] = FunctionType.Mod,
+        ["pow"] = FunctionType.Pow
     };
 
     private static readonly HashSet<FunctionType> StringFunctions =
@@ -90,6 +102,20 @@ public sealed class ExpressionParser
         FunctionType.Format
     ];
 
+    private static readonly HashSet<FunctionType> MathFunctions =
+    [
+        FunctionType.Round,
+        FunctionType.Floor,
+        FunctionType.Ceil,
+        FunctionType.Abs,
+        FunctionType.Add,
+        FunctionType.Subtract,
+        FunctionType.Multiply,
+        FunctionType.Divide,
+        FunctionType.Mod,
+        FunctionType.Pow
+    ];
+
     private static readonly Dictionary<string, AggregationType> AggregationNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ["count"] = AggregationType.Count,
@@ -104,11 +130,6 @@ public sealed class ExpressionParser
         ["any"] = BooleanFunctionType.Any,
         ["all"] = BooleanFunctionType.All
     };
-
-    public ExpressionParser(IReadOnlyList<Token> tokens)
-    {
-        _tokens = tokens ?? throw new ArgumentNullException(nameof(tokens));
-    }
 
     /// <summary>
     /// Parses the expression string into an AST.
@@ -391,7 +412,7 @@ public sealed class ExpressionParser
 
         if (Match(TokenType.Number))
         {
-            return LiteralNode.Number(decimal.Parse(Previous().Value));
+            return LiteralNode.Number(decimal.Parse(Previous().Value, CultureInfo.InvariantCulture));
         }
 
         if (Match(TokenType.Boolean))
@@ -485,7 +506,13 @@ public sealed class ExpressionParser
         // Check for boolean functions first: :any, :all
         if (BooleanFunctionNames.TryGetValue(funcName, out var boolFuncType))
         {
-            return ParseBooleanFunction(source, boolFuncType);
+            ExpressionNode boolResult = ParseBooleanFunction(source, boolFuncType);
+            // Check for chained functions after boolean function
+            while (Match(TokenType.Colon))
+            {
+                boolResult = ParseFunctionOrAggregation(boolResult);
+            }
+            return boolResult;
         }
 
         if (!FunctionNames.TryGetValue(funcName, out var functionType))
@@ -493,34 +520,52 @@ public sealed class ExpressionParser
             throw new ExpressionParseException($"Unknown function '{funcName}' at position {funcToken.Position}");
         }
 
+        ExpressionNode result;
+
         // Handle string functions
         if (StringFunctions.Contains(functionType))
         {
-            return ParseStringFunction(source, functionType, funcToken);
+            result = ParseStringFunction(source, functionType, funcToken);
         }
-
         // Handle date functions
-        if (DateFunctions.Contains(functionType))
+        else if (DateFunctions.Contains(functionType))
         {
-            return ParseDateFunction(source, functionType, funcToken);
+            result = ParseDateFunction(source, functionType, funcToken);
+        }
+        // Handle math functions
+        else if (MathFunctions.Contains(functionType))
+        {
+            result = ParseMathFunction(source, functionType, funcToken);
+        }
+        else
+        {
+            string argument = null;
+
+            // Check for argument: :sum(Total)
+            if (Match(TokenType.OpenParen))
+            {
+                argument = Consume(TokenType.Identifier, "Expected property name in function argument").Value;
+                Consume(TokenType.CloseParen, "Expected ')' after function argument");
+            }
+
+            // If it has an argument or is at the end of navigation, treat as aggregation
+            if (argument != null || functionType != FunctionType.Count)
+            {
+                result = new AggregationNode(source, AggregationNames[funcName], argument);
+            }
+            else
+            {
+                result = new FunctionNode(source, functionType, argument);
+            }
         }
 
-        string argument = null;
-
-        // Check for argument: :sum(Total)
-        if (Match(TokenType.OpenParen))
+        // Check for chained functions: :add(10):round(2), :trim:upper
+        while (Match(TokenType.Colon))
         {
-            argument = Consume(TokenType.Identifier, "Expected property name in function argument").Value;
-            Consume(TokenType.CloseParen, "Expected ')' after function argument");
+            result = ParseFunctionOrAggregation(result);
         }
 
-        // If it has an argument or is at the end of navigation, treat as aggregation
-        if (argument != null || functionType != FunctionType.Count)
-        {
-            return new AggregationNode(source, AggregationNames[funcName], argument);
-        }
-
-        return new FunctionNode(source, functionType, argument);
+        return result;
     }
 
     /// <summary>
@@ -550,6 +595,52 @@ public sealed class ExpressionParser
             Consume(TokenType.CloseParen, "Expected ')' after format argument");
 
             return new FunctionNode(source, functionType, null, [formatArg]);
+        }
+
+        // Should not reach here
+        return new FunctionNode(source, functionType);
+    }
+
+    /// <summary>
+    /// Parses math functions with their arguments.
+    /// :floor, :ceil, :abs - no arguments required
+    /// :round(decimals) - optional argument for decimal places (default 0)
+    /// :add(operand), :subtract(operand), :multiply(operand), :divide(operand), :mod(operand), :pow(exponent) - required argument
+    /// Arguments can be numbers or property references.
+    /// </summary>
+    private FunctionNode ParseMathFunction(ExpressionNode source, FunctionType functionType, Token funcToken)
+    {
+        // Functions without arguments: floor, ceil, abs
+        if (functionType is FunctionType.Floor or FunctionType.Ceil or FunctionType.Abs)
+        {
+            return new FunctionNode(source, functionType);
+        }
+
+        // :round - optional argument (decimal places)
+        if (functionType == FunctionType.Round)
+        {
+            if (Match(TokenType.OpenParen))
+            {
+                var decimalsArg = ParseFunctionArgument();
+                Consume(TokenType.CloseParen, "Expected ')' after round argument");
+                return new FunctionNode(source, functionType, null, [decimalsArg]);
+            }
+            // No argument means round to 0 decimal places
+            return new FunctionNode(source, functionType);
+        }
+
+        // Binary math functions: add, subtract, multiply, divide, mod, pow - required argument
+        if (functionType is FunctionType.Add or FunctionType.Subtract or FunctionType.Multiply
+            or FunctionType.Divide or FunctionType.Mod or FunctionType.Pow)
+        {
+            if (!Match(TokenType.OpenParen))
+            {
+                throw new ExpressionParseException($"Function '{funcToken.Value}' requires an argument at position {funcToken.Position}");
+            }
+
+            var operandArg = ParseFunctionArgument();
+            Consume(TokenType.CloseParen, $"Expected ')' after {funcToken.Value} argument");
+            return new FunctionNode(source, functionType, null, [operandArg]);
         }
 
         // Should not reach here
@@ -608,7 +699,7 @@ public sealed class ExpressionParser
         // Number literal
         if (Match(TokenType.Number))
         {
-            return LiteralNode.Number(decimal.Parse(Previous().Value));
+            return LiteralNode.Number(decimal.Parse(Previous().Value, CultureInfo.InvariantCulture));
         }
 
         // Property reference (identifier)
@@ -778,7 +869,7 @@ public sealed class ExpressionParser
 
         if (Match(TokenType.Number))
         {
-            return LiteralNode.Number(decimal.Parse(Previous().Value));
+            return LiteralNode.Number(decimal.Parse(Previous().Value, CultureInfo.InvariantCulture));
         }
 
         if (Match(TokenType.Boolean))

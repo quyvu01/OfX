@@ -345,6 +345,17 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             FunctionType.DayOfWeek => BuildDayOfWeekFunction(sourceValue),
             FunctionType.DaysAgo => BuildDaysAgoFunction(sourceValue),
             FunctionType.Format => BuildDateFormatFunction(sourceValue, node, context),
+            // Math functions
+            FunctionType.Round => BuildRoundFunction(sourceValue, node, context),
+            FunctionType.Floor => new BsonDocument("$floor", sourceValue),
+            FunctionType.Ceil => new BsonDocument("$ceil", sourceValue),
+            FunctionType.Abs => new BsonDocument("$abs", sourceValue),
+            FunctionType.Add => BuildMathBinaryFunction(sourceValue, "$add", node, context),
+            FunctionType.Subtract => BuildMathBinaryFunction(sourceValue, "$subtract", node, context),
+            FunctionType.Multiply => BuildMathBinaryFunction(sourceValue, "$multiply", node, context),
+            FunctionType.Divide => BuildMathBinaryFunction(sourceValue, "$divide", node, context),
+            FunctionType.Mod => BuildMathBinaryFunction(sourceValue, "$mod", node, context),
+            FunctionType.Pow => BuildMathBinaryFunction(sourceValue, "$pow", node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -497,6 +508,37 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             .Replace("ss", "%S")
             .Replace("fff", "%L")
             .Replace("tt", "%p");
+    }
+
+    /// <summary>
+    /// Builds MongoDB $round: { $round: [ number, decimals ] } or { $round: number }
+    /// </summary>
+    private BsonValue BuildRoundFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+
+        if (args.Count > 0)
+        {
+            // $round with decimal places: { $round: [ value, decimals ] }
+            var decimalsValue = args[0].Accept(this, context);
+            return new BsonDocument("$round", new BsonArray { sourceValue, decimalsValue });
+        }
+
+        // $round without decimals (rounds to integer)
+        return new BsonDocument("$round", sourceValue);
+    }
+
+    /// <summary>
+    /// Builds MongoDB binary math operation: { $add: [ source, operand ] }, { $subtract: [ source, operand ] }, etc.
+    /// </summary>
+    private BsonValue BuildMathBinaryFunction(BsonValue sourceValue, string operation, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        if (args.Count == 0)
+            throw new InvalidOperationException($"Math operation {operation} requires an operand");
+
+        var operandValue = args[0].Accept(this, context);
+        return new BsonDocument(operation, new BsonArray { sourceValue, operandValue });
     }
 
     public BsonValue VisitBooleanFunction(BooleanFunctionNode node, BsonBuildContext context)

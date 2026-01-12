@@ -454,6 +454,17 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             FunctionType.DayOfWeek => BuildDayOfWeekFunction(sourceResult),
             FunctionType.DaysAgo => BuildDaysAgoFunction(sourceResult),
             FunctionType.Format => BuildDateFormatFunction(sourceResult, node, context),
+            // Math functions
+            FunctionType.Round => BuildRoundFunction(sourceResult, node, context),
+            FunctionType.Floor => BuildMathUnaryFunction(sourceResult, nameof(Math.Floor)),
+            FunctionType.Ceil => BuildMathUnaryFunction(sourceResult, nameof(Math.Ceiling)),
+            FunctionType.Abs => BuildAbsFunction(sourceResult),
+            FunctionType.Add => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Add),
+            FunctionType.Subtract => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Subtract),
+            FunctionType.Multiply => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Multiply),
+            FunctionType.Divide => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Divide),
+            FunctionType.Mod => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Modulo),
+            FunctionType.Pow => BuildPowFunction(sourceResult, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -669,6 +680,218 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         var call = Expression.Call(dateExpr, toStringMethod, Expression.Convert(formatExpr, typeof(string)));
 
         return new ExpressionBuildResult(typeof(string), call);
+    }
+
+    /// <summary>
+    /// Builds Math.Round function: Math.Round(source) or Math.Round(source, decimals)
+    /// </summary>
+    private ExpressionBuildResult BuildRoundFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var sourceExpr = ConvertToDouble(source.Expression, source.Type);
+        var args = node.GetArguments();
+
+        if (args.Count > 0)
+        {
+            // Math.Round(value, decimals)
+            var decimalsExpr = BuildArgumentExpression(args[0], context);
+            var roundMethod = typeof(Math).GetMethod(nameof(Math.Round), [typeof(double), typeof(int)])!;
+            var call = Expression.Call(roundMethod, sourceExpr, Expression.Convert(decimalsExpr, typeof(int)));
+            return new ExpressionBuildResult(typeof(double), call);
+        }
+
+        // Math.Round(value) - round to nearest integer
+        var method = typeof(Math).GetMethod(nameof(Math.Round), [typeof(double)])!;
+        var roundCall = Expression.Call(method, sourceExpr);
+        return new ExpressionBuildResult(typeof(double), roundCall);
+    }
+
+    /// <summary>
+    /// Builds unary math function: Math.Floor(source), Math.Ceiling(source)
+    /// </summary>
+    private static ExpressionBuildResult BuildMathUnaryFunction(ExpressionBuildResult source, string methodName)
+    {
+        var sourceExpr = ConvertToDouble(source.Expression, source.Type);
+        var method = typeof(Math).GetMethod(methodName, [typeof(double)])!;
+        var call = Expression.Call(method, sourceExpr);
+        return new ExpressionBuildResult(typeof(double), call);
+    }
+
+    /// <summary>
+    /// Builds Math.Abs function. Handles different numeric types.
+    /// </summary>
+    private static ExpressionBuildResult BuildAbsFunction(ExpressionBuildResult source)
+    {
+        var sourceType = source.Type;
+        var underlyingType = Nullable.GetUnderlyingType(sourceType) ?? sourceType;
+
+        // Find the right Math.Abs overload for the type
+        MethodInfo absMethod;
+        Expression sourceExpr = source.Expression;
+
+        if (underlyingType == typeof(int))
+        {
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(int)])!;
+        }
+        else if (underlyingType == typeof(long))
+        {
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(long)])!;
+        }
+        else if (underlyingType == typeof(double))
+        {
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(double)])!;
+        }
+        else if (underlyingType == typeof(decimal))
+        {
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(decimal)])!;
+        }
+        else if (underlyingType == typeof(float))
+        {
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(float)])!;
+        }
+        else
+        {
+            // Default to double conversion
+            sourceExpr = ConvertToDouble(source.Expression, sourceType);
+            absMethod = typeof(Math).GetMethod(nameof(Math.Abs), [typeof(double)])!;
+            var call = Expression.Call(absMethod, sourceExpr);
+            return new ExpressionBuildResult(typeof(double), call);
+        }
+
+        // Handle nullable types by accessing Value
+        if (Nullable.GetUnderlyingType(sourceType) != null)
+        {
+            sourceExpr = Expression.Property(source.Expression, nameof(Nullable<int>.Value));
+        }
+
+        var absCall = Expression.Call(absMethod, sourceExpr);
+        return new ExpressionBuildResult(absMethod.ReturnType, absCall);
+    }
+
+    /// <summary>
+    /// Builds binary math operation: source + operand, source - operand, etc.
+    /// </summary>
+    private ExpressionBuildResult BuildMathBinaryFunction(
+        ExpressionBuildResult source,
+        FunctionNode node,
+        ExpressionBuildContext context,
+        ExpressionType operationType)
+    {
+        var args = node.GetArguments();
+        if (args.Count == 0)
+            throw new InvalidOperationException($"Math operation requires an operand");
+
+        var operandResult = args[0].Accept(this, context);
+
+        // Determine the common type for the operation
+        var resultType = DetermineMathResultType(source.Type, operandResult.Type);
+
+        var leftExpr = ConvertToNumericType(source.Expression, source.Type, resultType);
+        var rightExpr = ConvertToNumericType(operandResult.Expression, operandResult.Type, resultType);
+
+        Expression binaryExpr = operationType switch
+        {
+            ExpressionType.Add => Expression.Add(leftExpr, rightExpr),
+            ExpressionType.Subtract => Expression.Subtract(leftExpr, rightExpr),
+            ExpressionType.Multiply => Expression.Multiply(leftExpr, rightExpr),
+            ExpressionType.Divide => Expression.Divide(leftExpr, rightExpr),
+            ExpressionType.Modulo => Expression.Modulo(leftExpr, rightExpr),
+            _ => throw new InvalidOperationException($"Unsupported math operation: {operationType}")
+        };
+
+        return new ExpressionBuildResult(resultType, binaryExpr);
+    }
+
+    /// <summary>
+    /// Builds Math.Pow function: Math.Pow(source, exponent)
+    /// </summary>
+    private ExpressionBuildResult BuildPowFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var args = node.GetArguments();
+        if (args.Count == 0)
+            throw new InvalidOperationException("pow function requires an exponent argument");
+
+        var exponentExpr = BuildArgumentExpression(args[0], context);
+
+        var sourceDouble = ConvertToDouble(source.Expression, source.Type);
+        var exponentDouble = ConvertToDouble(exponentExpr, exponentExpr.Type);
+
+        var powMethod = typeof(Math).GetMethod(nameof(Math.Pow), [typeof(double), typeof(double)])!;
+        var call = Expression.Call(powMethod, sourceDouble, exponentDouble);
+
+        return new ExpressionBuildResult(typeof(double), call);
+    }
+
+    /// <summary>
+    /// Determines the result type for math operations.
+    /// </summary>
+    private static Type DetermineMathResultType(Type leftType, Type rightType)
+    {
+        var left = Nullable.GetUnderlyingType(leftType) ?? leftType;
+        var right = Nullable.GetUnderlyingType(rightType) ?? rightType;
+
+        // If either is decimal, result is decimal
+        if (left == typeof(decimal) || right == typeof(decimal))
+            return typeof(decimal);
+
+        // If either is double, result is double
+        if (left == typeof(double) || right == typeof(double))
+            return typeof(double);
+
+        // If either is float, result is double (for precision)
+        if (left == typeof(float) || right == typeof(float))
+            return typeof(double);
+
+        // If either is long, result is long
+        if (left == typeof(long) || right == typeof(long))
+            return typeof(long);
+
+        // Default to double for safety
+        if (!IsIntegerType(left) || !IsIntegerType(right))
+            return typeof(double);
+
+        return typeof(int);
+    }
+
+    private static bool IsIntegerType(Type type)
+    {
+        return type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(byte);
+    }
+
+    /// <summary>
+    /// Converts an expression to double for math operations.
+    /// </summary>
+    private static Expression ConvertToDouble(Expression expr, Type sourceType)
+    {
+        if (sourceType == typeof(double))
+            return expr;
+
+        var underlyingType = Nullable.GetUnderlyingType(sourceType);
+        if (underlyingType != null)
+        {
+            expr = Expression.Property(expr, nameof(Nullable<int>.Value));
+            sourceType = underlyingType;
+        }
+
+        return Expression.Convert(expr, typeof(double));
+    }
+
+    /// <summary>
+    /// Converts an expression to the target numeric type.
+    /// </summary>
+    private static Expression ConvertToNumericType(Expression expr, Type sourceType, Type targetType)
+    {
+        var underlyingSource = Nullable.GetUnderlyingType(sourceType) ?? sourceType;
+
+        // Handle nullable by accessing Value
+        if (Nullable.GetUnderlyingType(sourceType) != null)
+        {
+            expr = Expression.Property(expr, nameof(Nullable<int>.Value));
+        }
+
+        if (underlyingSource == targetType)
+            return expr;
+
+        return Expression.Convert(expr, targetType);
     }
 
     /// <summary>

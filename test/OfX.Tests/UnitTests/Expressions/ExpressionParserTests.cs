@@ -1755,4 +1755,401 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region Math Functions
+
+    [Fact]
+    public void Parse_FloorFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:floor");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Floor);
+        func.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Source).Name.ShouldBe("Price");
+    }
+
+    [Fact]
+    public void Parse_CeilFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:ceil");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Ceil);
+    }
+
+    [Fact]
+    public void Parse_AbsFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Balance:abs");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Abs);
+    }
+
+    [Fact]
+    public void Parse_RoundFunctionWithoutArgs_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:round");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Round);
+        func.Arguments.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Parse_RoundFunctionWithDecimals_ReturnsFunctionNodeWithArgument()
+    {
+        var result = ExpressionParser.Parse("Price:round(2)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Round);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(2m);
+    }
+
+    [Fact]
+    public void Parse_AddFunctionWithNumber_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:add(10)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Add);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(10m);
+    }
+
+    [Fact]
+    public void Parse_AddFunctionWithProperty_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:add(Tax)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Add);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Arguments[0]).Name.ShouldBe("Tax");
+    }
+
+    [Fact]
+    public void Parse_SubtractFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:subtract(Discount)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Subtract);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Arguments[0]).Name.ShouldBe("Discount");
+    }
+
+    [Fact]
+    public void Parse_MultiplyFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Price:multiply(Quantity)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Multiply);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Arguments[0]).Name.ShouldBe("Quantity");
+    }
+
+    [Fact]
+    public void Parse_DivideFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Total:divide(Count)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Divide);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Parse_ModFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Value:mod(3)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Mod);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(3m);
+    }
+
+    [Fact]
+    public void Parse_PowFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("Value:pow(2)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Pow);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(2m);
+    }
+
+    [Fact]
+    public void Parse_AddWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Price:add"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_SubtractWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Price:subtract"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_MultiplyWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Price:multiply"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_DivideWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Price:divide"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_ModWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Value:mod"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_PowWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Value:pow"));
+        ex.Message.ShouldContain("requires an argument");
+    }
+
+    [Fact]
+    public void Parse_MathFunctionInProjection_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Price:round(2) as RoundedPrice}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("RoundedPrice");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Round);
+    }
+
+    [Fact]
+    public void Parse_ChainedMathFunctions_ReturnsCorrectStructure()
+    {
+        // Price:add(Tax):round(2) - add tax first, then round
+        var result = ExpressionParser.Parse("Price:add(Tax):round(2)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var roundFunc = (FunctionNode)result;
+        roundFunc.FunctionName.ShouldBe(FunctionType.Round);
+
+        roundFunc.Source.ShouldBeOfType<FunctionNode>();
+        var addFunc = (FunctionNode)roundFunc.Source;
+        addFunc.FunctionName.ShouldBe(FunctionType.Add);
+        addFunc.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)addFunc.Source).Name.ShouldBe("Price");
+    }
+
+    [Fact]
+    public void Parse_MathFunctionWithNavigation_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("Order.Total:floor");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)navNode.Segments[1];
+        func.FunctionName.ShouldBe(FunctionType.Floor);
+    }
+
+    [Fact]
+    public void Parse_MultipleMathFunctionsInProjection_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Price:floor as FloorPrice, Price:ceil as CeilPrice, Balance:abs as AbsBalance}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(4);
+
+        ((FunctionNode)projection.Properties[1].Expression).FunctionName.ShouldBe(FunctionType.Floor);
+        ((FunctionNode)projection.Properties[2].Expression).FunctionName.ShouldBe(FunctionType.Ceil);
+        ((FunctionNode)projection.Properties[3].Expression).FunctionName.ShouldBe(FunctionType.Abs);
+    }
+
+    [Fact]
+    public void Parse_MathFunctionCaseInsensitive_ReturnsFunctionNode()
+    {
+        // Test case insensitivity
+        var result1 = ExpressionParser.Parse("Price:FLOOR");
+        var result2 = ExpressionParser.Parse("Price:Floor");
+        var result3 = ExpressionParser.Parse("Price:floor");
+
+        ((FunctionNode)result1).FunctionName.ShouldBe(FunctionType.Floor);
+        ((FunctionNode)result2).FunctionName.ShouldBe(FunctionType.Floor);
+        ((FunctionNode)result3).FunctionName.ShouldBe(FunctionType.Floor);
+    }
+
+    [Fact]
+    public void Parse_ComplexMathExpression_ReturnsCorrectStructure()
+    {
+        // Simulate: (Price * Quantity - Discount):round(2)
+        // Using chained functions: Price:multiply(Quantity):subtract(Discount):round(2)
+        var result = ExpressionParser.Parse("Price:multiply(Quantity):subtract(Discount):round(2)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var roundFunc = (FunctionNode)result;
+        roundFunc.FunctionName.ShouldBe(FunctionType.Round);
+
+        var subtractFunc = (FunctionNode)roundFunc.Source;
+        subtractFunc.FunctionName.ShouldBe(FunctionType.Subtract);
+
+        var multiplyFunc = (FunctionNode)subtractFunc.Source;
+        multiplyFunc.FunctionName.ShouldBe(FunctionType.Multiply);
+
+        var priceNode = (PropertyNode)multiplyFunc.Source;
+        priceNode.Name.ShouldBe("Price");
+    }
+
+    [Fact]
+    public void Parse_MathFunctionInFilter_ReturnsCorrectStructure()
+    {
+        // Filter products where rounded price > 100
+        var result = ExpressionParser.Parse("Products(Price:floor > 100)");
+
+        result.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)result;
+        var condition = (BinaryConditionNode)filterNode.Condition;
+
+        condition.Left.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)condition.Left;
+        func.FunctionName.ShouldBe(FunctionType.Floor);
+    }
+
+    [Fact]
+    public void Parse_MathFunctionWithNegativeNumber_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("Value:add(-10)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Add);
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(-10m);
+    }
+
+    [Fact]
+    public void Parse_MathFunctionWithDecimalNumber_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("Price:multiply(1.15)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Multiply);
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe(1.15m);
+    }
+
+    [Fact]
+    public void Parse_ComplexProjectionWithMathAndString_ReturnsCorrectStructure()
+    {
+        // Mix of math and string functions in projection
+        var result = ExpressionParser.Parse("{Id, Name:upper, Price:round(2) as RoundedPrice, (Balance:abs) as AbsBalance}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(4);
+
+        // Name:upper - string function
+        ((FunctionNode)projection.Properties[1].Expression).FunctionName.ShouldBe(FunctionType.Upper);
+
+        // Price:round(2) - math function
+        ((FunctionNode)projection.Properties[2].Expression).FunctionName.ShouldBe(FunctionType.Round);
+
+        // (Balance:abs) - math function with parens
+        ((FunctionNode)projection.Properties[3].Expression).FunctionName.ShouldBe(FunctionType.Abs);
+    }
+
+    [Fact]
+    public void Parse_MathFunctionAfterAggregation_ReturnsAggregationNode()
+    {
+        // Note: When chaining :sum(Total):round(2), the parser currently returns
+        // an AggregationNode for :sum(Total) and doesn't chain the :round(2) after it.
+        // This is because aggregation functions (with property selector) are handled
+        // differently than regular functions.
+        // To apply math operations on aggregation results, use projections:
+        // {Total: (Orders(Status = 'Done'):sum(Total)):round(2) as RoundedTotal}
+        var result = ExpressionParser.Parse("Orders(Status = 'Done'):sum(Total)");
+
+        result.ShouldBeOfType<AggregationNode>();
+        var sumAgg = (AggregationNode)result;
+        sumAgg.AggregationType.ShouldBe(AggregationType.Sum);
+        sumAgg.PropertyName.ShouldBe("Total");
+
+        sumAgg.Source.ShouldBeOfType<FilterNode>();
+    }
+
+    [Fact]
+    public void Parse_MathFunctionAfterCountFunction_ReturnsCorrectStructure()
+    {
+        // Chaining works for functions that return FunctionNode like :count
+        // Orders(Status = 'Done'):count:add(10)
+        var result = ExpressionParser.Parse("Orders(Status = 'Done'):count:add(10)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var addFunc = (FunctionNode)result;
+        addFunc.FunctionName.ShouldBe(FunctionType.Add);
+
+        addFunc.Source.ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)addFunc.Source;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        countFunc.Source.ShouldBeOfType<FilterNode>();
+    }
+
+    #endregion
 }

@@ -198,5 +198,84 @@ public enum FunctionType
     /// LINQ: .ToString(format)
     /// MongoDB: $dateToString with format
     /// </summary>
-    Format
+    Format,
+
+    // Math functions
+
+    /// <summary>
+    /// Rounds a number to specified decimal places: Price:round(2) -> 10.50
+    /// Arguments: decimal places (optional, default 0)
+    /// LINQ: Math.Round(value, decimals)
+    /// MongoDB: $round
+    /// </summary>
+    Round,
+
+    /// <summary>
+    /// Rounds down to the nearest integer: Price:floor -> 10
+    /// LINQ: Math.Floor(value)
+    /// MongoDB: $floor
+    /// </summary>
+    Floor,
+
+    /// <summary>
+    /// Rounds up to the nearest integer: Price:ceil -> 11
+    /// LINQ: Math.Ceiling(value)
+    /// MongoDB: $ceil
+    /// </summary>
+    Ceil,
+
+    /// <summary>
+    /// Absolute value: Balance:abs -> 100
+    /// LINQ: Math.Abs(value)
+    /// MongoDB: $abs
+    /// </summary>
+    Abs,
+
+    /// <summary>
+    /// Addition: Price:add(Tax) -> 110 or Price:add(10) -> 110
+    /// Arguments: value to add (property reference or number)
+    /// LINQ: value + operand
+    /// MongoDB: $add
+    /// </summary>
+    Add,
+
+    /// <summary>
+    /// Subtraction: Price:subtract(Discount) -> 90 or Price:subtract(10) -> 90
+    /// Arguments: value to subtract (property reference or number)
+    /// LINQ: value - operand
+    /// MongoDB: $subtract
+    /// </summary>
+    Subtract,
+
+    /// <summary>
+    /// Multiplication: Price:multiply(Quantity) -> 200 or Price:multiply(2) -> 200
+    /// Arguments: value to multiply by (property reference or number)
+    /// LINQ: value * operand
+    /// MongoDB: $multiply
+    /// </summary>
+    Multiply,
+
+    /// <summary>
+    /// Division: Total:divide(Count) -> 50 or Total:divide(2) -> 50
+    /// Arguments: value to divide by (property reference or number)
+    /// LINQ: value / operand
+    /// MongoDB: $divide
+    /// </summary>
+    Divide,
+
+    /// <summary>
+    /// Modulo (remainder): Value:mod(3) -> 1
+    /// Arguments: divisor (property reference or number)
+    /// LINQ: value % operand
+    /// MongoDB: $mod
+    /// </summary>
+    Mod,
+
+    /// <summary>
+    /// Power: Value:pow(2) -> 100 (if value is 10)
+    /// Arguments: exponent (property reference or number)
+    /// LINQ: Math.Pow(value, exponent)
+    /// MongoDB: $pow
+    /// </summary>
+    Pow
 }
