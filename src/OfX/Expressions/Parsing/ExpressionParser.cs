@@ -812,11 +812,23 @@ public sealed class ExpressionParser
     }
 
     /// <summary>
-    /// Parses a single projection property: Name, Country.Name, Country.Name as CountryName, or (expression) as Alias
+    /// Parses a single projection property: Name, Country.Name, Country.Name as CountryName,
+    /// Name:upper, Name:substring(0, 3) as Short, or (expression) as Alias
     /// </summary>
+    /// <remarks>
+    /// Supports:
+    /// - Simple properties: Name, Id
+    /// - Navigation paths: Country.Name, User.Address.City
+    /// - Inline functions (no parens required): Name:upper, Name:lower, Name:trim
+    /// - Functions with arguments: Name:substring(0, 3), Name:replace('a', 'b')
+    /// - Chained functions: Name:trim:upper
+    /// - Aliases: Name:upper as UpperName
+    /// - Complex expressions (parens required): (Nickname ?? Name) as DisplayName
+    /// </remarks>
     private ProjectionProperty ParseProjectionProperty()
     {
         // Check for computed expression: (expression) as Alias
+        // This is required for complex expressions like coalesce (??) and ternary (?:)
         if (Check(TokenType.OpenParen))
         {
             return ParseComputedProjectionProperty();
@@ -826,13 +838,21 @@ public sealed class ExpressionParser
         var pathParts = new List<string>();
         pathParts.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
 
-        // Continue collecting path segments while we see dots
+        // Continue collecting path segments while we see dots (but not .{ for projection)
         while (Match(TokenType.Dot))
         {
+            // Stop if this is a nested projection
+            if (Check(TokenType.OpenBrace)) break;
             pathParts.Add(Consume(TokenType.Identifier, "Expected property name after '.'").Value);
         }
 
         var path = string.Join(".", pathParts);
+
+        // Check for inline function: :upper, :lower, :substring(0, 3), etc.
+        if (Check(TokenType.Colon))
+        {
+            return ParseInlineFunctionProperty(pathParts, path);
+        }
 
         // Check for alias: "as AliasName"
         string alias = null;
@@ -842,6 +862,46 @@ public sealed class ExpressionParser
         }
 
         return new ProjectionProperty(path, alias);
+    }
+
+    /// <summary>
+    /// Parses an inline function property: Name:upper, Name:substring(0, 3) as Short, Name:trim:upper
+    /// </summary>
+    private ProjectionProperty ParseInlineFunctionProperty(List<string> pathParts, string path)
+    {
+        // Build the source expression from path parts
+        ExpressionNode source;
+        if (pathParts.Count == 1)
+        {
+            source = new PropertyNode(pathParts[0]);
+        }
+        else
+        {
+            var segments = pathParts.Select(p => (ExpressionNode)new PropertyNode(p)).ToList();
+            source = new NavigationNode(segments);
+        }
+
+        // Parse function chain: :upper, :substring(0, 3), :trim:upper
+        while (Match(TokenType.Colon))
+        {
+            source = ParseFunctionOrAggregation(source);
+        }
+
+        // Check for alias: "as AliasName"
+        string alias = null;
+        if (Match(TokenType.As))
+        {
+            alias = Consume(TokenType.Identifier, "Expected alias name after 'as'").Value;
+        }
+
+        // For inline functions without alias, use the original property name as output key
+        // e.g., {Name:upper} → output key is "Name"
+        if (alias == null)
+        {
+            alias = pathParts[^1]; // Use the last part of the path as alias
+        }
+
+        return ProjectionProperty.FromExpression(source, alias);
     }
 
     /// <summary>

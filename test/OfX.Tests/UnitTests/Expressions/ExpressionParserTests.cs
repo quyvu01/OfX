@@ -1278,4 +1278,289 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region Inline Functions in Projection Tests (Optional Parentheses)
+
+    [Fact]
+    public void Parse_InlineFunctionWithoutAlias_UsesPropertyNameAsOutputKey()
+    {
+        // {Id, Name:upper} → Name:upper outputs as "Name"
+        var result = ExpressionParser.Parse("{Id, Name:upper}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[0].IsComputed.ShouldBeFalse();
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Name"); // Uses property name as output key
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Upper);
+        func.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Source).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_InlineFunctionWithAlias_UsesAliasAsOutputKey()
+    {
+        // {Id, Name:upper as UpperName}
+        var result = ExpressionParser.Parse("{Id, Name:upper as UpperName}");
+
+        // Assert
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("UpperName");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+    }
+
+    [Fact]
+    public void Parse_InlineLowerFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Name:lower as LowerName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("LowerName");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Lower);
+    }
+
+    [Fact]
+    public void Parse_InlineTrimFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Description:trim}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Description");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Trim);
+    }
+
+    [Fact]
+    public void Parse_InlineSubstringFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Name:substring(0, 3) as Short}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Short");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Substring);
+        func.Arguments.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Parse_InlineReplaceFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Name:replace('a', 'b') as ReplacedName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("ReplacedName");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Replace);
+        func.Arguments.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Parse_InlineConcatFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, FirstName:concat(' ', LastName) as FullName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("FullName");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Concat);
+        func.Arguments.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Parse_InlineChainedFunctions_ReturnsCorrectStructure()
+    {
+        // Name:trim:upper - trim first, then uppercase
+        var result = ExpressionParser.Parse("{Id, Name:trim:upper as CleanName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("CleanName");
+
+        // Should be (Name:trim):upper
+        var upperFunc = (FunctionNode)projection.Properties[1].Expression;
+        upperFunc.FunctionName.ShouldBe(FunctionType.Upper);
+
+        var trimFunc = (FunctionNode)upperFunc.Source;
+        trimFunc.FunctionName.ShouldBe(FunctionType.Trim);
+        trimFunc.Source.ShouldBeOfType<PropertyNode>();
+    }
+
+    [Fact]
+    public void Parse_InlineFunctionWithNavigationPath_ReturnsCorrectStructure()
+    {
+        // Country.Name:upper - navigation then function
+        var result = ExpressionParser.Parse("{Id, Country.Name:upper as CountryName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("CountryName");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Upper);
+
+        // Source should be NavigationNode(Country, Name)
+        func.Source.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)func.Source;
+        navNode.Segments.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Parse_InlineCountFunction_ReturnsCorrectStructure()
+    {
+        // Orders:count
+        var result = ExpressionParser.Parse("{Id, Orders:count as OrderCount}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("OrderCount");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Count);
+    }
+
+    [Fact]
+    public void Parse_MultipleInlineFunctions_ReturnsCorrectStructure()
+    {
+        // Multiple inline functions in one projection
+        var result = ExpressionParser.Parse("{Id, Name:upper, Description:trim as TrimmedDesc, Country.Name:lower as CountryName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(4);
+
+        // Id - simple property
+        projection.Properties[0].Path.ShouldBe("Id");
+        projection.Properties[0].IsComputed.ShouldBeFalse();
+
+        // Name:upper - no alias, uses "Name"
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Name");
+
+        // Description:trim as TrimmedDesc
+        projection.Properties[2].IsComputed.ShouldBeTrue();
+        projection.Properties[2].OutputKey.ShouldBe("TrimmedDesc");
+
+        // Country.Name:lower as CountryName
+        projection.Properties[3].IsComputed.ShouldBeTrue();
+        projection.Properties[3].OutputKey.ShouldBe("CountryName");
+    }
+
+    [Fact]
+    public void Parse_InlineFunctionWithSplitFunction_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, Tags:split(',') as TagList}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("TagList");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Split);
+    }
+
+    [Fact]
+    public void Parse_MixedInlineAndComputedExpressions_ReturnsCorrectStructure()
+    {
+        // Mix of inline functions and computed expressions (with parens)
+        var result = ExpressionParser.Parse("{Id, Name:upper, (Nickname ?? Name) as DisplayName}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(3);
+
+        // Name:upper - inline function
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Name");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        // (Nickname ?? Name) as DisplayName - computed expression
+        projection.Properties[2].IsComputed.ShouldBeTrue();
+        projection.Properties[2].OutputKey.ShouldBe("DisplayName");
+        projection.Properties[2].Expression.ShouldBeOfType<CoalesceNode>();
+    }
+
+    [Fact]
+    public void Parse_InlineFunctionInNonRootProjection_ReturnsCorrectStructure()
+    {
+        // Collection projection with inline function
+        var result = ExpressionParser.Parse("Orders.{Id, ProductName:upper as Product}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projection = (ProjectionNode)result;
+
+        projection.Properties.Count.ShouldBe(2);
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Product");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+    }
+
+    [Fact]
+    public void Parse_ComplexExpressionRequiresParentheses_CoalesceNeedsParens()
+    {
+        // Coalesce without parens should still work at top level
+        // But in projection, complex expressions need parens
+        var result = ExpressionParser.Parse("{Id, (Nickname ?? Name) as Display}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].Expression.ShouldBeOfType<CoalesceNode>();
+    }
+
+    [Fact]
+    public void Parse_ComplexExpressionRequiresParentheses_TernaryNeedsParens()
+    {
+        // Ternary expressions must use parens in projection
+        var result = ExpressionParser.Parse("{Id, (Status = 'Active' ? 'Yes' : 'No') as StatusText}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].Expression.ShouldBeOfType<TernaryNode>();
+    }
+
+    #endregion
 }

@@ -51,6 +51,15 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
+    public async Task<IActionResult> FunctionTest([FromServices] IDistributedMapper distributedMapper,
+        string expression)
+    {
+        var result = await distributedMapper
+            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1", "2", "3"], [expression]));
+        return Ok(result);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> GetSimpleMembers([FromServices] IDistributedMapper distributedMapper,
         string userAlias, CancellationToken token = default)
     {
