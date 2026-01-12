@@ -465,6 +465,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             FunctionType.Divide => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Divide),
             FunctionType.Mod => BuildMathBinaryFunction(sourceResult, node, context, ExpressionType.Modulo),
             FunctionType.Pow => BuildPowFunction(sourceResult, node, context),
+            // Collection functions
+            FunctionType.Distinct => BuildDistinctFunction(sourceResult, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -822,6 +824,71 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     }
 
     /// <summary>
+    /// Builds Distinct function: source.Select(x => x.Property).Distinct()
+    /// Example: Items:distinct(Name) -> Items.Select(x => x.Name).Distinct()
+    /// </summary>
+    private ExpressionBuildResult BuildDistinctFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        // Get element type from source collection
+        if (!TryGetEnumerableElementType(source.Type, out var elementType))
+        {
+            throw new InvalidOperationException(
+                $"Cannot apply distinct function to non-collection type '{source.Type.Name}'");
+        }
+
+        var args = node.GetArguments();
+        if (args.Count == 0)
+        {
+            throw new InvalidOperationException("distinct function requires a property argument");
+        }
+
+        // Get the property name from the first argument
+        var propertyArg = args[0];
+        string propertyName;
+        if (propertyArg is PropertyNode propNode)
+        {
+            propertyName = propNode.Name;
+        }
+        else if (propertyArg is LiteralNode { LiteralType: LiteralType.String } literalNode)
+        {
+            propertyName = (string)literalNode.Value!;
+        }
+        else
+        {
+            throw new InvalidOperationException("distinct function requires a property name argument");
+        }
+
+        // Create parameter for Select lambda: a => a.Property
+        var selectParameter = Expression.Parameter(elementType, "a");
+
+        // Get the property accessor
+        var typeAccessor = context.TypeAccessorProvider(elementType);
+        var propertyInfo = typeAccessor.GetPropertyInfo(propertyName)
+            ?? throw new InvalidOperationException(
+                $"Property '{propertyName}' not found on type '{elementType.Name}'");
+
+        var propertyAccess = Expression.Property(selectParameter, propertyInfo);
+        var selectLambda = Expression.Lambda(propertyAccess, selectParameter);
+
+        // Build: source.Select(a => a.Property)
+        var selectCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Select),
+            [elementType, propertyInfo.PropertyType],
+            source.Expression,
+            selectLambda);
+
+        // Build: .Distinct()
+        var distinctCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Distinct),
+            [propertyInfo.PropertyType],
+            selectCall);
+
+        return new ExpressionBuildResult(typeof(IEnumerable<>).MakeGenericType(propertyInfo.PropertyType), distinctCall);
+    }
+
+    /// <summary>
     /// Determines the result type for math operations.
     /// </summary>
     private static Type DetermineMathResultType(Type leftType, Type rightType)
@@ -1133,6 +1200,76 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         return new ExpressionBuildResult(resultType, conditionalExpr);
     }
 
+    public ExpressionBuildResult VisitGroupBy(GroupByNode node, ExpressionBuildContext context)
+    {
+        // Build the source expression
+        var sourceResult = node.Source.Accept(this, context);
+
+        // Get element type from source collection
+        if (!TryGetEnumerableElementType(sourceResult.Type, out var elementType))
+        {
+            throw new InvalidOperationException(
+                $"Cannot apply groupBy to non-collection type '{sourceResult.Type.Name}'");
+        }
+
+        // Create parameter for GroupBy lambda: o => o.Property or o => new { o.Prop1, o.Prop2 }
+        var groupParameter = Expression.Parameter(elementType, "o");
+        var typeAccessor = context.TypeAccessorProvider(elementType);
+
+        Expression keySelectorBody;
+        Type keyType;
+
+        if (node.IsSingleKey)
+        {
+            // Single key: o => o.Status
+            var propertyName = node.KeyProperties[0];
+            var propertyInfo = typeAccessor.GetPropertyInfo(propertyName)
+                ?? throw new InvalidOperationException(
+                    $"Property '{propertyName}' not found on type '{elementType.Name}'");
+
+            keySelectorBody = Expression.Property(groupParameter, propertyInfo);
+            keyType = propertyInfo.PropertyType;
+        }
+        else
+        {
+            // Multiple keys: o => ValueTuple.Create(o.Year, o.Month)
+            var keyProperties = new List<(string Name, Type Type, Expression Access)>();
+
+            foreach (var propName in node.KeyProperties)
+            {
+                var propertyInfo = typeAccessor.GetPropertyInfo(propName)
+                    ?? throw new InvalidOperationException(
+                        $"Property '{propName}' not found on type '{elementType.Name}'");
+
+                keyProperties.Add((propName, propertyInfo.PropertyType, Expression.Property(groupParameter, propertyInfo)));
+            }
+
+            // Create ValueTuple using constructor
+            var tupleType = CreateAnonymousType(keyProperties.Select(p => (p.Name, p.Type)).ToArray());
+            var constructor = tupleType.GetConstructor(keyProperties.Select(p => p.Type).ToArray())!;
+            var newExpression = Expression.New(constructor, keyProperties.Select(p => p.Access).ToArray());
+
+            keySelectorBody = newExpression;
+            keyType = tupleType;
+        }
+
+        var keySelectorLambda = Expression.Lambda(keySelectorBody, groupParameter);
+
+        // Build: source.GroupBy(o => o.Key)
+        var groupByCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.GroupBy),
+            [elementType, keyType],
+            sourceResult.Expression,
+            keySelectorLambda);
+
+        // Result type is IEnumerable<IGrouping<TKey, TElement>>
+        var groupingType = typeof(IGrouping<,>).MakeGenericType(keyType, elementType);
+        var resultType = typeof(IEnumerable<>).MakeGenericType(groupingType);
+
+        return new ExpressionBuildResult(resultType, groupByCall, new GroupByMetadata(node.KeyProperties, keyType, elementType));
+    }
+
     #region Helper Methods
 
     /// <summary>
@@ -1335,6 +1472,39 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
 
         return Expression.Convert(expression, targetType);
+    }
+
+    /// <summary>
+    /// Creates an anonymous type at runtime with the specified properties.
+    /// This is used for multi-key groupBy operations.
+    /// </summary>
+    private static Type CreateAnonymousType((string Name, Type Type)[] properties)
+    {
+        // Use a simple tuple type for multi-key grouping
+        // This is simpler than creating actual anonymous types at runtime
+        // and works well for GroupBy operations
+
+        if (properties.Length == 2)
+        {
+            return typeof(ValueTuple<,>).MakeGenericType(properties[0].Type, properties[1].Type);
+        }
+        if (properties.Length == 3)
+        {
+            return typeof(ValueTuple<,,>).MakeGenericType(properties[0].Type, properties[1].Type, properties[2].Type);
+        }
+        if (properties.Length == 4)
+        {
+            return typeof(ValueTuple<,,,>).MakeGenericType(
+                properties[0].Type, properties[1].Type, properties[2].Type, properties[3].Type);
+        }
+        if (properties.Length == 5)
+        {
+            return typeof(ValueTuple<,,,,>).MakeGenericType(
+                properties[0].Type, properties[1].Type, properties[2].Type, properties[3].Type, properties[4].Type);
+        }
+
+        // For more than 5 keys, use nested tuples or throw
+        throw new InvalidOperationException($"GroupBy with more than 5 keys is not supported. Found {properties.Length} keys.");
     }
 
     #endregion

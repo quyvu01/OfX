@@ -356,6 +356,8 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             FunctionType.Divide => BuildMathBinaryFunction(sourceValue, "$divide", node, context),
             FunctionType.Mod => BuildMathBinaryFunction(sourceValue, "$mod", node, context),
             FunctionType.Pow => BuildMathBinaryFunction(sourceValue, "$pow", node, context),
+            // Collection functions
+            FunctionType.Distinct => BuildDistinctFunction(sourceValue, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -541,6 +543,46 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
         return new BsonDocument(operation, new BsonArray { sourceValue, operandValue });
     }
 
+    /// <summary>
+    /// Builds MongoDB distinct function using $setUnion to get unique values.
+    /// Example: Items:distinct(Name) -> { $setUnion: [{ $map: { input: "$Items", as: "item", in: "$$item.Name" } }, []] }
+    /// The empty array union trick ensures we get a true set with unique values.
+    /// </summary>
+    private BsonValue BuildDistinctFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        if (args.Count == 0)
+            throw new InvalidOperationException("distinct function requires a property argument");
+
+        // Get the property name from the first argument
+        var propertyArg = args[0];
+        string propertyName;
+        if (propertyArg is PropertyNode propNode)
+        {
+            propertyName = propNode.Name;
+        }
+        else if (propertyArg is LiteralNode { LiteralType: LiteralType.String } literalNode)
+        {
+            propertyName = (string)literalNode.Value!;
+        }
+        else
+        {
+            throw new InvalidOperationException("distinct function requires a property name argument");
+        }
+
+        // Build $map to extract the property values: { $map: { input: source, as: "item", in: "$$item.Property" } }
+        var mapExpression = new BsonDocument("$map", new BsonDocument
+        {
+            { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+            { "as", "item" },
+            { "in", $"$$item.{propertyName}" }
+        });
+
+        // Use $setUnion with empty array to get unique values: { $setUnion: [mapped, []] }
+        // This is the MongoDB way to get distinct values within a single document
+        return new BsonDocument("$setUnion", new BsonArray { mapExpression, new BsonArray() });
+    }
+
     public BsonValue VisitBooleanFunction(BooleanFunctionNode node, BsonBuildContext context)
     {
         var sourceValue = node.Source.Accept(this, context);
@@ -682,6 +724,149 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             { "if", conditionValue },
             { "then", whenTrueValue },
             { "else", whenFalseValue }
+        });
+    }
+
+    public BsonValue VisitGroupBy(GroupByNode node, BsonBuildContext context)
+    {
+        // GroupBy in MongoDB projection context is complex.
+        // We use a combination of $reduce and $setUnion to simulate grouping within a single document.
+        // For full aggregation pipeline support, this would need a different approach.
+        //
+        // Implementation: Create an array of {Key: ..., Items: [...]} objects
+        // using $reduce to build groups from the source array.
+
+        var sourceValue = node.Source.Accept(this, context);
+
+        if (node.IsSingleKey)
+        {
+            // Single key groupBy: Orders:groupBy(Status)
+            // Result: [{Key: "Pending", Items: [...]}, {Key: "Done", Items: [...]}]
+            return BuildSingleKeyGroupBy(sourceValue, node.KeyProperties[0]);
+        }
+        else
+        {
+            // Multi-key groupBy: Orders:groupBy(Year, Month)
+            // Result: [{Key: {Year: 2024, Month: 1}, Items: [...]}, ...]
+            return BuildMultiKeyGroupBy(sourceValue, node.KeyProperties);
+        }
+    }
+
+    /// <summary>
+    /// Builds a single-key groupBy using $reduce.
+    /// </summary>
+    private static BsonValue BuildSingleKeyGroupBy(BsonValue sourceValue, string keyProperty)
+    {
+        // Implementation using $reduce to build groups
+        // This creates: [{Key: value1, Items: [...]}, {Key: value2, Items: [...]}]
+
+        // First, get distinct keys
+        var distinctKeys = new BsonDocument("$setUnion", new BsonArray
+        {
+            new BsonDocument("$map", new BsonDocument
+            {
+                { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+                { "as", "item" },
+                { "in", $"$$item.{keyProperty}" }
+            }),
+            new BsonArray()
+        });
+
+        // Then, for each distinct key, filter items with that key
+        return new BsonDocument("$map", new BsonDocument
+        {
+            { "input", distinctKeys },
+            { "as", "key" },
+            {
+                "in", new BsonDocument
+                {
+                    { "Key", "$$key" },
+                    {
+                        "Items", new BsonDocument("$filter", new BsonDocument
+                        {
+                            { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+                            { "as", "item" },
+                            { "cond", new BsonDocument("$eq", new BsonArray { $"$$item.{keyProperty}", "$$key" }) }
+                        })
+                    }
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// Builds a multi-key groupBy using $reduce.
+    /// </summary>
+    private static BsonValue BuildMultiKeyGroupBy(BsonValue sourceValue, IReadOnlyList<string> keyProperties)
+    {
+        // For multi-key, we need to create composite keys and group by them
+        // This is more complex - create a key document for each combination
+
+        // Build key extraction expression: { Year: "$$item.Year", Month: "$$item.Month" }
+        var keyExtraction = new BsonDocument();
+        foreach (var prop in keyProperties)
+        {
+            keyExtraction.Add(prop, $"$$item.{prop}");
+        }
+
+        // Build key comparison expression
+        var keyComparisonConditions = new BsonArray();
+        foreach (var prop in keyProperties)
+        {
+            keyComparisonConditions.Add(new BsonDocument("$eq", new BsonArray { $"$$item.{prop}", $"$$key.{prop}" }));
+        }
+
+        // Get distinct key combinations using $reduce
+        var distinctKeys = new BsonDocument("$reduce", new BsonDocument
+        {
+            { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+            { "initialValue", new BsonArray() },
+            {
+                "in", new BsonDocument("$cond", new BsonDocument
+                {
+                    {
+                        "if", new BsonDocument("$in", new BsonArray
+                        {
+                            new BsonDocument(keyProperties.ToDictionary(p => p, p => (BsonValue)$"$$this.{p}")),
+                            new BsonDocument("$map", new BsonDocument
+                            {
+                                { "input", "$$value" },
+                                { "as", "v" },
+                                { "in", new BsonDocument(keyProperties.ToDictionary(p => p, p => (BsonValue)$"$$v.{p}")) }
+                            })
+                        })
+                    },
+                    { "then", "$$value" },
+                    {
+                        "else", new BsonDocument("$concatArrays", new BsonArray
+                        {
+                            "$$value",
+                            new BsonArray { new BsonDocument(keyProperties.ToDictionary(p => p, p => (BsonValue)$"$$this.{p}")) }
+                        })
+                    }
+                })
+            }
+        });
+
+        // Map each distinct key to {Key: {...}, Items: [...]}
+        return new BsonDocument("$map", new BsonDocument
+        {
+            { "input", distinctKeys },
+            { "as", "key" },
+            {
+                "in", new BsonDocument
+                {
+                    { "Key", "$$key" },
+                    {
+                        "Items", new BsonDocument("$filter", new BsonDocument
+                        {
+                            { "input", new BsonDocument("$ifNull", new BsonArray { sourceValue, new BsonArray() }) },
+                            { "as", "item" },
+                            { "cond", new BsonDocument("$and", keyComparisonConditions) }
+                        })
+                    }
+                }
+            }
         });
     }
 

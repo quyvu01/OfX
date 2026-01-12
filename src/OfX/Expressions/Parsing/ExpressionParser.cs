@@ -75,7 +75,9 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         ["multiply"] = FunctionType.Multiply,
         ["divide"] = FunctionType.Divide,
         ["mod"] = FunctionType.Mod,
-        ["pow"] = FunctionType.Pow
+        ["pow"] = FunctionType.Pow,
+        // Collection functions
+        ["distinct"] = FunctionType.Distinct
     };
 
     private static readonly HashSet<FunctionType> StringFunctions =
@@ -114,6 +116,11 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         FunctionType.Divide,
         FunctionType.Mod,
         FunctionType.Pow
+    ];
+
+    private static readonly HashSet<FunctionType> CollectionFunctions =
+    [
+        FunctionType.Distinct
     ];
 
     private static readonly Dictionary<string, AggregationType> AggregationNames = new(StringComparer.OrdinalIgnoreCase)
@@ -497,11 +504,18 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// Parses a function or aggregation: :count, :sum(Total), :any, :any(Status = 'Done'), :all(IsApproved = true)
     /// String functions: :upper, :lower, :trim, :substring(0, 3), :replace('a', 'b'), :concat(' ', LastName), :split(',')
     /// Date functions: :year, :month, :day, :hour, :minute, :second, :dayOfWeek, :daysAgo, :format('yyyy-MM-dd')
+    /// Collection functions: :distinct(Property), :groupBy(Property1, Property2)
     /// </summary>
     private ExpressionNode ParseFunctionOrAggregation(ExpressionNode source)
     {
         var funcToken = Consume(TokenType.Identifier, "Expected function name after ':'");
         var funcName = funcToken.Value.ToLowerInvariant();
+
+        // Check for groupBy first (special handling, not a FunctionType)
+        if (funcName == "groupby")
+        {
+            return ParseGroupByFunction(source, funcToken);
+        }
 
         // Check for boolean functions first: :any, :all
         if (BooleanFunctionNames.TryGetValue(funcName, out var boolFuncType))
@@ -536,6 +550,11 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         else if (MathFunctions.Contains(functionType))
         {
             result = ParseMathFunction(source, functionType, funcToken);
+        }
+        // Handle collection functions
+        else if (CollectionFunctions.Contains(functionType))
+        {
+            result = ParseCollectionFunction(source, functionType, funcToken);
         }
         else
         {
@@ -645,6 +664,206 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
 
         // Should not reach here
         return new FunctionNode(source, functionType);
+    }
+
+    /// <summary>
+    /// Parses collection functions with their arguments.
+    /// :distinct(PropertyName) - selects distinct values by property: x.Items.Select(a => a.Property).Distinct()
+    /// </summary>
+    private FunctionNode ParseCollectionFunction(ExpressionNode source, FunctionType functionType, Token funcToken)
+    {
+        // :distinct requires a property argument
+        if (functionType == FunctionType.Distinct)
+        {
+            if (!Match(TokenType.OpenParen))
+            {
+                throw new ExpressionParseException($"Function 'distinct' requires a property argument at position {funcToken.Position}");
+            }
+
+            var propertyArg = ParseFunctionArgument();
+            Consume(TokenType.CloseParen, "Expected ')' after distinct argument");
+
+            return new FunctionNode(source, functionType, null, [propertyArg]);
+        }
+
+        // Should not reach here
+        return new FunctionNode(source, functionType);
+    }
+
+    /// <summary>
+    /// Parses groupBy function: :groupBy(Property1) or :groupBy(Property1, Property2, ...)
+    /// </summary>
+    /// <remarks>
+    /// <para>Syntax:</para>
+    /// <list type="bullet">
+    ///   <item><description><c>:groupBy(Status)</c> → single key grouping</description></item>
+    ///   <item><description><c>:groupBy(Year, Month)</c> → multi-key grouping</description></item>
+    /// </list>
+    /// <para>
+    /// After groupBy, use projection to access:
+    /// - Key properties by their names (Status, Year, Month)
+    /// - Group elements via the "Items" keyword
+    /// </para>
+    /// <para>Example: <c>Orders:groupBy(Status).{Status, Items:count as Count}</c></para>
+    /// </remarks>
+    private ExpressionNode ParseGroupByFunction(ExpressionNode source, Token funcToken)
+    {
+        if (!Match(TokenType.OpenParen))
+        {
+            throw new ExpressionParseException($"Function 'groupBy' requires at least one property argument at position {funcToken.Position}");
+        }
+
+        var keyProperties = new List<string>();
+
+        // Parse first key property (required)
+        var firstKey = Consume(TokenType.Identifier, "Expected property name for groupBy key");
+        keyProperties.Add(firstKey.Value);
+
+        // Parse additional key properties (optional, comma-separated)
+        while (Match(TokenType.Comma))
+        {
+            var nextKey = Consume(TokenType.Identifier, "Expected property name after ','");
+            keyProperties.Add(nextKey.Value);
+        }
+
+        Consume(TokenType.CloseParen, "Expected ')' after groupBy arguments");
+
+        var groupByNode = new GroupByNode(source, keyProperties);
+
+        // Check for projection after groupBy: :groupBy(Status).{Status, Items:count}
+        if (Match(TokenType.Dot))
+        {
+            if (Check(TokenType.OpenBrace))
+            {
+                // Parse projection in groupBy context
+                return ParseGroupByProjection(groupByNode);
+            }
+            else
+            {
+                // Unexpected token after dot
+                throw new ExpressionParseException($"Expected '{{' for projection after groupBy at position {Current().Position}");
+            }
+        }
+
+        // Check for chained functions after groupBy (without projection)
+        while (Match(TokenType.Colon))
+        {
+            return ParseFunctionOrAggregation(groupByNode);
+        }
+
+        return groupByNode;
+    }
+
+    /// <summary>
+    /// Parses projection after groupBy: .{Status, Items:count as Count}
+    /// In this context, key property names resolve to Key or Key.PropertyName,
+    /// and "Items" resolves to the group elements.
+    /// </summary>
+    private ExpressionNode ParseGroupByProjection(GroupByNode groupByNode)
+    {
+        Consume(TokenType.OpenBrace, "Expected '{' for projection");
+
+        var properties = new List<ProjectionProperty>();
+
+        do
+        {
+            var prop = ParseGroupByProjectionProperty(groupByNode.KeyProperties);
+            properties.Add(prop);
+        }
+        while (Match(TokenType.Comma));
+
+        Consume(TokenType.CloseBrace, "Expected '}' after projection");
+
+        // Return a ProjectionNode with the GroupByNode as source
+        return new ProjectionNode(groupByNode, properties);
+    }
+
+    /// <summary>
+    /// Parses a single property in groupBy projection context.
+    /// Key properties (Status, Year, Month) and Items are handled specially.
+    /// </summary>
+    private ProjectionProperty ParseGroupByProjectionProperty(IReadOnlyList<string> keyProperties)
+    {
+        // Check for computed expression: (expression) as Alias
+        if (Match(TokenType.OpenParen))
+        {
+            var expression = ParseExpression();
+            Consume(TokenType.CloseParen, "Expected ')' after computed expression");
+            Consume(TokenType.As, "Computed expression requires 'as' alias");
+            var alias = Consume(TokenType.Identifier, "Expected alias name").Value;
+            return ProjectionProperty.FromExpression(expression, alias);
+        }
+
+        // Parse identifier (could be key property, Items, or Items with function)
+        var identifier = Consume(TokenType.Identifier, "Expected property name or 'Items'");
+        var name = identifier.Value;
+
+        // Check if this is a function call on Items: Items:count, Items:sum(Total)
+        if (name.Equals("Items", StringComparison.OrdinalIgnoreCase) && Check(TokenType.Colon))
+        {
+            // Parse Items with function chain
+            var itemsNode = new PropertyNode("Items", false);
+            Match(TokenType.Colon); // consume the colon
+            var functionResult = ParseFunctionOrAggregation(itemsNode);
+
+            // Check for alias
+            string alias = null;
+            if (Match(TokenType.As))
+            {
+                alias = Consume(TokenType.Identifier, "Expected alias name").Value;
+            }
+
+            return ProjectionProperty.FromExpression(functionResult, alias ?? GetDefaultAliasForExpression(functionResult));
+        }
+
+        // Check if this is Items with filter: Items(condition)
+        if (name.Equals("Items", StringComparison.OrdinalIgnoreCase) && Check(TokenType.OpenParen))
+        {
+            var itemsNode = new PropertyNode("Items", false);
+            Match(TokenType.OpenParen);
+            var condition = ParseCondition();
+            Consume(TokenType.CloseParen, "Expected ')' after filter condition");
+            var filterNode = new FilterNode(itemsNode, condition);
+
+            // Check for function chain after filter: Items(condition):count
+            ExpressionNode resultNode = filterNode;
+            if (Match(TokenType.Colon))
+            {
+                resultNode = ParseFunctionOrAggregation(filterNode);
+            }
+
+            // Check for alias
+            string alias = null;
+            if (Match(TokenType.As))
+            {
+                alias = Consume(TokenType.Identifier, "Expected alias name").Value;
+            }
+
+            return ProjectionProperty.FromExpression(resultNode, alias ?? GetDefaultAliasForExpression(resultNode));
+        }
+
+        // Simple property (key property or Items)
+        string propertyAlias = null;
+        if (Match(TokenType.As))
+        {
+            propertyAlias = Consume(TokenType.Identifier, "Expected alias name").Value;
+        }
+
+        return ProjectionProperty.FromPath(name, propertyAlias);
+    }
+
+    /// <summary>
+    /// Gets a default alias name for an expression (used when no explicit alias is provided).
+    /// </summary>
+    private static string GetDefaultAliasForExpression(ExpressionNode expression)
+    {
+        return expression switch
+        {
+            FunctionNode fn => fn.FunctionName.ToString(),
+            AggregationNode an => an.AggregationType.ToString(),
+            FilterNode => "FilteredItems",
+            _ => "Value"
+        };
     }
 
     /// <summary>

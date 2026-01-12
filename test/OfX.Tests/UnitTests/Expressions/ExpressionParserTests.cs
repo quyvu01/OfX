@@ -2152,4 +2152,999 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region Collection Functions - Distinct
+
+    [Fact]
+    public void Parse_DistinctWithProperty_ReturnsFunctionNode()
+    {
+        // Items:distinct(Name) -> select distinct names from items
+        var result = ExpressionParser.Parse("Items:distinct(Name)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var funcNode = (FunctionNode)result;
+        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
+        funcNode.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)funcNode.Source).Name.ShouldBe("Items");
+
+        var args = funcNode.GetArguments();
+        args.Count.ShouldBe(1);
+        args[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)args[0]).Name.ShouldBe("Name");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithNavigationSource_ReturnsCorrectStructure()
+    {
+        // Order.Items:distinct(ProductName)
+        // Structure: NavigationNode([Order, FunctionNode(Items:distinct(ProductName))])
+        var result = ExpressionParser.Parse("Order.Items:distinct(ProductName)");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment: Order
+        navNode.Segments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Order");
+
+        // Second segment: Items:distinct(ProductName)
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var funcNode = (FunctionNode)navNode.Segments[1];
+        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)funcNode.Source).Name.ShouldBe("Items");
+
+        var args = funcNode.GetArguments();
+        args.Count.ShouldBe(1);
+        ((PropertyNode)args[0]).Name.ShouldBe("ProductName");
+    }
+
+    [Fact]
+    public void Parse_DistinctAfterFilter_ReturnsCorrectStructure()
+    {
+        // Orders(Status = 'Done'):distinct(CustomerId)
+        var result = ExpressionParser.Parse("Orders(Status = 'Done'):distinct(CustomerId)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var funcNode = (FunctionNode)result;
+        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
+
+        funcNode.Source.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)funcNode.Source;
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        var args = funcNode.GetArguments();
+        ((PropertyNode)args[0]).Name.ShouldBe("CustomerId");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithCountChain_ReturnsCorrectStructure()
+    {
+        // Items:distinct(Category):count -> count of distinct categories
+        var result = ExpressionParser.Parse("Items:distinct(Category):count");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)result;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        countFunc.Source.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)countFunc.Source;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("Category");
+    }
+
+    [Fact]
+    public void Parse_DistinctInProjection_ReturnsCorrectStructure()
+    {
+        // {Id, Name, Items:distinct(Category) as Categories}
+        var result = ExpressionParser.Parse("{Id, Name, Items:distinct(Category) as Categories}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(3);
+
+        // Third property should be distinct function
+        var distinctProp = projection.Properties[2];
+        distinctProp.OutputKey.ShouldBe("Categories");
+        distinctProp.IsComputed.ShouldBeTrue();
+        distinctProp.Expression.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)distinctProp.Expression;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+    }
+
+    [Fact]
+    public void Parse_DistinctWithFilterAndCount_ComplexChain()
+    {
+        // Orders(Status = 'Completed').Items:distinct(ProductId):count
+        // Structure: NavigationNode([FilterNode(Orders), FunctionNode(Items:distinct(ProductId):count)])
+        var result = ExpressionParser.Parse("Orders(Status = 'Completed').Items:distinct(ProductId):count");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment should be FilterNode
+        navNode.Segments[0].ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)navNode.Segments[0];
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        // Second segment should be Items:distinct(ProductId):count
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)navNode.Segments[1];
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        countFunc.Source.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)countFunc.Source;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Items");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithoutArgument_ThrowsException()
+    {
+        // Items:distinct should throw because property argument is required
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Items:distinct"));
+
+        exception.Message.ShouldContain("distinct");
+        exception.Message.ShouldContain("requires");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithEmptyParens_ThrowsException()
+    {
+        // Items:distinct() should throw because property argument is required
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Items:distinct()"));
+
+        exception.Message.ShouldContain("argument");
+    }
+
+    [Fact]
+    public void Parse_MultipleDistinctsInProjection_ReturnsCorrectStructure()
+    {
+        // {Items:distinct(Category) as Categories, Items:distinct(Vendor) as Vendors}
+        var result = ExpressionParser.Parse("{Items:distinct(Category) as Categories, Items:distinct(Vendor) as Vendors}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        // First distinct
+        var catProp = projection.Properties[0];
+        catProp.OutputKey.ShouldBe("Categories");
+        var catFunc = (FunctionNode)catProp.Expression;
+        catFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)catFunc.GetArguments()[0]).Name.ShouldBe("Category");
+
+        // Second distinct
+        var vendorProp = projection.Properties[1];
+        vendorProp.OutputKey.ShouldBe("Vendors");
+        var vendorFunc = (FunctionNode)vendorProp.Expression;
+        vendorFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)vendorFunc.GetArguments()[0]).Name.ShouldBe("Vendor");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithDeepNavigation_ReturnsCorrectStructure()
+    {
+        // Customer.Orders.Items:distinct(ProductName)
+        // Structure: NavigationNode([Customer, Orders, FunctionNode(Items:distinct(ProductName))])
+        var result = ExpressionParser.Parse("Customer.Orders.Items:distinct(ProductName)");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(3);
+
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Customer");
+        ((PropertyNode)navNode.Segments[1]).Name.ShouldBe("Orders");
+
+        // Last segment is FunctionNode
+        navNode.Segments[2].ShouldBeOfType<FunctionNode>();
+        var funcNode = (FunctionNode)navNode.Segments[2];
+        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)funcNode.Source).Name.ShouldBe("Items");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithFilterOnNestedCollection_ComplexQuery()
+    {
+        // Company.Departments(IsActive = true).Employees:distinct(Role)
+        // Structure: NavigationNode([Company, FilterNode(Departments), FunctionNode(Employees:distinct(Role))])
+        var result = ExpressionParser.Parse("Company.Departments(IsActive = true).Employees:distinct(Role)");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(3);
+
+        // First segment: Company
+        navNode.Segments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Company");
+
+        // Second segment: Departments with filter
+        navNode.Segments[1].ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)navNode.Segments[1];
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Departments");
+
+        // Third segment: Employees:distinct(Role)
+        navNode.Segments[2].ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)navNode.Segments[2];
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Employees");
+        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("Role");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithIndexerBefore_ComplexChain()
+    {
+        // Customers[0 10 asc CreatedAt].Orders:distinct(Status)
+        // Structure: NavigationNode([IndexerNode(Customers), FunctionNode(Orders:distinct(Status))])
+        var result = ExpressionParser.Parse("Customers[0 10 asc CreatedAt].Orders:distinct(Status)");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment: Customers with indexer
+        navNode.Segments[0].ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)navNode.Segments[0];
+        ((PropertyNode)indexerNode.Source).Name.ShouldBe("Customers");
+        indexerNode.Skip.ShouldBe(0);
+        indexerNode.Take.ShouldBe(10);
+        indexerNode.OrderDirection.ShouldBe(OrderDirection.Asc);
+
+        // Second segment: Orders:distinct(Status)
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)navNode.Segments[1];
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Orders");
+        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("Status");
+    }
+
+    [Fact]
+    public void Parse_DistinctCombinedWithTernary_InProjection()
+    {
+        // {(Items:distinct(Category):count > 0 ? 'Has Categories' : 'No Categories') as CategoryStatus}
+        var result = ExpressionParser.Parse("{(Items:distinct(Category):count > 0 ? 'Has Categories' : 'No Categories') as CategoryStatus}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(1);
+
+        var prop = projection.Properties[0];
+        prop.OutputKey.ShouldBe("CategoryStatus");
+        prop.Expression.ShouldBeOfType<TernaryNode>();
+
+        var ternary = (TernaryNode)prop.Expression;
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+
+        var condition = (BinaryConditionNode)ternary.Condition;
+        // The left side should be Items:distinct(Category):count
+        condition.Left.ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)condition.Left;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        countFunc.Source.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)countFunc.Source;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+    }
+
+    [Fact]
+    public void Parse_DistinctWithCoalesceInProjection_ComplexExpression()
+    {
+        // {(Items:distinct(Category) ?? Items:distinct(SubCategory)) as Categories}
+        var result = ExpressionParser.Parse("{(Items:distinct(Category) ?? Items:distinct(SubCategory)) as Categories}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(1);
+
+        var prop = projection.Properties[0];
+        prop.OutputKey.ShouldBe("Categories");
+        prop.Expression.ShouldBeOfType<CoalesceNode>();
+
+        var coalesce = (CoalesceNode)prop.Expression;
+
+        // Left side: Items:distinct(Category)
+        coalesce.Left.ShouldBeOfType<FunctionNode>();
+        var leftDistinct = (FunctionNode)coalesce.Left;
+        leftDistinct.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)leftDistinct.GetArguments()[0]).Name.ShouldBe("Category");
+
+        // Right side: Items:distinct(SubCategory)
+        coalesce.Right.ShouldBeOfType<FunctionNode>();
+        var rightDistinct = (FunctionNode)coalesce.Right;
+        rightDistinct.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)rightDistinct.GetArguments()[0]).Name.ShouldBe("SubCategory");
+    }
+
+    [Fact]
+    public void Parse_DistinctWithAndFilter_ComplexQuery()
+    {
+        // Orders(Year = 2024, Status = 'Active'):distinct(CustomerId)
+        // Use AND condition instead of multiple filter blocks
+        var result = ExpressionParser.Parse("Orders(Year = 2024, Status = 'Active'):distinct(CustomerId)");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)result;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("CustomerId");
+
+        // Source should be single filter with AND condition
+        distinctFunc.Source.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)distinctFunc.Source;
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        // Condition should be LogicalConditionNode (AND)
+        filterNode.Condition.ShouldBeOfType<LogicalConditionNode>();
+        var logicalCond = (LogicalConditionNode)filterNode.Condition;
+        logicalCond.Operator.ShouldBe(LogicalOperator.And);
+    }
+
+    [Fact]
+    public void Parse_DistinctCaseInsensitive_Works()
+    {
+        // Test that DISTINCT, Distinct, distinct all work
+        var result1 = ExpressionParser.Parse("Items:distinct(Name)");
+        var result2 = ExpressionParser.Parse("Items:DISTINCT(Name)");
+        var result3 = ExpressionParser.Parse("Items:Distinct(Name)");
+
+        result1.ShouldBeOfType<FunctionNode>();
+        result2.ShouldBeOfType<FunctionNode>();
+        result3.ShouldBeOfType<FunctionNode>();
+
+        ((FunctionNode)result1).FunctionName.ShouldBe(FunctionType.Distinct);
+        ((FunctionNode)result2).FunctionName.ShouldBe(FunctionType.Distinct);
+        ((FunctionNode)result3).FunctionName.ShouldBe(FunctionType.Distinct);
+    }
+
+    #endregion
+
+    #region GroupBy Tests - Basic Parsing
+
+    [Fact]
+    public void Parse_GroupBySingleKey_ReturnsGroupByNode()
+    {
+        // Orders:groupBy(Status) -> group orders by Status
+        var result = ExpressionParser.Parse("Orders:groupBy(Status)");
+
+        result.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)result;
+        groupByNode.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)groupByNode.Source).Name.ShouldBe("Orders");
+        groupByNode.KeyProperties.Count.ShouldBe(1);
+        groupByNode.KeyProperties[0].ShouldBe("Status");
+        groupByNode.IsSingleKey.ShouldBeTrue();
+        groupByNode.IsMultiKey.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Parse_GroupByMultipleKeys_ReturnsGroupByNode()
+    {
+        // Orders:groupBy(Year, Month) -> group orders by Year and Month
+        var result = ExpressionParser.Parse("Orders:groupBy(Year, Month)");
+
+        result.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)result;
+        groupByNode.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)groupByNode.Source).Name.ShouldBe("Orders");
+        groupByNode.KeyProperties.Count.ShouldBe(2);
+        groupByNode.KeyProperties[0].ShouldBe("Year");
+        groupByNode.KeyProperties[1].ShouldBe("Month");
+        groupByNode.IsSingleKey.ShouldBeFalse();
+        groupByNode.IsMultiKey.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Parse_GroupByThreeKeys_ReturnsGroupByNode()
+    {
+        // Sales:groupBy(Year, Quarter, Region)
+        var result = ExpressionParser.Parse("Sales:groupBy(Year, Quarter, Region)");
+
+        result.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)result;
+        groupByNode.KeyProperties.Count.ShouldBe(3);
+        groupByNode.KeyProperties[0].ShouldBe("Year");
+        groupByNode.KeyProperties[1].ShouldBe("Quarter");
+        groupByNode.KeyProperties[2].ShouldBe("Region");
+        groupByNode.IsMultiKey.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Parse_GroupByAfterFilter_ReturnsCorrectStructure()
+    {
+        // Orders(Status = 'Active'):groupBy(CustomerId)
+        var result = ExpressionParser.Parse("Orders(Status = 'Active'):groupBy(CustomerId)");
+
+        result.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)result;
+
+        // Source should be FilterNode
+        groupByNode.Source.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)groupByNode.Source;
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        groupByNode.KeyProperties.Count.ShouldBe(1);
+        groupByNode.KeyProperties[0].ShouldBe("CustomerId");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithNavigation_ReturnsCorrectStructure()
+    {
+        // Customer.Orders:groupBy(Status)
+        var result = ExpressionParser.Parse("Customer.Orders:groupBy(Status)");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment: Customer
+        navNode.Segments[0].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Customer");
+
+        // Second segment: Orders:groupBy(Status)
+        navNode.Segments[1].ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)navNode.Segments[1];
+        ((PropertyNode)groupByNode.Source).Name.ShouldBe("Orders");
+        groupByNode.KeyProperties[0].ShouldBe("Status");
+    }
+
+    [Fact]
+    public void Parse_GroupByCaseInsensitive_Works()
+    {
+        // Test that GROUPBY, GroupBy, groupby all work
+        var result1 = ExpressionParser.Parse("Items:groupby(Category)");
+        var result2 = ExpressionParser.Parse("Items:GROUPBY(Category)");
+        var result3 = ExpressionParser.Parse("Items:GroupBy(Category)");
+
+        result1.ShouldBeOfType<GroupByNode>();
+        result2.ShouldBeOfType<GroupByNode>();
+        result3.ShouldBeOfType<GroupByNode>();
+
+        ((GroupByNode)result1).KeyProperties[0].ShouldBe("Category");
+        ((GroupByNode)result2).KeyProperties[0].ShouldBe("Category");
+        ((GroupByNode)result3).KeyProperties[0].ShouldBe("Category");
+    }
+
+    #endregion
+
+    #region GroupBy Tests - With Projection
+
+    [Fact]
+    public void Parse_GroupByWithSimpleProjection_ReturnsProjectionNode()
+    {
+        // Orders:groupBy(Status).{Status, Items:count}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:count}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // Source should be GroupByNode
+        projNode.Source.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties[0].ShouldBe("Status");
+
+        // Properties
+        projNode.Properties.Count.ShouldBe(2);
+
+        // First property: Status (key)
+        projNode.Properties[0].Path.ShouldBe("Status");
+
+        // Second property: Items:count
+        projNode.Properties[1].IsComputed.ShouldBeTrue();
+        projNode.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)projNode.Properties[1].Expression;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+        countFunc.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)countFunc.Source).Name.ShouldBe("Items");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithAliasedProjection_ReturnsCorrectAliases()
+    {
+        // Orders:groupBy(Status).{Status as OrderStatus, Items:count as TotalCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status as OrderStatus, Items:count as TotalCount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(2);
+
+        // First property: Status as OrderStatus
+        projNode.Properties[0].OutputKey.ShouldBe("OrderStatus");
+
+        // Second property: Items:count as TotalCount
+        projNode.Properties[1].OutputKey.ShouldBe("TotalCount");
+    }
+
+    [Fact]
+    public void Parse_GroupByMultiKeyWithProjection_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(Year, Month).{Year, Month, Items:count as OrderCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Year, Month).{Year, Month, Items:count as OrderCount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // Source should be GroupByNode with 2 keys
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties.Count.ShouldBe(2);
+        groupByNode.KeyProperties[0].ShouldBe("Year");
+        groupByNode.KeyProperties[1].ShouldBe("Month");
+
+        // Properties: Year, Month, OrderCount
+        projNode.Properties.Count.ShouldBe(3);
+        projNode.Properties[0].Path.ShouldBe("Year");
+        projNode.Properties[1].Path.ShouldBe("Month");
+        projNode.Properties[2].OutputKey.ShouldBe("OrderCount");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithSumFunction_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(CustomerId).{CustomerId, Items:sum(Total) as TotalAmount}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:sum(Total) as TotalAmount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(2);
+
+        // Second property: Items:sum(Total) as TotalAmount
+        var totalProp = projNode.Properties[1];
+        totalProp.OutputKey.ShouldBe("TotalAmount");
+        totalProp.Expression.ShouldBeOfType<AggregationNode>();
+
+        var sumAgg = (AggregationNode)totalProp.Expression;
+        sumAgg.AggregationType.ShouldBe(AggregationType.Sum);
+        sumAgg.PropertyName.ShouldBe("Total");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithAvgFunction_ReturnsCorrectStructure()
+    {
+        // Products:groupBy(Category).{Category, Items:avg(Price) as AvgPrice}
+        var result = ExpressionParser.Parse("Products:groupBy(Category).{Category, Items:avg(Price) as AvgPrice}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var avgProp = projNode.Properties[1];
+        avgProp.OutputKey.ShouldBe("AvgPrice");
+        avgProp.Expression.ShouldBeOfType<AggregationNode>();
+        var avgAgg = (AggregationNode)avgProp.Expression;
+        avgAgg.AggregationType.ShouldBe(AggregationType.Average);
+        avgAgg.PropertyName.ShouldBe("Price");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithMinMaxFunctions_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(Status).{Status, Items:min(CreatedAt) as FirstOrder, Items:max(CreatedAt) as LastOrder}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:min(CreatedAt) as FirstOrder, Items:max(CreatedAt) as LastOrder}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(3);
+
+        // Min property
+        var minProp = projNode.Properties[1];
+        minProp.OutputKey.ShouldBe("FirstOrder");
+        minProp.Expression.ShouldBeOfType<AggregationNode>();
+        var minAgg = (AggregationNode)minProp.Expression;
+        minAgg.AggregationType.ShouldBe(AggregationType.Min);
+
+        // Max property
+        var maxProp = projNode.Properties[2];
+        maxProp.OutputKey.ShouldBe("LastOrder");
+        maxProp.Expression.ShouldBeOfType<AggregationNode>();
+        var maxAgg = (AggregationNode)maxProp.Expression;
+        maxAgg.AggregationType.ShouldBe(AggregationType.Max);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithMultipleAggregations_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(CustomerId).{CustomerId, Items:count as OrderCount, Items:sum(Total) as TotalSpent, Items:avg(Total) as AvgOrderValue}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:count as OrderCount, Items:sum(Total) as TotalSpent, Items:avg(Total) as AvgOrderValue}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(4);
+
+        // CustomerId
+        projNode.Properties[0].Path.ShouldBe("CustomerId");
+
+        // OrderCount - count returns FunctionNode
+        projNode.Properties[1].OutputKey.ShouldBe("OrderCount");
+        ((FunctionNode)projNode.Properties[1].Expression).FunctionName.ShouldBe(FunctionType.Count);
+
+        // TotalSpent - sum returns AggregationNode
+        projNode.Properties[2].OutputKey.ShouldBe("TotalSpent");
+        ((AggregationNode)projNode.Properties[2].Expression).AggregationType.ShouldBe(AggregationType.Sum);
+
+        // AvgOrderValue - avg returns AggregationNode
+        projNode.Properties[3].OutputKey.ShouldBe("AvgOrderValue");
+        ((AggregationNode)projNode.Properties[3].Expression).AggregationType.ShouldBe(AggregationType.Average);
+    }
+
+    #endregion
+
+    #region GroupBy Tests - Items with Filter
+
+    [Fact]
+    public void Parse_GroupByWithFilteredItems_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(Status).{Status, Items(IsActive = true):count as ActiveCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items(IsActive = true):count as ActiveCount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(2);
+
+        // Second property: Items(IsActive = true):count as ActiveCount
+        var activeProp = projNode.Properties[1];
+        activeProp.OutputKey.ShouldBe("ActiveCount");
+        activeProp.Expression.ShouldBeOfType<FunctionNode>();
+
+        var countFunc = (FunctionNode)activeProp.Expression;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        // Source should be FilterNode
+        countFunc.Source.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)countFunc.Source;
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Items");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithFilteredItemsAndCondition_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(Year).{Year, Items(Total > 100):count as HighValueCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Year).{Year, Items(Total > 100):count as HighValueCount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var highValueProp = projNode.Properties[1];
+        highValueProp.OutputKey.ShouldBe("HighValueCount");
+
+        var countFunc = (FunctionNode)highValueProp.Expression;
+        var filterNode = (FilterNode)countFunc.Source;
+
+        var condition = (BinaryConditionNode)filterNode.Condition;
+        condition.Operator.ShouldBe(ComparisonOperator.GreaterThan);
+        ((PropertyNode)condition.Left).Name.ShouldBe("Total");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithComplexFilteredItems_AndCondition()
+    {
+        // Orders:groupBy(Status).{Status, Items(IsActive = true && Total > 50):sum(Total) as ActiveTotal}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items(IsActive = true && Total > 50):sum(Total) as ActiveTotal}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var activeTotalProp = projNode.Properties[1];
+        activeTotalProp.Expression.ShouldBeOfType<AggregationNode>();
+        var sumAgg = (AggregationNode)activeTotalProp.Expression;
+        sumAgg.AggregationType.ShouldBe(AggregationType.Sum);
+
+        var filterNode = (FilterNode)sumAgg.Source;
+        filterNode.Condition.ShouldBeOfType<LogicalConditionNode>();
+
+        var logicalCondition = (LogicalConditionNode)filterNode.Condition;
+        logicalCondition.Operator.ShouldBe(LogicalOperator.And);
+    }
+
+    #endregion
+
+    #region GroupBy Tests - Error Cases
+
+    [Fact]
+    public void Parse_GroupByWithoutArguments_ThrowsException()
+    {
+        // Orders:groupBy should throw
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Orders:groupBy"));
+
+        exception.Message.ShouldContain("groupBy");
+        exception.Message.ShouldContain("requires");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithEmptyParens_ThrowsException()
+    {
+        // Orders:groupBy() should throw
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Orders:groupBy()"));
+
+        exception.Message.ShouldContain("property");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInvalidProjection_ThrowsException()
+    {
+        // Orders:groupBy(Status).InvalidToken should throw
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Orders:groupBy(Status).InvalidToken"));
+
+        exception.Message.ShouldContain("{");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithTrailingComma_ThrowsException()
+    {
+        // Orders:groupBy(Status,) should throw
+        var exception = Should.Throw<ExpressionParseException>(() => ExpressionParser.Parse("Orders:groupBy(Status,)"));
+
+        exception.Message.ShouldContain("property");
+    }
+
+    #endregion
+
+    #region GroupBy Tests - Complex Scenarios
+
+    [Fact]
+    public void Parse_GroupByAfterFilterWithProjection_ComplexChain()
+    {
+        // Orders(Year = 2024):groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenue}
+        var result = ExpressionParser.Parse("Orders(Year = 2024):groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenue}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // Source is GroupByNode
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties[0].ShouldBe("Status");
+
+        // GroupByNode's source is FilterNode
+        groupByNode.Source.ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)groupByNode.Source;
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        projNode.Properties.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithDeepNavigation_ReturnsCorrectStructure()
+    {
+        // Company.Departments.Employees:groupBy(Role).{Role, Items:count as HeadCount}
+        var result = ExpressionParser.Parse("Company.Departments.Employees:groupBy(Role).{Role, Items:count as HeadCount}");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(3);
+
+        // First two segments: Company, Departments
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Company");
+        ((PropertyNode)navNode.Segments[1]).Name.ShouldBe("Departments");
+
+        // Third segment: ProjectionNode (wrapping GroupByNode)
+        navNode.Segments[2].ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)navNode.Segments[2];
+        projNode.Source.ShouldBeOfType<GroupByNode>();
+    }
+
+    [Fact]
+    public void Parse_GroupByWithIndexerBefore_ComplexChain()
+    {
+        // Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, Items:count}
+        var result = ExpressionParser.Parse("Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, Items:count}");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment: Customers with indexer
+        navNode.Segments[0].ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)navNode.Segments[0];
+        ((PropertyNode)indexerNode.Source).Name.ShouldBe("Customers");
+        indexerNode.Take.ShouldBe(10);
+
+        // Second segment: ProjectionNode (Orders:groupBy with projection)
+        navNode.Segments[1].ShouldBeOfType<ProjectionNode>();
+    }
+
+    [Fact]
+    public void Parse_GroupByWithComputedExpression_InProjection()
+    {
+        // Orders:groupBy(Status).{Status, (Items:count:multiply(10)) as WeightedCount}
+        // Use multiply function instead of * operator (which isn't supported in tokenizer)
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:count:multiply(10)) as WeightedCount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(2);
+
+        // Second property: computed expression
+        var weightedProp = projNode.Properties[1];
+        weightedProp.OutputKey.ShouldBe("WeightedCount");
+        weightedProp.IsComputed.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Parse_GroupByWithAnyFunction_ReturnsCorrectStructure()
+    {
+        // Orders:groupBy(CustomerId).{CustomerId, Items:any(Status = 'Urgent') as HasUrgent}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:any(Status = 'Urgent') as HasUrgent}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var hasUrgentProp = projNode.Properties[1];
+        hasUrgentProp.OutputKey.ShouldBe("HasUrgent");
+
+        // Should be BooleanFunctionNode (any with condition)
+        hasUrgentProp.Expression.ShouldBeOfType<BooleanFunctionNode>();
+        var anyFunc = (BooleanFunctionNode)hasUrgentProp.Expression;
+        anyFunc.FunctionName.ShouldBe(BooleanFunctionType.Any);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithAllFunction_ReturnsCorrectStructure()
+    {
+        // Tasks:groupBy(ProjectId).{ProjectId, Items:all(IsCompleted = true) as AllCompleted}
+        var result = ExpressionParser.Parse("Tasks:groupBy(ProjectId).{ProjectId, Items:all(IsCompleted = true) as AllCompleted}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var allCompletedProp = projNode.Properties[1];
+        allCompletedProp.OutputKey.ShouldBe("AllCompleted");
+
+        allCompletedProp.Expression.ShouldBeOfType<BooleanFunctionNode>();
+        var allFunc = (BooleanFunctionNode)allCompletedProp.Expression;
+        allFunc.FunctionName.ShouldBe(BooleanFunctionType.All);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithDistinctInProjection_ComplexScenario()
+    {
+        // Orders:groupBy(Year).{Year, Items:distinct(CustomerId):count as UniqueCustomers}
+        var result = ExpressionParser.Parse("Orders:groupBy(Year).{Year, Items:distinct(CustomerId):count as UniqueCustomers}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var uniqueProp = projNode.Properties[1];
+        uniqueProp.OutputKey.ShouldBe("UniqueCustomers");
+
+        // Should be count on top of distinct
+        uniqueProp.Expression.ShouldBeOfType<FunctionNode>();
+        var countFunc = (FunctionNode)uniqueProp.Expression;
+        countFunc.FunctionName.ShouldBe(FunctionType.Count);
+
+        countFunc.Source.ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)countFunc.Source;
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithDefaultAlias_WhenNoAliasProvided()
+    {
+        // Orders:groupBy(Status).{Status, Items:count}
+        // Items:count should get default alias "Count"
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:count}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // The count property should have "Count" as default alias
+        var countProp = projNode.Properties[1];
+        countProp.OutputKey.ShouldBe("Count"); // Default alias from function name
+    }
+
+    [Fact]
+    public void Parse_GroupByWithMultipleKeysAndComplexAggregations()
+    {
+        // Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, Items:count as SalesCount, Items:sum(Amount) as TotalSales, Items:avg(Amount) as AvgSale}
+        var result = ExpressionParser.Parse("Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, Items:count as SalesCount, Items:sum(Amount) as TotalSales, Items:avg(Amount) as AvgSale}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties.Count.ShouldBe(3);
+
+        projNode.Properties.Count.ShouldBe(6);
+        projNode.Properties[0].Path.ShouldBe("Year");
+        projNode.Properties[1].Path.ShouldBe("Quarter");
+        projNode.Properties[2].Path.ShouldBe("Region");
+        projNode.Properties[3].OutputKey.ShouldBe("SalesCount");
+        projNode.Properties[4].OutputKey.ShouldBe("TotalSales");
+        projNode.Properties[5].OutputKey.ShouldBe("AvgSale");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithTernaryInProjection_ComplexScenario()
+    {
+        // Orders:groupBy(Status).{Status, (Items:count > 10 ? 'High' : 'Low') as Volume}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:count > 10 ? 'High' : 'Low') as Volume}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var volumeProp = projNode.Properties[1];
+        volumeProp.OutputKey.ShouldBe("Volume");
+        volumeProp.Expression.ShouldBeOfType<TernaryNode>();
+
+        var ternary = (TernaryNode)volumeProp.Expression;
+        ternary.Condition.ShouldBeOfType<BinaryConditionNode>();
+    }
+
+    [Fact]
+    public void Parse_GroupByWithCoalesceInProjection_ComplexScenario()
+    {
+        // Orders:groupBy(Status).{Status, (Items:sum(Discount) ?? 0) as TotalDiscount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:sum(Discount) ?? 0) as TotalDiscount}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var discountProp = projNode.Properties[1];
+        discountProp.OutputKey.ShouldBe("TotalDiscount");
+        discountProp.Expression.ShouldBeOfType<CoalesceNode>();
+    }
+
+    [Fact]
+    public void Parse_GroupByOnNestedCollection_AfterNavigation()
+    {
+        // Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, Items:count as CategoryCount}
+        // The whole expression is parsed as a ProjectionNode with NavigationNode source containing GroupByNode
+        var result = ExpressionParser.Parse("Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, Items:count as CategoryCount}");
+
+        // Top level is ProjectionNode
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // Source is GroupByNode
+        projNode.Source.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties[0].ShouldBe("ProductCategory");
+
+        // GroupByNode's source is NavigationNode with FilterNode
+        groupByNode.Source.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)groupByNode.Source;
+        navNode.Segments.Count.ShouldBe(2);
+
+        // First segment: Customer
+        ((PropertyNode)navNode.Segments[0]).Name.ShouldBe("Customer");
+
+        // Second segment: FilterNode for Orders(Status != 'Cancelled')
+        navNode.Segments[1].ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)navNode.Segments[1];
+        ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithOnlyItems_InProjection()
+    {
+        // Orders:groupBy(Status).{Items:count}
+        // Just Items aggregation without key in projection (unusual but valid)
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Items:count}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(1);
+        ((FunctionNode)projNode.Properties[0].Expression).FunctionName.ShouldBe(FunctionType.Count);
+    }
+
+    [Fact]
+    public void Parse_GroupByPreservesKeyPropertyCase()
+    {
+        // Orders:groupBy(CustomerID).{CustomerID, Items:count}
+        // Key property case should be preserved
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerID).{CustomerID, Items:count}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties[0].ShouldBe("CustomerID");
+
+        projNode.Properties[0].Path.ShouldBe("CustomerID");
+    }
+
+    #endregion
 }

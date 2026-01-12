@@ -277,5 +277,15 @@ public enum FunctionType
     /// LINQ: Math.Pow(value, exponent)
     /// MongoDB: $pow
     /// </summary>
-    Pow
+    Pow,
+
+    // Collection functions
+
+    /// <summary>
+    /// Selects distinct values from a collection by property: Items:distinct(Name) -> ["A", "B", "C"]
+    /// Arguments: property name to select distinct values from
+    /// LINQ: .Select(x => x.Property).Distinct()
+    /// MongoDB: $addToSet in aggregation or distinct operation
+    /// </summary>
+    Distinct
 }
