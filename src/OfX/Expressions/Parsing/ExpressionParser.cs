@@ -53,7 +53,17 @@ public sealed class ExpressionParser
         ["substring"] = FunctionType.Substring,
         ["replace"] = FunctionType.Replace,
         ["concat"] = FunctionType.Concat,
-        ["split"] = FunctionType.Split
+        ["split"] = FunctionType.Split,
+        // Date/Time functions
+        ["year"] = FunctionType.Year,
+        ["month"] = FunctionType.Month,
+        ["day"] = FunctionType.Day,
+        ["hour"] = FunctionType.Hour,
+        ["minute"] = FunctionType.Minute,
+        ["second"] = FunctionType.Second,
+        ["dayofweek"] = FunctionType.DayOfWeek,
+        ["daysago"] = FunctionType.DaysAgo,
+        ["format"] = FunctionType.Format
     };
 
     private static readonly HashSet<FunctionType> StringFunctions =
@@ -65,6 +75,19 @@ public sealed class ExpressionParser
         FunctionType.Replace,
         FunctionType.Concat,
         FunctionType.Split
+    ];
+
+    private static readonly HashSet<FunctionType> DateFunctions =
+    [
+        FunctionType.Year,
+        FunctionType.Month,
+        FunctionType.Day,
+        FunctionType.Hour,
+        FunctionType.Minute,
+        FunctionType.Second,
+        FunctionType.DayOfWeek,
+        FunctionType.DaysAgo,
+        FunctionType.Format
     ];
 
     private static readonly Dictionary<string, AggregationType> AggregationNames = new(StringComparer.OrdinalIgnoreCase)
@@ -452,6 +475,7 @@ public sealed class ExpressionParser
     /// <summary>
     /// Parses a function or aggregation: :count, :sum(Total), :any, :any(Status = 'Done'), :all(IsApproved = true)
     /// String functions: :upper, :lower, :trim, :substring(0, 3), :replace('a', 'b'), :concat(' ', LastName), :split(',')
+    /// Date functions: :year, :month, :day, :hour, :minute, :second, :dayOfWeek, :daysAgo, :format('yyyy-MM-dd')
     /// </summary>
     private ExpressionNode ParseFunctionOrAggregation(ExpressionNode source)
     {
@@ -475,6 +499,12 @@ public sealed class ExpressionParser
             return ParseStringFunction(source, functionType, funcToken);
         }
 
+        // Handle date functions
+        if (DateFunctions.Contains(functionType))
+        {
+            return ParseDateFunction(source, functionType, funcToken);
+        }
+
         string argument = null;
 
         // Check for argument: :sum(Total)
@@ -491,6 +521,39 @@ public sealed class ExpressionParser
         }
 
         return new FunctionNode(source, functionType, argument);
+    }
+
+    /// <summary>
+    /// Parses date functions with their arguments.
+    /// :year, :month, :day, :hour, :minute, :second, :dayOfWeek, :daysAgo - no arguments
+    /// :format(pattern) - requires format pattern argument
+    /// </summary>
+    private FunctionNode ParseDateFunction(ExpressionNode source, FunctionType functionType, Token funcToken)
+    {
+        // Functions without arguments: year, month, day, hour, minute, second, dayOfWeek, daysAgo
+        if (functionType is FunctionType.Year or FunctionType.Month or FunctionType.Day
+            or FunctionType.Hour or FunctionType.Minute or FunctionType.Second
+            or FunctionType.DayOfWeek or FunctionType.DaysAgo)
+        {
+            return new FunctionNode(source, functionType);
+        }
+
+        // :format requires a format pattern argument
+        if (functionType == FunctionType.Format)
+        {
+            if (!Match(TokenType.OpenParen))
+            {
+                throw new ExpressionParseException($"Function 'format' requires a format pattern argument at position {funcToken.Position}");
+            }
+
+            var formatArg = ParseFunctionArgument();
+            Consume(TokenType.CloseParen, "Expected ')' after format argument");
+
+            return new FunctionNode(source, functionType, null, [formatArg]);
+        }
+
+        // Should not reach here
+        return new FunctionNode(source, functionType);
     }
 
     /// <summary>

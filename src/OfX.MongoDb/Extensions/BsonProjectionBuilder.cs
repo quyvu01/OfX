@@ -335,6 +335,16 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
             FunctionType.Replace => BuildReplaceFunction(sourceValue, node, context),
             FunctionType.Concat => BuildConcatFunction(sourceValue, node, context),
             FunctionType.Split => BuildSplitFunction(sourceValue, node, context),
+            // Date/Time functions
+            FunctionType.Year => new BsonDocument("$year", sourceValue),
+            FunctionType.Month => new BsonDocument("$month", sourceValue),
+            FunctionType.Day => new BsonDocument("$dayOfMonth", sourceValue),
+            FunctionType.Hour => new BsonDocument("$hour", sourceValue),
+            FunctionType.Minute => new BsonDocument("$minute", sourceValue),
+            FunctionType.Second => new BsonDocument("$second", sourceValue),
+            FunctionType.DayOfWeek => BuildDayOfWeekFunction(sourceValue),
+            FunctionType.DaysAgo => BuildDaysAgoFunction(sourceValue),
+            FunctionType.Format => BuildDateFormatFunction(sourceValue, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -407,6 +417,86 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
         var delimiter = args[0].Accept(this, context);
 
         return new BsonDocument("$split", new BsonArray { sourceValue, delimiter });
+    }
+
+    /// <summary>
+    /// Builds MongoDB $dayOfWeek with adjustment to match .NET DayOfWeek (0=Sunday to 6=Saturday)
+    /// MongoDB $dayOfWeek returns 1=Sunday to 7=Saturday, so we subtract 1
+    /// </summary>
+    private static BsonValue BuildDayOfWeekFunction(BsonValue sourceValue)
+    {
+        // MongoDB returns 1-7, .NET expects 0-6
+        // Result: { $subtract: [{ $dayOfWeek: source }, 1] }
+        return new BsonDocument("$subtract", new BsonArray
+        {
+            new BsonDocument("$dayOfWeek", sourceValue),
+            1
+        });
+    }
+
+    /// <summary>
+    /// Builds MongoDB daysAgo calculation: number of days between the date and now
+    /// Uses: { $floor: { $divide: [{ $subtract: ["$$NOW", source] }, 86400000] } }
+    /// 86400000 = milliseconds in a day
+    /// </summary>
+    private static BsonValue BuildDaysAgoFunction(BsonValue sourceValue)
+    {
+        return new BsonDocument("$floor", new BsonDocument("$divide", new BsonArray
+        {
+            new BsonDocument("$subtract", new BsonArray { "$$NOW", sourceValue }),
+            86400000 // milliseconds in a day
+        }));
+    }
+
+    /// <summary>
+    /// Builds MongoDB $dateToString: { $dateToString: { format: pattern, date: source } }
+    /// Converts .NET format patterns to MongoDB format patterns.
+    /// </summary>
+    private BsonValue BuildDateFormatFunction(BsonValue sourceValue, FunctionNode node, BsonBuildContext context)
+    {
+        var args = node.GetArguments();
+        var formatArg = args[0].Accept(this, context);
+
+        // Convert the format string if it's a literal
+        var mongoFormat = formatArg;
+        if (formatArg.IsString)
+        {
+            mongoFormat = ConvertToMongoDateFormat(formatArg.AsString);
+        }
+
+        return new BsonDocument("$dateToString", new BsonDocument
+        {
+            { "format", mongoFormat },
+            { "date", sourceValue }
+        });
+    }
+
+    /// <summary>
+    /// Converts .NET date format patterns to MongoDB format patterns.
+    /// Common conversions:
+    /// - yyyy -> %Y (4-digit year)
+    /// - MM -> %m (2-digit month)
+    /// - dd -> %d (2-digit day)
+    /// - HH -> %H (24-hour)
+    /// - mm -> %M (minutes)
+    /// - ss -> %S (seconds)
+    /// </summary>
+    private static string ConvertToMongoDateFormat(string dotNetFormat)
+    {
+        // Common .NET to MongoDB format conversions
+        return dotNetFormat
+            .Replace("yyyy", "%Y")
+            .Replace("yy", "%y")
+            .Replace("MMMM", "%B")
+            .Replace("MMM", "%b")
+            .Replace("MM", "%m")
+            .Replace("dd", "%d")
+            .Replace("HH", "%H")
+            .Replace("hh", "%I")
+            .Replace("mm", "%M")
+            .Replace("ss", "%S")
+            .Replace("fff", "%L")
+            .Replace("tt", "%p");
     }
 
     public BsonValue VisitBooleanFunction(BooleanFunctionNode node, BsonBuildContext context)

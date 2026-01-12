@@ -444,6 +444,16 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             FunctionType.Replace => BuildReplaceFunction(sourceResult, node, context),
             FunctionType.Concat => BuildConcatFunction(sourceResult, node, context),
             FunctionType.Split => BuildSplitFunction(sourceResult, node, context),
+            // Date/Time functions
+            FunctionType.Year => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Year)),
+            FunctionType.Month => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Month)),
+            FunctionType.Day => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Day)),
+            FunctionType.Hour => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Hour)),
+            FunctionType.Minute => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Minute)),
+            FunctionType.Second => BuildDatePropertyFunction(sourceResult, nameof(DateTime.Second)),
+            FunctionType.DayOfWeek => BuildDayOfWeekFunction(sourceResult),
+            FunctionType.DaysAgo => BuildDaysAgoFunction(sourceResult),
+            FunctionType.Format => BuildDateFormatFunction(sourceResult, node, context),
             _ => throw new InvalidOperationException($"Unknown function: {node.FunctionName}")
         };
     }
@@ -540,6 +550,125 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             Expression.Convert(separatorExpr, typeof(string)),
             Expression.Constant(StringSplitOptions.None));
         return new ExpressionBuildResult(typeof(string[]), call);
+    }
+
+    /// <summary>
+    /// Builds a DateTime property access: source.Year, source.Month, source.Day, etc.
+    /// Handles both DateTime and DateTime? types.
+    /// </summary>
+    private static ExpressionBuildResult BuildDatePropertyFunction(ExpressionBuildResult source, string propertyName)
+    {
+        var sourceType = source.Type;
+        var underlyingType = Nullable.GetUnderlyingType(sourceType);
+
+        Expression dateExpr;
+        if (underlyingType == typeof(DateTime))
+        {
+            // For DateTime?, access Value property first
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+        }
+        else if (sourceType == typeof(DateTime))
+        {
+            dateExpr = source.Expression;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Cannot apply date function to non-DateTime type '{sourceType.Name}'");
+        }
+
+        var propertyAccess = Expression.Property(dateExpr, propertyName);
+        return new ExpressionBuildResult(typeof(int), propertyAccess);
+    }
+
+    /// <summary>
+    /// Builds DayOfWeek access: (int)source.DayOfWeek
+    /// Returns 0=Sunday, 1=Monday, ..., 6=Saturday
+    /// </summary>
+    private static ExpressionBuildResult BuildDayOfWeekFunction(ExpressionBuildResult source)
+    {
+        var sourceType = source.Type;
+        var underlyingType = Nullable.GetUnderlyingType(sourceType);
+
+        Expression dateExpr;
+        if (underlyingType == typeof(DateTime))
+        {
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+        }
+        else if (sourceType == typeof(DateTime))
+        {
+            dateExpr = source.Expression;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Cannot apply dayOfWeek function to non-DateTime type '{sourceType.Name}'");
+        }
+
+        var dayOfWeekAccess = Expression.Property(dateExpr, nameof(DateTime.DayOfWeek));
+        var castToInt = Expression.Convert(dayOfWeekAccess, typeof(int));
+        return new ExpressionBuildResult(typeof(int), castToInt);
+    }
+
+    /// <summary>
+    /// Builds DaysAgo calculation: (DateTime.Today - source).Days
+    /// Returns the number of days between the date and today.
+    /// </summary>
+    private static ExpressionBuildResult BuildDaysAgoFunction(ExpressionBuildResult source)
+    {
+        var sourceType = source.Type;
+        var underlyingType = Nullable.GetUnderlyingType(sourceType);
+
+        Expression dateExpr;
+        if (underlyingType == typeof(DateTime))
+        {
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+        }
+        else if (sourceType == typeof(DateTime))
+        {
+            dateExpr = source.Expression;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Cannot apply daysAgo function to non-DateTime type '{sourceType.Name}'");
+        }
+
+        // Build: (DateTime.Today - source).Days
+        var todayExpr = Expression.Property(null, typeof(DateTime), nameof(DateTime.Today));
+        var subtractExpr = Expression.Subtract(todayExpr, dateExpr);
+        var daysAccess = Expression.Property(subtractExpr, nameof(TimeSpan.Days));
+
+        return new ExpressionBuildResult(typeof(int), daysAccess);
+    }
+
+    /// <summary>
+    /// Builds date format call: source.ToString(format)
+    /// </summary>
+    private ExpressionBuildResult BuildDateFormatFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    {
+        var sourceType = source.Type;
+        var underlyingType = Nullable.GetUnderlyingType(sourceType);
+
+        Expression dateExpr;
+        if (underlyingType == typeof(DateTime))
+        {
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+        }
+        else if (sourceType == typeof(DateTime))
+        {
+            dateExpr = source.Expression;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Cannot apply format function to non-DateTime type '{sourceType.Name}'");
+        }
+
+        var args = node.GetArguments();
+        var formatExpr = BuildArgumentExpression(args[0], context);
+
+        // Build: source.ToString(format)
+        var toStringMethod = typeof(DateTime).GetMethod(nameof(DateTime.ToString), [typeof(string)])!;
+        var call = Expression.Call(dateExpr, toStringMethod, Expression.Convert(formatExpr, typeof(string)));
+
+        return new ExpressionBuildResult(typeof(string), call);
     }
 
     /// <summary>

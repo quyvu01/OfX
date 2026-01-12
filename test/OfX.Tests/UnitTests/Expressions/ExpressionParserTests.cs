@@ -1563,4 +1563,196 @@ public sealed class ExpressionParserTests
     }
 
     #endregion
+
+    #region Date Functions
+
+    [Fact]
+    public void Parse_YearFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:year");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Year);
+        func.Source.ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)func.Source).Name.ShouldBe("CreatedAt");
+    }
+
+    [Fact]
+    public void Parse_MonthFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:month");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Month);
+    }
+
+    [Fact]
+    public void Parse_DayFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:day");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Day);
+    }
+
+    [Fact]
+    public void Parse_HourFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:hour");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Hour);
+    }
+
+    [Fact]
+    public void Parse_MinuteFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:minute");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Minute);
+    }
+
+    [Fact]
+    public void Parse_SecondFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:second");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Second);
+    }
+
+    [Fact]
+    public void Parse_DayOfWeekFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:dayOfWeek");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.DayOfWeek);
+    }
+
+    [Fact]
+    public void Parse_DaysAgoFunction_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:daysAgo");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.DaysAgo);
+    }
+
+    [Fact]
+    public void Parse_FormatFunction_ReturnsFunctionNodeWithArgument()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:format('yyyy-MM-dd')");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Format);
+        func.Arguments.ShouldNotBeNull();
+        func.Arguments.Count.ShouldBe(1);
+        func.Arguments[0].ShouldBeOfType<LiteralNode>();
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe("yyyy-MM-dd");
+    }
+
+    [Fact]
+    public void Parse_FormatFunctionWithTimeFormat_ReturnsFunctionNode()
+    {
+        var result = ExpressionParser.Parse("CreatedAt:format('yyyy-MM-dd HH:mm:ss')");
+
+        result.ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)result;
+        func.FunctionName.ShouldBe(FunctionType.Format);
+        ((LiteralNode)func.Arguments[0]).Value.ShouldBe("yyyy-MM-dd HH:mm:ss");
+    }
+
+    [Fact]
+    public void Parse_FormatFunctionWithoutArgs_ThrowsException()
+    {
+        var ex = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("CreatedAt:format"));
+        ex.Message.ShouldContain("requires");
+    }
+
+    [Fact]
+    public void Parse_DateFunctionInProjection_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, CreatedAt:year as Year}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(2);
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("Year");
+        projection.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Year);
+    }
+
+    [Fact]
+    public void Parse_DateFunctionWithNavigation_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("Order.CreatedAt:year");
+
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
+
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var func = (FunctionNode)navNode.Segments[1];
+        func.FunctionName.ShouldBe(FunctionType.Year);
+    }
+
+    [Fact]
+    public void Parse_MultipleDateFunctionsInProjection_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, CreatedAt:year as Year, CreatedAt:month as Month, CreatedAt:day as Day}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+        projection.Properties.Count.ShouldBe(4);
+
+        ((FunctionNode)projection.Properties[1].Expression).FunctionName.ShouldBe(FunctionType.Year);
+        ((FunctionNode)projection.Properties[2].Expression).FunctionName.ShouldBe(FunctionType.Month);
+        ((FunctionNode)projection.Properties[3].Expression).FunctionName.ShouldBe(FunctionType.Day);
+    }
+
+    [Fact]
+    public void Parse_DateFormatInProjection_ReturnsCorrectStructure()
+    {
+        var result = ExpressionParser.Parse("{Id, CreatedAt:format('yyyy-MM-dd') as DateStr}");
+
+        result.ShouldBeOfType<RootProjectionNode>();
+        var projection = (RootProjectionNode)result;
+
+        projection.Properties[1].IsComputed.ShouldBeTrue();
+        projection.Properties[1].OutputKey.ShouldBe("DateStr");
+
+        var func = (FunctionNode)projection.Properties[1].Expression;
+        func.FunctionName.ShouldBe(FunctionType.Format);
+    }
+
+    [Fact]
+    public void Parse_DateFunctionCaseInsensitive_ReturnsFunctionNode()
+    {
+        // Test case insensitivity
+        var result1 = ExpressionParser.Parse("CreatedAt:YEAR");
+        var result2 = ExpressionParser.Parse("CreatedAt:Year");
+        var result3 = ExpressionParser.Parse("CreatedAt:year");
+
+        ((FunctionNode)result1).FunctionName.ShouldBe(FunctionType.Year);
+        ((FunctionNode)result2).FunctionName.ShouldBe(FunctionType.Year);
+        ((FunctionNode)result3).FunctionName.ShouldBe(FunctionType.Year);
+    }
+
+    #endregion
 }
