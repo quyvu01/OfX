@@ -84,7 +84,7 @@ public decimal TotalSpent { get; set; }
 public UserInfo UserDetails { get; set; }
 
 // GroupBy
-[UserOf(nameof(UserId), Expression = "Orders:groupBy(Status).{Status, Items:count as Count}")]
+[UserOf(nameof(UserId), Expression = "Orders:groupBy(Status).{Status, :count as Count}")]
 public List<OrderSummary> OrdersByStatus { get; set; }
 ```
 

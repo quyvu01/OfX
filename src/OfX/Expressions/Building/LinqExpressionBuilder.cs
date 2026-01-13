@@ -63,6 +63,37 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
     public ExpressionBuildResult VisitProperty(PropertyNode node, ExpressionBuildContext context)
     {
+        // In GroupBy context, check if this property is a key property
+        // If so, map it to g.Key (single key) or g.Key.PropertyName (multi-key)
+        if (context.IsInGroupByContext)
+        {
+            var groupByCtx = context.GroupByContext;
+            var keyIndex = GetKeyPropertyIndex(node.Name, groupByCtx.KeyProperties);
+
+            if (keyIndex >= 0)
+            {
+                // This is a key property - map to g.Key or g.Key.ItemN
+                Expression keyAccess;
+
+                if (groupByCtx.IsSingleKey)
+                {
+                    // Single key: g.Key (direct access)
+                    keyAccess = groupByCtx.KeyExpression;
+                }
+                else
+                {
+                    // Multi-key with ValueTuple: g.Key.Item1, g.Key.Item2, etc.
+                    var itemFieldName = $"Item{keyIndex + 1}";
+                    var itemField = groupByCtx.KeyType.GetField(itemFieldName)
+                        ?? throw new InvalidOperationException(
+                            $"Field '{itemFieldName}' not found on tuple type '{groupByCtx.KeyType.Name}'");
+                    keyAccess = Expression.Field(groupByCtx.KeyExpression, itemField);
+                }
+
+                return new ExpressionBuildResult(keyAccess.Type, keyAccess);
+            }
+        }
+
         var typeAccessor = context.TypeAccessorProvider(context.CurrentType);
         var propertyInfo = typeAccessor.GetPropertyInfo(node.Name)
                            ?? throw new InvalidOperationException(
@@ -78,6 +109,20 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
 
         return new ExpressionBuildResult(propertyInfo.PropertyType, propertyAccess);
+    }
+
+    /// <summary>
+    /// Gets the index of a property name in the key properties list.
+    /// Returns -1 if not found.
+    /// </summary>
+    private static int GetKeyPropertyIndex(string propertyName, IReadOnlyList<string> keyProperties)
+    {
+        for (var i = 0; i < keyProperties.Count; i++)
+        {
+            if (string.Equals(keyProperties[i], propertyName, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        return -1;
     }
 
     public ExpressionBuildResult VisitNavigation(NavigationNode node, ExpressionBuildContext context)
@@ -236,6 +281,12 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
     public ExpressionBuildResult VisitProjection(ProjectionNode node, ExpressionBuildContext context)
     {
+        // Check if source is a GroupByNode - requires special handling
+        if (node.Source is GroupByNode groupByNode)
+        {
+            return BuildGroupByProjection(node, groupByNode, context);
+        }
+
         // Get the source
         var sourceResult = node.Source.Accept(this, context);
 
@@ -250,6 +301,103 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             // Single object projection: Country.{Id, Name} -> Dictionary<string, object>
             return BuildSingleObjectProjection(node, sourceResult, context);
         }
+    }
+
+    /// <summary>
+    /// Builds projection for GroupBy result: Orders:groupBy(Status).{Status, :count as Count}
+    /// Maps to: source.GroupBy(o => o.Status).Select(g => new { Status = g.Key, Count = g.Count() })
+    /// </summary>
+    private ExpressionBuildResult BuildGroupByProjection(
+        ProjectionNode node,
+        GroupByNode groupByNode,
+        ExpressionBuildContext context)
+    {
+        // First, build the GroupBy expression
+        var groupByResult = groupByNode.Accept(this, context);
+        var metadata = groupByResult.Metadata as GroupByMetadata
+            ?? throw new InvalidOperationException("GroupBy result missing metadata");
+
+        // Result type is IEnumerable<IGrouping<TKey, TElement>>
+        var groupingType = typeof(IGrouping<,>).MakeGenericType(metadata.KeyType, metadata.ElementType);
+
+        // Create parameter for Select lambda: g (the IGrouping)
+        var groupParam = Expression.Parameter(groupingType, "g");
+
+        // Create expression to access g.Key
+        var keyProperty = groupingType.GetProperty(nameof(IGrouping<object, object>.Key))!;
+        var keyAccess = Expression.Property(groupParam, keyProperty);
+
+        // Create GroupBy context for building projection properties
+        var groupByContext = new GroupByBuildContext(
+            groupByNode.KeyProperties,
+            metadata.KeyType,
+            metadata.ElementType,
+            groupParam,
+            keyAccess);
+
+        // Create context for building projection expressions
+        var projectionContext = context.WithGroupByContext(groupByContext);
+
+        // Build Dictionary<string, object> for each group
+        var dictType = typeof(Dictionary<string, object>);
+        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var newDictExpr = Expression.New(dictType);
+
+        var elementInits = new List<ElementInit>();
+
+        foreach (var prop in node.Properties)
+        {
+            Expression valueExpr;
+
+            if (prop.IsComputed)
+            {
+                // Computed expression (including :count, :sum, etc.)
+                var result = prop.Expression!.Accept(this, projectionContext);
+                valueExpr = result.Expression;
+            }
+            else
+            {
+                // Simple property (key property) - map to g.Key or g.Key.ItemN
+                var keyIndex = GetKeyPropertyIndex(prop.PathSegments[0], groupByNode.KeyProperties);
+
+                if (keyIndex >= 0)
+                {
+                    if (groupByNode.IsSingleKey)
+                    {
+                        valueExpr = keyAccess;
+                    }
+                    else
+                    {
+                        // Multi-key: access tuple field
+                        var itemFieldName = $"Item{keyIndex + 1}";
+                        var itemField = metadata.KeyType.GetField(itemFieldName)!;
+                        valueExpr = Expression.Field(keyAccess, itemField);
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Property '{prop.PathSegments[0]}' is not a key property in GroupBy. " +
+                        $"Available keys: {string.Join(", ", groupByNode.KeyProperties)}");
+                }
+            }
+
+            var keyExpr = Expression.Constant(prop.OutputKey);
+            elementInits.Add(Expression.ElementInit(addMethod, keyExpr, Expression.Convert(valueExpr, typeof(object))));
+        }
+
+        var dictInitExpr = Expression.ListInit(newDictExpr, elementInits);
+        var selectLambda = Expression.Lambda(dictInitExpr, groupParam);
+
+        // Build: source.GroupBy(...).Select(g => new Dictionary...)
+        var selectCall = Expression.Call(
+            typeof(Enumerable),
+            nameof(Enumerable.Select),
+            [groupingType, dictType],
+            groupByResult.Expression,
+            selectLambda);
+
+        return new ExpressionBuildResult(typeof(IEnumerable<Dictionary<string, object>>), selectCall);
     }
 
     /// <summary>
@@ -1270,6 +1418,26 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         return new ExpressionBuildResult(resultType, groupByCall, new GroupByMetadata(node.KeyProperties, keyType, elementType));
     }
 
+    public ExpressionBuildResult VisitGroupElements(GroupElementsNode node, ExpressionBuildContext context)
+    {
+        // This node represents "the group elements" in a GroupBy projection context
+        // It should only be visited when we are inside a GroupBy projection
+        if (!context.IsInGroupByContext)
+        {
+            throw new InvalidOperationException(
+                "GroupElements node can only be used within a GroupBy projection context. " +
+                "Use syntax like: Orders:groupBy(Status).{Status, :count as Count}");
+        }
+
+        var groupByCtx = context.GroupByContext;
+
+        // Return the group parameter itself (g) as the source for aggregation functions
+        // IGrouping<TKey, TElement> implements IEnumerable<TElement>
+        var groupingType = typeof(IGrouping<,>).MakeGenericType(groupByCtx.KeyType, groupByCtx.ElementType);
+
+        return new ExpressionBuildResult(groupingType, groupByCtx.GroupParameter);
+    }
+
     #region Helper Methods
 
     /// <summary>
@@ -1390,15 +1558,37 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         var propertyAccess = Expression.Property(parameter, property);
         var selectorLambda = Expression.Lambda(propertyAccess, parameter);
+        var propertyType = property.PropertyType;
 
-        // Find the right Sum/Average/etc method with selector
+        // Find the right Sum/Average/etc method with selector that matches the property type
+        // Methods like Sum, Min, Max have overloads for each numeric type (int, long, decimal, double, etc.)
         var aggregateMethod = typeof(Enumerable).GetMethods()
             .Where(m => m.Name == methodName && m.GetParameters().Length == 2)
             .FirstOrDefault(m =>
             {
                 var p = m.GetParameters()[1];
-                return p.ParameterType.IsGenericType &&
-                       p.ParameterType.GetGenericTypeDefinition() == typeof(Func<,>);
+                if (!p.ParameterType.IsGenericType ||
+                    p.ParameterType.GetGenericTypeDefinition() != typeof(Func<,>))
+                    return false;
+
+                // Check if the Func's return type matches the property type
+                var funcArgs = p.ParameterType.GetGenericArguments();
+                if (funcArgs.Length != 2) return false;
+
+                // For generic methods, the first argument is TSource, the second is the selector return type
+                // We need to match the second type argument with our property type
+                var selectorReturnType = funcArgs[1];
+
+                // If the method is generic, check if we can substitute our property type
+                if (m.IsGenericMethod)
+                {
+                    // For methods like Sum<TSource>(IEnumerable<TSource>, Func<TSource, decimal>)
+                    // The return type of Func is fixed (int, long, decimal, etc.)
+                    return selectorReturnType == propertyType ||
+                           (selectorReturnType.IsGenericParameter && CanUseNumericType(propertyType, methodName));
+                }
+
+                return selectorReturnType == propertyType;
             });
 
         if (aggregateMethod == null)
@@ -1409,6 +1599,22 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         var call = Expression.Call(genericMethod, source.Expression, selectorLambda);
 
         return new ExpressionBuildResult(call.Type, call);
+    }
+
+    /// <summary>
+    /// Checks if a type can be used for a numeric aggregate method.
+    /// </summary>
+    private static bool CanUseNumericType(Type type, string methodName)
+    {
+        // For Min/Max, any IComparable type works
+        if (methodName is "Min" or "Max")
+            return true;
+
+        // For Sum/Average, only numeric types work
+        return type == typeof(int) || type == typeof(long) || type == typeof(float) ||
+               type == typeof(double) || type == typeof(decimal) ||
+               type == typeof(int?) || type == typeof(long?) || type == typeof(float?) ||
+               type == typeof(double?) || type == typeof(decimal?);
     }
 
     private static bool TryGetEnumerableElementType(Type type, out Type elementType)

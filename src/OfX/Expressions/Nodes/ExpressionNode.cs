@@ -31,4 +31,5 @@ public interface IExpressionNodeVisitor<out TResult, in TContext>
     TResult VisitCoalesce(CoalesceNode node, TContext context);
     TResult VisitTernary(TernaryNode node, TContext context);
     TResult VisitGroupBy(GroupByNode node, TContext context);
+    TResult VisitGroupElements(GroupElementsNode node, TContext context);
 }

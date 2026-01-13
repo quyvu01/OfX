@@ -150,6 +150,12 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
     public BsonValue VisitProjection(ProjectionNode node, BsonBuildContext context)
     {
+        // Check if source is a GroupByNode - requires special handling
+        if (node.Source is GroupByNode groupByNode)
+        {
+            return BuildGroupByProjection(node, groupByNode, context);
+        }
+
         // Get source value (could be array or single object)
         var sourceValue = node.Source.Accept(this, context);
 
@@ -164,6 +170,84 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
         // Single object projection: Country.{Id, Name} -> direct field extraction
         return BuildSingleObjectProjection(sourceValue, node.Properties, context);
+    }
+
+    /// <summary>
+    /// Builds projection for GroupBy result in MongoDB.
+    /// Orders:groupBy(Status).{Status, :count as Count}
+    /// Maps to: $map on the grouped array with Key and computed aggregations.
+    /// </summary>
+    private BsonValue BuildGroupByProjection(ProjectionNode node, GroupByNode groupByNode, BsonBuildContext context)
+    {
+        // First, build the GroupBy expression (which returns array of {Key, Items})
+        var groupByValue = groupByNode.Accept(this, context);
+
+        // Create GroupBy context for building projection properties
+        var groupByContext = new BsonGroupByContext(groupByNode.KeyProperties, groupByNode.IsSingleKey);
+        var projectionContext = context.WithGroupByContext(groupByContext);
+
+        // Build projection document for each group
+        var projectionDoc = new BsonDocument();
+
+        foreach (var prop in node.Properties)
+        {
+            BsonValue fieldValue;
+
+            if (prop.IsComputed)
+            {
+                // Computed expression (including :count, :sum, etc.)
+                // Use $$group.Items as the source for aggregations
+                var itemContext = new BsonBuildContext(null, "$$group", groupByContext);
+                fieldValue = prop.Expression!.Accept(this, itemContext);
+            }
+            else
+            {
+                // Simple property (key property) - map to $$group.Key or $$group.Key.PropertyName
+                var keyIndex = GetKeyPropertyIndex(prop.PathSegments[0], groupByNode.KeyProperties);
+
+                if (keyIndex >= 0)
+                {
+                    if (groupByNode.IsSingleKey)
+                    {
+                        fieldValue = "$$group.Key";
+                    }
+                    else
+                    {
+                        // Multi-key: access Key.PropertyName
+                        fieldValue = $"$$group.Key.{prop.PathSegments[0]}";
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Property '{prop.PathSegments[0]}' is not a key property in GroupBy. " +
+                        $"Available keys: {string.Join(", ", groupByNode.KeyProperties)}");
+                }
+            }
+
+            projectionDoc.Add(prop.OutputKey, fieldValue);
+        }
+
+        // Build $map to project each group
+        return new BsonDocument("$map", new BsonDocument
+        {
+            { "input", groupByValue },
+            { "as", "group" },
+            { "in", projectionDoc }
+        });
+    }
+
+    /// <summary>
+    /// Gets the index of a property name in the key properties list.
+    /// </summary>
+    private static int GetKeyPropertyIndex(string propertyName, IReadOnlyList<string> keyProperties)
+    {
+        for (var i = 0; i < keyProperties.Count; i++)
+        {
+            if (string.Equals(keyProperties[i], propertyName, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        return -1;
     }
 
     /// <summary>
@@ -870,6 +954,22 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
         });
     }
 
+    public BsonValue VisitGroupElements(GroupElementsNode node, BsonBuildContext context)
+    {
+        // This node represents "the group elements" in a GroupBy projection context
+        // In MongoDB, when we build projection after GroupBy, we use $$group.Items
+        // where Items contains the grouped elements
+        if (context.GroupByContext == null)
+        {
+            throw new InvalidOperationException(
+                "GroupElements node can only be used within a GroupBy projection context. " +
+                "Use syntax like: Orders:groupBy(Status).{Status, :count as Count}");
+        }
+
+        // Return reference to the Items array in the group
+        return "$$group.Items";
+    }
+
     #region Helper Methods
 
     private BsonValue BuildCondition(ConditionNode condition, BsonBuildContext context)
@@ -1010,10 +1110,24 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 /// </summary>
 /// <param name="CurrentPath">The current BSON path being built.</param>
 /// <param name="ItemVariable">The variable name for array iteration (e.g., "$$item").</param>
-public sealed record BsonBuildContext(BsonValue CurrentPath, string ItemVariable = null)
+/// <param name="GroupByContext">Optional context when building projections after GroupBy.</param>
+public sealed record BsonBuildContext(BsonValue CurrentPath, string ItemVariable = null, BsonGroupByContext GroupByContext = null)
 {
     /// <summary>
     /// Gets the field reference prefix based on context.
     /// </summary>
     public string GetFieldPrefix() => ItemVariable ?? "$";
+
+    /// <summary>
+    /// Creates a new context for building projection inside a GroupBy.
+    /// </summary>
+    public BsonBuildContext WithGroupByContext(BsonGroupByContext groupByContext) =>
+        this with { GroupByContext = groupByContext };
 }
+
+/// <summary>
+/// Context for building BSON expressions inside a GroupBy projection.
+/// </summary>
+/// <param name="KeyProperties">The property names used for grouping.</param>
+/// <param name="IsSingleKey">Whether this is a single-key groupBy.</param>
+public sealed record BsonGroupByContext(IReadOnlyList<string> KeyProperties, bool IsSingleKey);

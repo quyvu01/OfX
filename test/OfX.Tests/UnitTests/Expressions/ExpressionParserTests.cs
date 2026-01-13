@@ -716,7 +716,7 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_AllWithAndCondition_ReturnsBooleanFunctionNodeWithLogicalCondition()
     {
-        // Act
+        // Act - Items:all(Price > 0 && Quantity > 0)
         var result = ExpressionParser.Parse("Items:all(Price > 0 && Quantity > 0)");
 
         // Assert
@@ -2202,16 +2202,23 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_DistinctAfterFilter_ReturnsCorrectStructure()
     {
-        // Orders(Status = 'Done'):distinct(CustomerId)
-        var result = ExpressionParser.Parse("Orders(Status = 'Done'):distinct(CustomerId)");
+        // Orders(Status = 'Done').Items:distinct(CustomerId)
+        // Structure: NavigationNode([FilterNode(Orders), FunctionNode(Items:distinct)])
+        var result = ExpressionParser.Parse("Orders(Status = 'Done').Items:distinct(CustomerId)");
 
-        result.ShouldBeOfType<FunctionNode>();
-        var funcNode = (FunctionNode)result;
-        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
 
-        funcNode.Source.ShouldBeOfType<FilterNode>();
-        var filterNode = (FilterNode)funcNode.Source;
+        // First segment: FilterNode for Orders(Status = 'Done')
+        navNode.Segments[0].ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)navNode.Segments[0];
         ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
+
+        // Second segment: FunctionNode for Items:distinct(CustomerId)
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var funcNode = (FunctionNode)navNode.Segments[1];
+        funcNode.FunctionName.ShouldBe(FunctionType.Distinct);
 
         var args = funcNode.GetArguments();
         ((PropertyNode)args[0]).Name.ShouldBe("CustomerId");
@@ -2347,13 +2354,13 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_DistinctWithFilterOnNestedCollection_ComplexQuery()
     {
-        // Company.Departments(IsActive = true).Employees:distinct(Role)
-        // Structure: NavigationNode([Company, FilterNode(Departments), FunctionNode(Employees:distinct(Role))])
-        var result = ExpressionParser.Parse("Company.Departments(IsActive = true).Employees:distinct(Role)");
+        // Company.Departments(IsActive = true).Employees.Items:distinct(Role)
+        // Structure: NavigationNode([Company, FilterNode(Departments), Employees, FunctionNode(Items:distinct(Role))])
+        var result = ExpressionParser.Parse("Company.Departments(IsActive = true).Employees.Items:distinct(Role)");
 
         result.ShouldBeOfType<NavigationNode>();
         var navNode = (NavigationNode)result;
-        navNode.Segments.Count.ShouldBe(3);
+        navNode.Segments.Count.ShouldBe(4);
 
         // First segment: Company
         navNode.Segments[0].ShouldBeOfType<PropertyNode>();
@@ -2364,24 +2371,28 @@ public sealed class ExpressionParserTests
         var filterNode = (FilterNode)navNode.Segments[1];
         ((PropertyNode)filterNode.Source).Name.ShouldBe("Departments");
 
-        // Third segment: Employees:distinct(Role)
-        navNode.Segments[2].ShouldBeOfType<FunctionNode>();
-        var distinctFunc = (FunctionNode)navNode.Segments[2];
+        // Third segment: Employees
+        navNode.Segments[2].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[2]).Name.ShouldBe("Employees");
+
+        // Fourth segment: Items:distinct(Role)
+        navNode.Segments[3].ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)navNode.Segments[3];
         distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
-        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Employees");
+        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Items");
         ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("Role");
     }
 
     [Fact]
     public void Parse_DistinctWithIndexerBefore_ComplexChain()
     {
-        // Customers[0 10 asc CreatedAt].Orders:distinct(Status)
-        // Structure: NavigationNode([IndexerNode(Customers), FunctionNode(Orders:distinct(Status))])
-        var result = ExpressionParser.Parse("Customers[0 10 asc CreatedAt].Orders:distinct(Status)");
+        // Customers[0 10 asc CreatedAt].Orders.Items:distinct(Status)
+        // Structure: NavigationNode([IndexerNode(Customers), Orders, FunctionNode(Items:distinct(Status))])
+        var result = ExpressionParser.Parse("Customers[0 10 asc CreatedAt].Orders.Items:distinct(Status)");
 
         result.ShouldBeOfType<NavigationNode>();
         var navNode = (NavigationNode)result;
-        navNode.Segments.Count.ShouldBe(2);
+        navNode.Segments.Count.ShouldBe(3);
 
         // First segment: Customers with indexer
         navNode.Segments[0].ShouldBeOfType<IndexerNode>();
@@ -2391,11 +2402,15 @@ public sealed class ExpressionParserTests
         indexerNode.Take.ShouldBe(10);
         indexerNode.OrderDirection.ShouldBe(OrderDirection.Asc);
 
-        // Second segment: Orders:distinct(Status)
-        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
-        var distinctFunc = (FunctionNode)navNode.Segments[1];
+        // Second segment: Orders
+        navNode.Segments[1].ShouldBeOfType<PropertyNode>();
+        ((PropertyNode)navNode.Segments[1]).Name.ShouldBe("Orders");
+
+        // Third segment: Items:distinct(Status)
+        navNode.Segments[2].ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)navNode.Segments[2];
         distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
-        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Orders");
+        ((PropertyNode)distinctFunc.Source).Name.ShouldBe("Items");
         ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("Status");
     }
 
@@ -2459,24 +2474,29 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_DistinctWithAndFilter_ComplexQuery()
     {
-        // Orders(Year = 2024, Status = 'Active'):distinct(CustomerId)
+        // Orders(Year = 2024, Status = 'Active').Items:distinct(CustomerId)
         // Use AND condition instead of multiple filter blocks
-        var result = ExpressionParser.Parse("Orders(Year = 2024, Status = 'Active'):distinct(CustomerId)");
+        var result = ExpressionParser.Parse("Orders(Year = 2024, Status = 'Active').Items:distinct(CustomerId)");
 
-        result.ShouldBeOfType<FunctionNode>();
-        var distinctFunc = (FunctionNode)result;
-        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
-        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("CustomerId");
+        result.ShouldBeOfType<NavigationNode>();
+        var navNode = (NavigationNode)result;
+        navNode.Segments.Count.ShouldBe(2);
 
-        // Source should be single filter with AND condition
-        distinctFunc.Source.ShouldBeOfType<FilterNode>();
-        var filterNode = (FilterNode)distinctFunc.Source;
+        // First segment: FilterNode for Orders with AND condition
+        navNode.Segments[0].ShouldBeOfType<FilterNode>();
+        var filterNode = (FilterNode)navNode.Segments[0];
         ((PropertyNode)filterNode.Source).Name.ShouldBe("Orders");
 
         // Condition should be LogicalConditionNode (AND)
         filterNode.Condition.ShouldBeOfType<LogicalConditionNode>();
         var logicalCond = (LogicalConditionNode)filterNode.Condition;
         logicalCond.Operator.ShouldBe(LogicalOperator.And);
+
+        // Second segment: Items:distinct(CustomerId)
+        navNode.Segments[1].ShouldBeOfType<FunctionNode>();
+        var distinctFunc = (FunctionNode)navNode.Segments[1];
+        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
+        ((PropertyNode)distinctFunc.GetArguments()[0]).Name.ShouldBe("CustomerId");
     }
 
     [Fact]
@@ -2611,8 +2631,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithSimpleProjection_ReturnsProjectionNode()
     {
-        // Orders:groupBy(Status).{Status, Items:count}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:count}");
+        // Orders:groupBy(Status).{Status, :count}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2628,20 +2648,19 @@ public sealed class ExpressionParserTests
         // First property: Status (key)
         projNode.Properties[0].Path.ShouldBe("Status");
 
-        // Second property: Items:count
+        // Second property: :count (direct aggregation on group elements)
         projNode.Properties[1].IsComputed.ShouldBeTrue();
         projNode.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
         var countFunc = (FunctionNode)projNode.Properties[1].Expression;
         countFunc.FunctionName.ShouldBe(FunctionType.Count);
-        countFunc.Source.ShouldBeOfType<PropertyNode>();
-        ((PropertyNode)countFunc.Source).Name.ShouldBe("Items");
+        countFunc.Source.ShouldBeOfType<GroupElementsNode>();
     }
 
     [Fact]
     public void Parse_GroupByWithAliasedProjection_ReturnsCorrectAliases()
     {
-        // Orders:groupBy(Status).{Status as OrderStatus, Items:count as TotalCount}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status as OrderStatus, Items:count as TotalCount}");
+        // Orders:groupBy(Status).{Status as OrderStatus, :count as TotalCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status as OrderStatus, :count as TotalCount}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2651,15 +2670,15 @@ public sealed class ExpressionParserTests
         // First property: Status as OrderStatus
         projNode.Properties[0].OutputKey.ShouldBe("OrderStatus");
 
-        // Second property: Items:count as TotalCount
+        // Second property: :count as TotalCount
         projNode.Properties[1].OutputKey.ShouldBe("TotalCount");
     }
 
     [Fact]
     public void Parse_GroupByMultiKeyWithProjection_ReturnsCorrectStructure()
     {
-        // Orders:groupBy(Year, Month).{Year, Month, Items:count as OrderCount}
-        var result = ExpressionParser.Parse("Orders:groupBy(Year, Month).{Year, Month, Items:count as OrderCount}");
+        // Orders:groupBy(Year, Month).{Year, Month, :count as OrderCount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Year, Month).{Year, Month, :count as OrderCount}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2680,15 +2699,15 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithSumFunction_ReturnsCorrectStructure()
     {
-        // Orders:groupBy(CustomerId).{CustomerId, Items:sum(Total) as TotalAmount}
-        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:sum(Total) as TotalAmount}");
+        // Orders:groupBy(CustomerId).{CustomerId, :sum(Total) as TotalAmount}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, :sum(Total) as TotalAmount}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
 
         projNode.Properties.Count.ShouldBe(2);
 
-        // Second property: Items:sum(Total) as TotalAmount
+        // Second property: :sum(Total) as TotalAmount
         var totalProp = projNode.Properties[1];
         totalProp.OutputKey.ShouldBe("TotalAmount");
         totalProp.Expression.ShouldBeOfType<AggregationNode>();
@@ -2701,8 +2720,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithAvgFunction_ReturnsCorrectStructure()
     {
-        // Products:groupBy(Category).{Category, Items:avg(Price) as AvgPrice}
-        var result = ExpressionParser.Parse("Products:groupBy(Category).{Category, Items:avg(Price) as AvgPrice}");
+        // Products:groupBy(Category).{Category, :avg(Price) as AvgPrice}
+        var result = ExpressionParser.Parse("Products:groupBy(Category).{Category, :avg(Price) as AvgPrice}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2718,8 +2737,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithMinMaxFunctions_ReturnsCorrectStructure()
     {
-        // Orders:groupBy(Status).{Status, Items:min(CreatedAt) as FirstOrder, Items:max(CreatedAt) as LastOrder}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:min(CreatedAt) as FirstOrder, Items:max(CreatedAt) as LastOrder}");
+        // Orders:groupBy(Status).{Status, :min(CreatedAt) as FirstOrder, :max(CreatedAt) as LastOrder}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :min(CreatedAt) as FirstOrder, :max(CreatedAt) as LastOrder}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2744,8 +2763,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithMultipleAggregations_ReturnsCorrectStructure()
     {
-        // Orders:groupBy(CustomerId).{CustomerId, Items:count as OrderCount, Items:sum(Total) as TotalSpent, Items:avg(Total) as AvgOrderValue}
-        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:count as OrderCount, Items:sum(Total) as TotalSpent, Items:avg(Total) as AvgOrderValue}");
+        // Orders:groupBy(CustomerId).{CustomerId, :count as OrderCount, :sum(Total) as TotalSpent, :avg(Total) as AvgOrderValue}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, :count as OrderCount, :sum(Total) as TotalSpent, :avg(Total) as AvgOrderValue}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2770,75 +2789,9 @@ public sealed class ExpressionParserTests
 
     #endregion
 
-    #region GroupBy Tests - Items with Filter
-
-    [Fact]
-    public void Parse_GroupByWithFilteredItems_ReturnsCorrectStructure()
-    {
-        // Orders:groupBy(Status).{Status, Items(IsActive = true):count as ActiveCount}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items(IsActive = true):count as ActiveCount}");
-
-        result.ShouldBeOfType<ProjectionNode>();
-        var projNode = (ProjectionNode)result;
-
-        projNode.Properties.Count.ShouldBe(2);
-
-        // Second property: Items(IsActive = true):count as ActiveCount
-        var activeProp = projNode.Properties[1];
-        activeProp.OutputKey.ShouldBe("ActiveCount");
-        activeProp.Expression.ShouldBeOfType<FunctionNode>();
-
-        var countFunc = (FunctionNode)activeProp.Expression;
-        countFunc.FunctionName.ShouldBe(FunctionType.Count);
-
-        // Source should be FilterNode
-        countFunc.Source.ShouldBeOfType<FilterNode>();
-        var filterNode = (FilterNode)countFunc.Source;
-        ((PropertyNode)filterNode.Source).Name.ShouldBe("Items");
-    }
-
-    [Fact]
-    public void Parse_GroupByWithFilteredItemsAndCondition_ReturnsCorrectStructure()
-    {
-        // Orders:groupBy(Year).{Year, Items(Total > 100):count as HighValueCount}
-        var result = ExpressionParser.Parse("Orders:groupBy(Year).{Year, Items(Total > 100):count as HighValueCount}");
-
-        result.ShouldBeOfType<ProjectionNode>();
-        var projNode = (ProjectionNode)result;
-
-        var highValueProp = projNode.Properties[1];
-        highValueProp.OutputKey.ShouldBe("HighValueCount");
-
-        var countFunc = (FunctionNode)highValueProp.Expression;
-        var filterNode = (FilterNode)countFunc.Source;
-
-        var condition = (BinaryConditionNode)filterNode.Condition;
-        condition.Operator.ShouldBe(ComparisonOperator.GreaterThan);
-        ((PropertyNode)condition.Left).Name.ShouldBe("Total");
-    }
-
-    [Fact]
-    public void Parse_GroupByWithComplexFilteredItems_AndCondition()
-    {
-        // Orders:groupBy(Status).{Status, Items(IsActive = true && Total > 50):sum(Total) as ActiveTotal}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items(IsActive = true && Total > 50):sum(Total) as ActiveTotal}");
-
-        result.ShouldBeOfType<ProjectionNode>();
-        var projNode = (ProjectionNode)result;
-
-        var activeTotalProp = projNode.Properties[1];
-        activeTotalProp.Expression.ShouldBeOfType<AggregationNode>();
-        var sumAgg = (AggregationNode)activeTotalProp.Expression;
-        sumAgg.AggregationType.ShouldBe(AggregationType.Sum);
-
-        var filterNode = (FilterNode)sumAgg.Source;
-        filterNode.Condition.ShouldBeOfType<LogicalConditionNode>();
-
-        var logicalCondition = (LogicalConditionNode)filterNode.Condition;
-        logicalCondition.Operator.ShouldBe(LogicalOperator.And);
-    }
-
-    #endregion
+    // NOTE: Items(condition) syntax in GroupBy projection is not supported in the current design.
+    // The new syntax uses direct aggregations like :count, :sum(Total) on group elements.
+    // Filtered Items support may be added in a future version.
 
     #region GroupBy Tests - Error Cases
 
@@ -2886,8 +2839,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByAfterFilterWithProjection_ComplexChain()
     {
-        // Orders(Year = 2024):groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenue}
-        var result = ExpressionParser.Parse("Orders(Year = 2024):groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenue}");
+        // Orders(Year = 2024):groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue}
+        var result = ExpressionParser.Parse("Orders(Year = 2024):groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2907,8 +2860,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithDeepNavigation_ReturnsCorrectStructure()
     {
-        // Company.Departments.Employees:groupBy(Role).{Role, Items:count as HeadCount}
-        var result = ExpressionParser.Parse("Company.Departments.Employees:groupBy(Role).{Role, Items:count as HeadCount}");
+        // Company.Departments.Employees:groupBy(Role).{Role, :count as HeadCount}
+        var result = ExpressionParser.Parse("Company.Departments.Employees:groupBy(Role).{Role, :count as HeadCount}");
 
         result.ShouldBeOfType<NavigationNode>();
         var navNode = (NavigationNode)result;
@@ -2927,8 +2880,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithIndexerBefore_ComplexChain()
     {
-        // Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, Items:count}
-        var result = ExpressionParser.Parse("Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, Items:count}");
+        // Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, :count}
+        var result = ExpressionParser.Parse("Customers[0 10 desc CreatedAt].Orders:groupBy(Status).{Status, :count}");
 
         result.ShouldBeOfType<NavigationNode>();
         var navNode = (NavigationNode)result;
@@ -2947,9 +2900,9 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithComputedExpression_InProjection()
     {
-        // Orders:groupBy(Status).{Status, (Items:count:multiply(10)) as WeightedCount}
+        // Orders:groupBy(Status).{Status, (:count:multiply(10)) as WeightedCount}
         // Use multiply function instead of * operator (which isn't supported in tokenizer)
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:count:multiply(10)) as WeightedCount}");
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (:count:multiply(10)) as WeightedCount}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2965,8 +2918,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithAnyFunction_ReturnsCorrectStructure()
     {
-        // Orders:groupBy(CustomerId).{CustomerId, Items:any(Status = 'Urgent') as HasUrgent}
-        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, Items:any(Status = 'Urgent') as HasUrgent}");
+        // Orders:groupBy(CustomerId).{CustomerId, :any(Status = 'Urgent') as HasUrgent}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, :any(Status = 'Urgent') as HasUrgent}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2983,8 +2936,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithAllFunction_ReturnsCorrectStructure()
     {
-        // Tasks:groupBy(ProjectId).{ProjectId, Items:all(IsCompleted = true) as AllCompleted}
-        var result = ExpressionParser.Parse("Tasks:groupBy(ProjectId).{ProjectId, Items:all(IsCompleted = true) as AllCompleted}");
+        // Tasks:groupBy(ProjectId).{ProjectId, :all(IsCompleted = true) as AllCompleted}
+        var result = ExpressionParser.Parse("Tasks:groupBy(ProjectId).{ProjectId, :all(IsCompleted = true) as AllCompleted}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -2997,34 +2950,15 @@ public sealed class ExpressionParserTests
         allFunc.FunctionName.ShouldBe(BooleanFunctionType.All);
     }
 
-    [Fact]
-    public void Parse_GroupByWithDistinctInProjection_ComplexScenario()
-    {
-        // Orders:groupBy(Year).{Year, Items:distinct(CustomerId):count as UniqueCustomers}
-        var result = ExpressionParser.Parse("Orders:groupBy(Year).{Year, Items:distinct(CustomerId):count as UniqueCustomers}");
-
-        result.ShouldBeOfType<ProjectionNode>();
-        var projNode = (ProjectionNode)result;
-
-        var uniqueProp = projNode.Properties[1];
-        uniqueProp.OutputKey.ShouldBe("UniqueCustomers");
-
-        // Should be count on top of distinct
-        uniqueProp.Expression.ShouldBeOfType<FunctionNode>();
-        var countFunc = (FunctionNode)uniqueProp.Expression;
-        countFunc.FunctionName.ShouldBe(FunctionType.Count);
-
-        countFunc.Source.ShouldBeOfType<FunctionNode>();
-        var distinctFunc = (FunctionNode)countFunc.Source;
-        distinctFunc.FunctionName.ShouldBe(FunctionType.Distinct);
-    }
+    // NOTE: Items:distinct syntax in GroupBy projection is not supported in current design.
+    // Use direct aggregations like :count, :sum on group elements instead.
 
     [Fact]
     public void Parse_GroupByWithDefaultAlias_WhenNoAliasProvided()
     {
-        // Orders:groupBy(Status).{Status, Items:count}
-        // Items:count should get default alias "Count"
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, Items:count}");
+        // Orders:groupBy(Status).{Status, :count}
+        // :count should get default alias "Count"
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3037,8 +2971,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithMultipleKeysAndComplexAggregations()
     {
-        // Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, Items:count as SalesCount, Items:sum(Amount) as TotalSales, Items:avg(Amount) as AvgSale}
-        var result = ExpressionParser.Parse("Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, Items:count as SalesCount, Items:sum(Amount) as TotalSales, Items:avg(Amount) as AvgSale}");
+        // Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, :count as SalesCount, :sum(Amount) as TotalSales, :avg(Amount) as AvgSale}
+        var result = ExpressionParser.Parse("Sales:groupBy(Year, Quarter, Region).{Year, Quarter, Region, :count as SalesCount, :sum(Amount) as TotalSales, :avg(Amount) as AvgSale}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3058,8 +2992,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithTernaryInProjection_ComplexScenario()
     {
-        // Orders:groupBy(Status).{Status, (Items:count > 10 ? 'High' : 'Low') as Volume}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:count > 10 ? 'High' : 'Low') as Volume}");
+        // Orders:groupBy(Status).{Status, (:count > 10 ? 'High' : 'Low') as Volume}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (:count > 10 ? 'High' : 'Low') as Volume}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3075,8 +3009,8 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithCoalesceInProjection_ComplexScenario()
     {
-        // Orders:groupBy(Status).{Status, (Items:sum(Discount) ?? 0) as TotalDiscount}
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (Items:sum(Discount) ?? 0) as TotalDiscount}");
+        // Orders:groupBy(Status).{Status, (:sum(Discount) ?? 0) as TotalDiscount}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, (:sum(Discount) ?? 0) as TotalDiscount}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3089,9 +3023,9 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByOnNestedCollection_AfterNavigation()
     {
-        // Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, Items:count as CategoryCount}
+        // Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, :count as CategoryCount}
         // The whole expression is parsed as a ProjectionNode with NavigationNode source containing GroupByNode
-        var result = ExpressionParser.Parse("Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, Items:count as CategoryCount}");
+        var result = ExpressionParser.Parse("Customer.Orders(Status != 'Cancelled'):groupBy(ProductCategory).{ProductCategory, :count as CategoryCount}");
 
         // Top level is ProjectionNode
         result.ShouldBeOfType<ProjectionNode>();
@@ -3119,9 +3053,9 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByWithOnlyItems_InProjection()
     {
-        // Orders:groupBy(Status).{Items:count}
+        // Orders:groupBy(Status).{:count}
         // Just Items aggregation without key in projection (unusual but valid)
-        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Items:count}");
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{:count}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3133,9 +3067,9 @@ public sealed class ExpressionParserTests
     [Fact]
     public void Parse_GroupByPreservesKeyPropertyCase()
     {
-        // Orders:groupBy(CustomerID).{CustomerID, Items:count}
+        // Orders:groupBy(CustomerID).{CustomerID, :count}
         // Key property case should be preserved
-        var result = ExpressionParser.Parse("Orders:groupBy(CustomerID).{CustomerID, Items:count}");
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerID).{CustomerID, :count}");
 
         result.ShouldBeOfType<ProjectionNode>();
         var projNode = (ProjectionNode)result;
@@ -3144,6 +3078,218 @@ public sealed class ExpressionParserTests
         groupByNode.KeyProperties[0].ShouldBe("CustomerID");
 
         projNode.Properties[0].Path.ShouldBe("CustomerID");
+    }
+
+    #endregion
+
+    #region GroupBy Tests - Inner Projection
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_SimpleCase()
+    {
+        // Orders:groupBy(Status).{Status, {Id, Total} as Items}
+        // Inner projection creates a Select on group elements
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id, Total} as Items}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        // Source is GroupByNode
+        projNode.Source.ShouldBeOfType<GroupByNode>();
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties[0].ShouldBe("Status");
+
+        // Should have 2 properties: Status and Items
+        projNode.Properties.Count.ShouldBe(2);
+
+        // First property: Status (key)
+        projNode.Properties[0].Path.ShouldBe("Status");
+
+        // Second property: inner projection with alias Items
+        var itemsProp = projNode.Properties[1];
+        itemsProp.OutputKey.ShouldBe("Items");
+        itemsProp.IsComputed.ShouldBeTrue();
+
+        // Expression is a ProjectionNode with GroupElementsNode as source
+        itemsProp.Expression.ShouldBeOfType<ProjectionNode>();
+        var innerProjNode = (ProjectionNode)itemsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+
+        // Inner projection has 2 properties: Id and Total
+        innerProjNode.Properties.Count.ShouldBe(2);
+        innerProjNode.Properties[0].Path.ShouldBe("Id");
+        innerProjNode.Properties[1].Path.ShouldBe("Total");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_MultipleProperties()
+    {
+        // Orders:groupBy(CustomerId).{CustomerId, {Id, ProductName, Quantity, UnitPrice} as OrderDetails}
+        var result = ExpressionParser.Parse("Orders:groupBy(CustomerId).{CustomerId, {Id, ProductName, Quantity, UnitPrice} as OrderDetails}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var detailsProp = projNode.Properties[1];
+        detailsProp.OutputKey.ShouldBe("OrderDetails");
+
+        var innerProjNode = (ProjectionNode)detailsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+        innerProjNode.Properties.Count.ShouldBe(4);
+        innerProjNode.Properties[0].Path.ShouldBe("Id");
+        innerProjNode.Properties[1].Path.ShouldBe("ProductName");
+        innerProjNode.Properties[2].Path.ShouldBe("Quantity");
+        innerProjNode.Properties[3].Path.ShouldBe("UnitPrice");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_WithAggregation()
+    {
+        // Orders:groupBy(Status).{Status, :count as Count, {Id, CustomerName} as Items}
+        // Mix of aggregation and inner projection
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count, {Id, CustomerName} as Items}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(3);
+
+        // First: Status (key)
+        projNode.Properties[0].Path.ShouldBe("Status");
+
+        // Second: :count as Count (aggregation)
+        projNode.Properties[1].OutputKey.ShouldBe("Count");
+        projNode.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        // Third: {Id, CustomerName} as Items (inner projection)
+        var itemsProp = projNode.Properties[2];
+        itemsProp.OutputKey.ShouldBe("Items");
+        var innerProjNode = (ProjectionNode)itemsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+        innerProjNode.Properties.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_MultipleKeys()
+    {
+        // Sales:groupBy(Year, Month).{Year, Month, {Id, Amount, Customer} as Transactions}
+        var result = ExpressionParser.Parse("Sales:groupBy(Year, Month).{Year, Month, {Id, Amount, Customer} as Transactions}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.KeyProperties.Count.ShouldBe(2);
+        groupByNode.KeyProperties[0].ShouldBe("Year");
+        groupByNode.KeyProperties[1].ShouldBe("Month");
+
+        projNode.Properties.Count.ShouldBe(3);
+        projNode.Properties[0].Path.ShouldBe("Year");
+        projNode.Properties[1].Path.ShouldBe("Month");
+
+        var transactionsProp = projNode.Properties[2];
+        transactionsProp.OutputKey.ShouldBe("Transactions");
+
+        var innerProjNode = (ProjectionNode)transactionsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+        innerProjNode.Properties.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_SingleProperty()
+    {
+        // Orders:groupBy(Status).{Status, {Id} as OrderIds}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id} as OrderIds}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var orderIdsProp = projNode.Properties[1];
+        orderIdsProp.OutputKey.ShouldBe("OrderIds");
+
+        var innerProjNode = (ProjectionNode)orderIdsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+        innerProjNode.Properties.Count.ShouldBe(1);
+        innerProjNode.Properties[0].Path.ShouldBe("Id");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_AliasedInnerProperties()
+    {
+        // Orders:groupBy(Status).{Status, {Id as OrderId, Total as OrderTotal} as Items}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id as OrderId, Total as OrderTotal} as Items}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var itemsProp = projNode.Properties[1];
+        itemsProp.OutputKey.ShouldBe("Items");
+
+        var innerProjNode = (ProjectionNode)itemsProp.Expression;
+        innerProjNode.Properties.Count.ShouldBe(2);
+        innerProjNode.Properties[0].Path.ShouldBe("Id");
+        innerProjNode.Properties[0].OutputKey.ShouldBe("OrderId");
+        innerProjNode.Properties[1].Path.ShouldBe("Total");
+        innerProjNode.Properties[1].OutputKey.ShouldBe("OrderTotal");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_MissingAlias_ThrowsException()
+    {
+        // {Id, Total} without 'as Alias' should throw
+        var exception = Should.Throw<ExpressionParseException>(() =>
+            ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id, Total}}"));
+
+        exception.Message.ShouldContain("as");
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_AfterFilter()
+    {
+        // Orders(Year = 2024):groupBy(Status).{Status, {Id, CustomerName} as Items}
+        var result = ExpressionParser.Parse("Orders(Year = 2024):groupBy(Status).{Status, {Id, CustomerName} as Items}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        var groupByNode = (GroupByNode)projNode.Source;
+        groupByNode.Source.ShouldBeOfType<FilterNode>();
+
+        var itemsProp = projNode.Properties[1];
+        itemsProp.OutputKey.ShouldBe("Items");
+
+        var innerProjNode = (ProjectionNode)itemsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+    }
+
+    [Fact]
+    public void Parse_GroupByWithInnerProjection_ComplexCombination()
+    {
+        // Orders:groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue, {Id, CustomerName, Total} as Details}
+        var result = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue, {Id, CustomerName, Total} as Details}");
+
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Properties.Count.ShouldBe(4);
+
+        // Status (key)
+        projNode.Properties[0].Path.ShouldBe("Status");
+
+        // :count as Count
+        projNode.Properties[1].OutputKey.ShouldBe("Count");
+        projNode.Properties[1].Expression.ShouldBeOfType<FunctionNode>();
+
+        // :sum(Total) as Revenue
+        projNode.Properties[2].OutputKey.ShouldBe("Revenue");
+        projNode.Properties[2].Expression.ShouldBeOfType<AggregationNode>();
+
+        // {Id, CustomerName, Total} as Details
+        var detailsProp = projNode.Properties[3];
+        detailsProp.OutputKey.ShouldBe("Details");
+        var innerProjNode = (ProjectionNode)detailsProp.Expression;
+        innerProjNode.Source.ShouldBeOfType<GroupElementsNode>();
+        innerProjNode.Properties.Count.ShouldBe(3);
     }
 
     #endregion

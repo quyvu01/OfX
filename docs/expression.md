@@ -366,11 +366,11 @@ Orders:groupBy(Year, Quarter, Region)
 ### GroupBy with Projection
 After groupBy, use projection to access:
 - **Key properties** by their names (Status, Year, Month)
-- **Group elements** via the `Items` keyword
+- **Aggregations** directly with `:function` syntax (operates on group elements)
 
 ```
-Orders:groupBy(Status).{Status, Items:count}
-Orders:groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenue}
+Orders:groupBy(Status).{Status, :count as Count}
+Orders:groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue}
 ```
 
 ### In Projection Context
@@ -379,56 +379,89 @@ Orders:groupBy(Status).{Status, Items:count as Count, Items:sum(Total) as Revenu
 |-----------|-------------|
 | `Status` | Group key value |
 | `Year`, `Month` | Key properties (multi-key) |
-| `Items` | Collection of elements in group |
-| `Items:count` | Number of items in group |
-| `Items:sum(Total)` | Sum of property in group |
-| `Items:avg(Price)` | Average of property in group |
-| `Items:min(Date)` | Minimum value in group |
-| `Items:max(Date)` | Maximum value in group |
-| `Items(Condition)` | Filter items in group |
-| `Items(Cond):count` | Count after filtering |
+| `:count` | Number of items in group |
+| `:sum(Total)` | Sum of property in group |
+| `:avg(Price)` | Average of property in group |
+| `:min(Date)` | Minimum value in group |
+| `:max(Date)` | Maximum value in group |
+| `{Id, Name} as Items` | Inner projection on group elements |
 
 ### Complex GroupBy Examples
 ```
 Orders:groupBy(Status).{
   Status,
-  Items:count as OrderCount,
-  Items:sum(Total) as TotalRevenue,
-  Items:avg(Total) as AvgOrderValue,
-  Items(IsUrgent = true):count as UrgentCount
+  :count as OrderCount,
+  :sum(Total) as TotalRevenue,
+  :avg(Total) as AvgOrderValue
 }
 
 Sales:groupBy(Year, Quarter).{
   Year,
   Quarter,
-  Items:count as SalesCount,
-  Items:sum(Amount) as TotalSales,
-  Items:avg(Amount) as AvgSale
+  :count as SalesCount,
+  :sum(Amount) as TotalSales,
+  :avg(Amount) as AvgSale
 }
 
 Orders:groupBy(CustomerId).{
   CustomerId,
-  Items:count as OrderCount,
-  Items:sum(Total) as TotalSpent,
-  Items:min(OrderDate) as FirstOrder,
-  Items:max(OrderDate) as LastOrder,
-  Items:any(Status = 'Overdue') as HasOverdue
+  :count as OrderCount,
+  :sum(Total) as TotalSpent,
+  :min(OrderDate) as FirstOrder,
+  :max(OrderDate) as LastOrder
 }
 ```
 
 ### Aliases in GroupBy Projection
 ```
-Orders:groupBy(Status).{Status as OrderStatus, Items:count as Count}
-Orders:groupBy(Year, Month).{Year as Yr, Month as Mo, Items:sum(Total) as Revenue}
+Orders:groupBy(Status).{Status as OrderStatus, :count as Count}
+Orders:groupBy(Year, Month).{Year as Yr, Month as Mo, :sum(Total) as Revenue}
 ```
 
 ### Computed Expressions in GroupBy
 ```
 Orders:groupBy(Status).{
   Status,
-  Items:count as Count,
-  (Items:count > 10 ? 'High' : 'Low') as Volume,
-  (Items:sum(Discount) ?? 0) as TotalDiscount
+  :count as Count,
+  (:count > 10 ? 'High' : 'Low') as Volume,
+  (:sum(Discount) ?? 0) as TotalDiscount
+}
+```
+
+### Inner Projection in GroupBy
+
+Use `{...} as Alias` to project specific properties from group elements.
+
+```
+# Select Id and Total from each order in the group
+Orders:groupBy(Status).{Status, {Id, Total} as Items}
+
+# Translates to:
+# g.GroupBy(o => o.Status).Select(g => new { Status = g.Key, Items = g.Select(item => new { item.Id, item.Total }) })
+```
+
+#### With Aliased Properties
+```
+Orders:groupBy(Status).{Status, {Id as OrderId, Total as OrderTotal} as Items}
+```
+
+#### Combined with Aggregations
+```
+Orders:groupBy(Status).{
+  Status,
+  :count as Count,
+  :sum(Total) as Revenue,
+  {Id, CustomerName, Total} as Details
+}
+```
+
+#### Multiple Keys with Inner Projection
+```
+Sales:groupBy(Year, Month).{
+  Year,
+  Month,
+  :count as TransactionCount,
+  {Id, Amount, Customer} as Transactions
 }
 ```
 
@@ -473,11 +506,9 @@ Sales:groupBy(Year, Quarter, Region).{
   Year,
   Quarter,
   Region,
-  Items:count as SalesCount,
-  Items:sum(Amount) as TotalSales,
-  Items:avg(Amount) as AvgSale,
-  Items(Status = 'Completed'):sum(Amount) as CompletedSales,
-  Items(Status = 'Pending'):count as PendingCount
+  :count as SalesCount,
+  :sum(Amount) as TotalSales,
+  :avg(Amount) as AvgSale
 }
 ```
 
@@ -499,10 +530,10 @@ Company.Departments(IsActive = true)[0 5 desc EmployeeCount].Employees(Role = 'D
 
 Orders(Year = 2024, Status != 'Cancelled'):groupBy(Month).{
   Month,
-  Items:count as OrderCount,
-  Items:sum(Total) as Revenue,
-  Items:avg(Total) as AvgOrder,
-  (Items:sum(Total) > 10000 ? 'Good' : 'Low') as Performance
+  :count as OrderCount,
+  :sum(Total) as Revenue,
+  :avg(Total) as AvgOrder,
+  (:sum(Total) > 10000 ? 'Good' : 'Low') as Performance
 }
 ```
 
@@ -590,6 +621,7 @@ Nickname ?? Name ?? 'Unknown'
 Status = 'Active' ? 'Yes' : 'No'
 
 # GroupBy
-Orders:groupBy(Status).{Status, Items:count as Count}
-Orders:groupBy(Year, Month).{Year, Month, Items:sum(Total)}
+Orders:groupBy(Status).{Status, :count as Count}
+Orders:groupBy(Year, Month).{Year, Month, :sum(Total) as Total}
+Orders:groupBy(Status).{Status, {Id, Total} as Items}   # Inner projection
 ```

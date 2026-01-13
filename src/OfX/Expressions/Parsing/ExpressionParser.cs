@@ -780,33 +780,54 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
 
     /// <summary>
     /// Parses a single property in groupBy projection context.
-    /// Key properties (Status, Year, Month) and Items are handled specially.
+    /// Supports:
+    /// - Key properties: Status, Year (map to g.Key or g.Key.PropertyName)
+    /// - Direct aggregations: :count, :sum(Total), :avg(Price) (operate on group elements)
+    /// - Filtered aggregations: (Status = 'Done'):count (filter then aggregate)
     /// </summary>
+    /// <remarks>
+    /// Syntax examples:
+    /// <list type="bullet">
+    ///   <item><c>{Status, :count as Count}</c> → Key property + group count</item>
+    ///   <item><c>{Status, :sum(Total) as TotalAmount}</c> → Key + sum of property</item>
+    ///   <item><c>{Year, Month, :avg(Price) as AvgPrice}</c> → Multi-key + average</item>
+    /// </list>
+    /// </remarks>
     private ProjectionProperty ParseGroupByProjectionProperty(IReadOnlyList<string> keyProperties)
     {
         // Check for computed expression: (expression) as Alias
         if (Match(TokenType.OpenParen))
         {
-            var expression = ParseExpression();
+            var expression = ParseGroupByExpression();
             Consume(TokenType.CloseParen, "Expected ')' after computed expression");
             Consume(TokenType.As, "Computed expression requires 'as' alias");
             var alias = Consume(TokenType.Identifier, "Expected alias name").Value;
             return ProjectionProperty.FromExpression(expression, alias);
         }
 
-        // Parse identifier (could be key property, Items, or Items with function)
-        var identifier = Consume(TokenType.Identifier, "Expected property name or 'Items'");
-        var name = identifier.Value;
-
-        // Check if this is a function call on Items: Items:count, Items:sum(Total)
-        if (name.Equals("Items", StringComparison.OrdinalIgnoreCase) && Check(TokenType.Colon))
+        // Check for inner projection on group elements: {Id, Name} as Items
+        // This creates a ProjectionNode with GroupElementsNode as source
+        // Maps to: g.Select(item => new { item.Id, item.Name })
+        if (Check(TokenType.OpenBrace))
         {
-            // Parse Items with function chain
-            var itemsNode = new PropertyNode("Items", false);
-            Match(TokenType.Colon); // consume the colon
-            var functionResult = ParseFunctionOrAggregation(itemsNode);
+            var groupElementsNode = new GroupElementsNode();
+            var innerProjection = ParseProjection(groupElementsNode);
+            Consume(TokenType.As, "Inner projection requires 'as' alias");
+            var alias = Consume(TokenType.Identifier, "Expected alias name").Value;
+            return ProjectionProperty.FromExpression(innerProjection, alias);
+        }
 
-            // Check for alias
+        // Check for direct aggregation on group: :count, :sum(Total), :avg(Price)
+        // This operates on the group elements directly (like g.Count(), g.Sum(x => x.Total))
+        if (Check(TokenType.Colon))
+        {
+            Match(TokenType.Colon); // consume the colon
+
+            // Create a special marker node to indicate "this group's elements"
+            var groupElementsNode = new GroupElementsNode();
+            var functionResult = ParseFunctionOrAggregation(groupElementsNode);
+
+            // Alias is required for aggregations
             string alias = null;
             if (Match(TokenType.As))
             {
@@ -816,33 +837,11 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
             return ProjectionProperty.FromExpression(functionResult, alias ?? GetDefaultAliasForExpression(functionResult));
         }
 
-        // Check if this is Items with filter: Items(condition)
-        if (name.Equals("Items", StringComparison.OrdinalIgnoreCase) && Check(TokenType.OpenParen))
-        {
-            var itemsNode = new PropertyNode("Items", false);
-            Match(TokenType.OpenParen);
-            var condition = ParseCondition();
-            Consume(TokenType.CloseParen, "Expected ')' after filter condition");
-            var filterNode = new FilterNode(itemsNode, condition);
+        // Parse identifier (key property name)
+        var identifier = Consume(TokenType.Identifier, "Expected property name");
+        var name = identifier.Value;
 
-            // Check for function chain after filter: Items(condition):count
-            ExpressionNode resultNode = filterNode;
-            if (Match(TokenType.Colon))
-            {
-                resultNode = ParseFunctionOrAggregation(filterNode);
-            }
-
-            // Check for alias
-            string alias = null;
-            if (Match(TokenType.As))
-            {
-                alias = Consume(TokenType.Identifier, "Expected alias name").Value;
-            }
-
-            return ProjectionProperty.FromExpression(resultNode, alias ?? GetDefaultAliasForExpression(resultNode));
-        }
-
-        // Simple property (key property or Items)
+        // Simple key property
         string propertyAlias = null;
         if (Match(TokenType.As))
         {
@@ -850,6 +849,77 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         }
 
         return ProjectionProperty.FromPath(name, propertyAlias);
+    }
+
+    /// <summary>
+    /// Parses an expression in GroupBy projection context.
+    /// This is similar to ParseExpression but supports :function syntax for group aggregations.
+    /// </summary>
+    private ExpressionNode ParseGroupByExpression()
+    {
+        var expr = ParseGroupByCoalesceExpression();
+
+        // Check for ternary (condition ? true : false)
+        if (IsComparisonOperator())
+        {
+            var op = ParseComparisonOperator();
+            var rightValue = ParseValue();
+            var condition = new BinaryConditionNode(expr, op, rightValue);
+
+            if (Match(TokenType.Question))
+            {
+                var whenTrue = ParseGroupByTernaryBranch();
+                Consume(TokenType.Colon, "Expected ':' in ternary expression");
+                var whenFalse = ParseGroupByExpression();
+                return new TernaryNode(condition, whenTrue, whenFalse);
+            }
+
+            return condition;
+        }
+
+        return expr;
+    }
+
+    /// <summary>
+    /// Parses coalesce expression in GroupBy context.
+    /// </summary>
+    private ExpressionNode ParseGroupByCoalesceExpression()
+    {
+        var left = ParseGroupByPrimaryExpression();
+
+        while (Match(TokenType.QuestionQuestion))
+        {
+            var right = ParseGroupByPrimaryExpression();
+            left = new CoalesceNode(left, right);
+        }
+
+        return left;
+    }
+
+    /// <summary>
+    /// Parses primary expression in GroupBy context.
+    /// Supports :function syntax for group aggregations.
+    /// </summary>
+    private ExpressionNode ParseGroupByPrimaryExpression()
+    {
+        // Check for :function (direct aggregation on group)
+        if (Check(TokenType.Colon))
+        {
+            Match(TokenType.Colon);
+            var groupElementsNode = new GroupElementsNode();
+            return ParseFunctionOrAggregation(groupElementsNode);
+        }
+
+        // Otherwise, parse as normal primary expression
+        return ParsePrimaryExpression();
+    }
+
+    /// <summary>
+    /// Parses ternary branch in GroupBy context.
+    /// </summary>
+    private ExpressionNode ParseGroupByTernaryBranch()
+    {
+        return ParseGroupByCoalesceExpression();
     }
 
     /// <summary>
