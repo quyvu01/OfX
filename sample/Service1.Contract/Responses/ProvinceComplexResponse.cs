@@ -9,7 +9,7 @@ public class ProvinceComplexResponse
     public string CountryName { get; set; }
     public string CountryId { get; set; }
 
-    [CountryOf(nameof(CountryId), Expression = "Provinces(Name endswith '0').{Id, Name}")]
+    [CountryOf(nameof(CountryId), Expression = "Provinces.{Id, (Name endswith '0' ? Name : 'N/A') as Name}")]
     public List<SampleProvinceByCountryResponse> Provinces { get; set; }
 }
 

@@ -409,4 +409,443 @@ public sealed class LinqExpressionBuilderTests
     }
 
     #endregion
+
+    #region GroupBy Tests
+
+    [Fact]
+    public void Build_GroupBy_SingleKey_ReturnsCorrectType()
+    {
+        // Arrange: Orders:groupBy(Status).{Status, :count as Count}
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count}");
+
+        // Act
+        var result = LinqExpressionBuilder.Build<Customer>(node);
+
+        // Assert
+        result.Type.ShouldBe(typeof(IEnumerable<Dictionary<string, object>>));
+    }
+
+    [Fact]
+    public void Build_GroupBy_SingleKey_CanCompileAndExecute()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Pending", Total = 100 },
+                new Order { Id = "2", Status = "Completed", Total = 200 },
+                new Order { Id = "3", Status = "Pending", Total = 150 },
+                new Order { Id = "4", Status = "Completed", Total = 300 },
+                new Order { Id = "5", Status = "Completed", Total = 250 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(2);
+
+        var pendingGroup = groups.First(g => g["Status"].ToString() == "Pending");
+        pendingGroup["Count"].ShouldBe(2);
+
+        var completedGroup = groups.First(g => g["Status"].ToString() == "Completed");
+        completedGroup["Count"].ShouldBe(3);
+    }
+
+    [Fact]
+    public void Build_GroupBy_SingleKey_WithSum()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :sum(Total) as TotalAmount}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Pending", Total = 100 },
+                new Order { Id = "2", Status = "Completed", Total = 200 },
+                new Order { Id = "3", Status = "Pending", Total = 150 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(2);
+
+        var pendingGroup = groups.First(g => g["Status"].ToString() == "Pending");
+        pendingGroup["TotalAmount"].ShouldBe(250m);
+
+        var completedGroup = groups.First(g => g["Status"].ToString() == "Completed");
+        completedGroup["TotalAmount"].ShouldBe(200m);
+    }
+
+    [Fact]
+    public void Build_GroupBy_SingleKey_WithMultipleAggregations()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue, :avg(Total) as AvgOrder}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Active", Total = 100 },
+                new Order { Id = "2", Status = "Active", Total = 200 },
+                new Order { Id = "3", Status = "Active", Total = 300 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        group["Status"].ShouldBe("Active");
+        group["Count"].ShouldBe(3);
+        group["Revenue"].ShouldBe(600m);
+        group["AvgOrder"].ShouldBe(200m);
+    }
+
+    [Fact]
+    public void Build_GroupBy_MultipleKeys_ReturnsCorrectType()
+    {
+        // Arrange: Orders:groupBy(Status, UserId).{Status, UserId, :count as Count}
+        var node = ExpressionParser.Parse("Orders:groupBy(Status, UserId).{Status, UserId, :count as Count}");
+
+        // Act
+        var result = LinqExpressionBuilder.Build<Customer>(node);
+
+        // Assert
+        result.Type.ShouldBe(typeof(IEnumerable<Dictionary<string, object>>));
+    }
+
+    [Fact]
+    public void Build_GroupBy_MultipleKeys_CanCompileAndExecute()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status, UserId).{Status, UserId, :count as Count}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Pending", UserId = "user1", Total = 100 },
+                new Order { Id = "2", Status = "Pending", UserId = "user1", Total = 150 },
+                new Order { Id = "3", Status = "Pending", UserId = "user2", Total = 200 },
+                new Order { Id = "4", Status = "Completed", UserId = "user1", Total = 300 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(3);
+
+        var pendingUser1 = groups.First(g => g["Status"].ToString() == "Pending" && g["UserId"].ToString() == "user1");
+        pendingUser1["Count"].ShouldBe(2);
+
+        var pendingUser2 = groups.First(g => g["Status"].ToString() == "Pending" && g["UserId"].ToString() == "user2");
+        pendingUser2["Count"].ShouldBe(1);
+
+        var completedUser1 = groups.First(g => g["Status"].ToString() == "Completed" && g["UserId"].ToString() == "user1");
+        completedUser1["Count"].ShouldBe(1);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithMinMax()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :min(Total) as MinOrder, :max(Total) as MaxOrder}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Active", Total = 50 },
+                new Order { Id = "2", Status = "Active", Total = 200 },
+                new Order { Id = "3", Status = "Active", Total = 150 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        group["MinOrder"].ShouldBe(50m);
+        group["MaxOrder"].ShouldBe(200m);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithKeyAlias()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status as OrderStatus, :count as Count}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "1", Status = "Pending", Total = 100 },
+                new Order { Id = "2", Status = "Pending", Total = 200 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        group.ContainsKey("OrderStatus").ShouldBeTrue();
+        group["OrderStatus"].ShouldBe("Pending");
+        group["Count"].ShouldBe(2);
+    }
+
+    #endregion
+
+    #region GroupBy Inner Projection Tests
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_ReturnsCorrectType()
+    {
+        // Arrange: Orders:groupBy(Status).{Status, {Id, Total} as Items}
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id, Total} as Items}");
+
+        // Act
+        var result = LinqExpressionBuilder.Build<Customer>(node);
+
+        // Assert
+        result.Type.ShouldBe(typeof(IEnumerable<Dictionary<string, object>>));
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_CanCompileAndExecute()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id, Total} as Items}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "ord1", Status = "Pending", Total = 100 },
+                new Order { Id = "ord2", Status = "Pending", Total = 150 },
+                new Order { Id = "ord3", Status = "Completed", Total = 200 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(2);
+
+        var pendingGroup = groups.First(g => g["Status"].ToString() == "Pending");
+        pendingGroup["Status"].ShouldBe("Pending");
+        var pendingItems = ((IEnumerable<Dictionary<string, object>>)pendingGroup["Items"]).ToList();
+        pendingItems.Count.ShouldBe(2);
+        pendingItems.ShouldContain(item => item["Id"].ToString() == "ord1" && (decimal)item["Total"] == 100m);
+        pendingItems.ShouldContain(item => item["Id"].ToString() == "ord2" && (decimal)item["Total"] == 150m);
+
+        var completedGroup = groups.First(g => g["Status"].ToString() == "Completed");
+        var completedItems = ((IEnumerable<Dictionary<string, object>>)completedGroup["Items"]).ToList();
+        completedItems.Count.ShouldBe(1);
+        completedItems[0]["Id"].ShouldBe("ord3");
+        completedItems[0]["Total"].ShouldBe(200m);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_MultipleProperties()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id, Total, UserId, OrderDate} as Details}");
+        var testDate = new DateTime(2024, 1, 15);
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "ord1", Status = "Active", Total = 100, UserId = "user1", OrderDate = testDate }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        var details = ((IEnumerable<Dictionary<string, object>>)group["Details"]).ToList();
+        details.Count.ShouldBe(1);
+        details[0]["Id"].ShouldBe("ord1");
+        details[0]["Total"].ShouldBe(100m);
+        details[0]["UserId"].ShouldBe("user1");
+        details[0]["OrderDate"].ShouldBe(testDate);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_AndAggregation()
+    {
+        // Arrange: Mix aggregation and inner projection
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, :count as Count, :sum(Total) as Revenue, {Id, Total} as Items}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "ord1", Status = "Active", Total = 100 },
+                new Order { Id = "ord2", Status = "Active", Total = 200 },
+                new Order { Id = "ord3", Status = "Active", Total = 300 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        group["Status"].ShouldBe("Active");
+        group["Count"].ShouldBe(3);
+        group["Revenue"].ShouldBe(600m);
+
+        var items = ((IEnumerable<Dictionary<string, object>>)group["Items"]).ToList();
+        items.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_AliasedInnerProperties()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id as OrderId, Total as Amount} as Items}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "ord1", Status = "Active", Total = 100 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(1);
+        var group = groups[0];
+        var items = ((IEnumerable<Dictionary<string, object>>)group["Items"]).ToList();
+        items.Count.ShouldBe(1);
+        items[0].ContainsKey("OrderId").ShouldBeTrue();
+        items[0].ContainsKey("Amount").ShouldBeTrue();
+        items[0]["OrderId"].ShouldBe("ord1");
+        items[0]["Amount"].ShouldBe(100m);
+    }
+
+    [Fact]
+    public void Build_GroupBy_MultipleKeys_WithInnerProjection()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status, UserId).{Status, UserId, {Id, Total} as Items}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders =
+            [
+                new Order { Id = "ord1", Status = "Pending", UserId = "user1", Total = 100 },
+                new Order { Id = "ord2", Status = "Pending", UserId = "user1", Total = 150 },
+                new Order { Id = "ord3", Status = "Pending", UserId = "user2", Total = 200 }
+            ]
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(2);
+
+        var user1Group = groups.First(g => g["UserId"].ToString() == "user1");
+        user1Group["Status"].ShouldBe("Pending");
+        var user1Items = ((IEnumerable<Dictionary<string, object>>)user1Group["Items"]).ToList();
+        user1Items.Count.ShouldBe(2);
+
+        var user2Group = groups.First(g => g["UserId"].ToString() == "user2");
+        var user2Items = ((IEnumerable<Dictionary<string, object>>)user2Group["Items"]).ToList();
+        user2Items.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Build_GroupBy_WithInnerProjection_EmptyGroup()
+    {
+        // Arrange
+        var node = ExpressionParser.Parse("Orders:groupBy(Status).{Status, {Id} as Items}");
+        var customer = new Customer
+        {
+            Id = "cust1",
+            Name = "John",
+            Orders = [] // Empty list
+        };
+
+        // Act
+        var lambda = LinqExpressionBuilder.BuildLambda<Customer, IEnumerable<Dictionary<string, object>>>(node);
+        var compiled = lambda.Compile();
+        var groups = compiled(customer).ToList();
+
+        // Assert
+        groups.Count.ShouldBe(0);
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// Test model for GroupBy tests
+/// </summary>
+public class Customer
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public List<Order> Orders { get; set; } = [];
 }
