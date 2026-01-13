@@ -55,7 +55,7 @@ public sealed class TestController : ControllerBase
         string expression)
     {
         var result = await distributedMapper
-            .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["abc"], [expression]));
+            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1"], [expression]));
         return Ok(result);
     }
 

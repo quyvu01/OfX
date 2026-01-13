@@ -111,14 +111,14 @@ ternary operators, and more, visit **[Expression Documentation](https://ofx.worl
 
 ## Documentation
 
-Visit **[ofx.world](https://ofx.world)** for:
+Visit **[ofxmapper.net](https://ofxmapper.net)** for:
 
-- [Getting Started Guide](https://ofx.world/docs/getting-started)
-- [Configuration Options](https://ofx.world/docs/configuration)
-- [Expression Language Reference](https://ofx.world/docs/expressions)
-- [Data Provider Setup](https://ofx.world/docs/providers)
-- [Transport Configuration](https://ofx.world/docs/transports)
-- [API Reference](https://ofx.world/docs/api)
+- [Getting Started Guide](https://ofxmapper.net/docs/getting-started)
+- [Configuration Options](https://ofxmapper.net/docs/configuration)
+- [Expression Language Reference](https://ofxmapper.net/docs/expressions)
+- [Data Provider Setup](https://ofxmapper.net/docs/providers)
+- [Transport Configuration](https://ofxmapper.net/docs/transports)
+- [API Reference](https://ofxmapper.net/docs/api)
 
 ## Contributing
 
