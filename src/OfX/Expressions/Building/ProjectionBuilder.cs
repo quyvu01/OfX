@@ -147,18 +147,13 @@ public sealed class ProjectionBuilder<TModel>(
 
         // If this is the default property (expression was null, using _defaultProperty),
         // bypass ExposedName and access property directly
-        if (isDefaultProperty)
-            return BuildDefaultPropertyExpression();
+        if (isDefaultProperty) return BuildDefaultPropertyExpression();
 
         // Parse the expression using our new parser
         var node = ExpressionParser.Parse(expression);
 
         // Build context
-        var context = new ExpressionBuildContext(
-            typeof(TModel),
-            _parameter,
-            _parameter,
-            _typeAccessorProvider);
+        var context = new ExpressionBuildContext(typeof(TModel), _parameter, _parameter, _typeAccessorProvider);
 
         // Build the LINQ expression
         var builder = new LinqExpressionBuilder();
