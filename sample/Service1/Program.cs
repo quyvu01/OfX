@@ -67,17 +67,19 @@ List<string> provinceIds =
 //     if (existed is null)
 //         await memberSocialCollection.InsertOneAsync(new MemberSocial
 //         {
-//             Id = id, Name = $"Social name: {id}",
+//             Id = id, Name = $"Social name at: {id}",
 //             OtherValue = $"SomeOtherValue Of: {id}",
+//             CreatedTime = DateTime.UtcNow,
 //             Metadata =
 //             [
 //                 ..Enumerable.Range(1, id).Select(x =>
 //                     new MemerSocialMetadata
 //                     {
-//                         Key = $"Key of: {x}", Value = $"Value of: {x}", ExternalOfMetadata = new ExternalOfMetadata
-//                         {
-//                             JustForTest = $"Just for test: {x}"
-//                         }
+//                         Key = $"Key of: {x}", Value = $"Value of: {x}", Order = x + 1, ExternalOfMetadata =
+//                             new ExternalOfMetadata
+//                             {
+//                                 JustForTest = $"Just for test: {x}"
+//                             }
 //                     })
 //             ]
 //         });
