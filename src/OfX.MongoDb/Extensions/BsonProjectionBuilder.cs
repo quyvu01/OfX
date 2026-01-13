@@ -56,9 +56,23 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
     public BsonValue VisitProperty(PropertyNode node, BsonBuildContext context)
     {
-        var fieldRef = context.CurrentPath == null
-            ? $"${node.Name}"
-            : node.Name;
+        string fieldRef;
+
+        if (context.ItemVariable != null)
+        {
+            // Inside array iteration (e.g., $filter, $map) - use $$item.PropertyName
+            fieldRef = $"{context.ItemVariable}.{node.Name}";
+        }
+        else if (context.CurrentPath == null)
+        {
+            // Root level - use $PropertyName
+            fieldRef = $"${node.Name}";
+        }
+        else
+        {
+            // Nested access - just property name (will be wrapped by $getField later)
+            fieldRef = node.Name;
+        }
 
         if (node.IsNullSafe)
         {
@@ -1036,18 +1050,32 @@ public sealed class BsonProjectionBuilder : IExpressionNodeVisitor<BsonValue, Bs
 
     private static BsonValue BuildCountFunction(BsonValue source)
     {
-        // Check if source is a string field reference
-        if (source is BsonString str && str.Value.StartsWith("$"))
+        // Use $switch to handle both string and array types dynamically
+        // - String: use $strLenCP (count of Unicode code points)
+        // - Array: use $size
+        // This handles the case where we don't know the type at build time
+        return new BsonDocument("$switch", new BsonDocument
         {
-            // Could be string or array - use $cond to handle both
-            // For simplicity, assume it's array if used with :count
-            return new BsonDocument("$size", source);
-        }
-
-        // For string length, use $strLenCP
-        // For array, use $size
-        // We'll use $size as default for collections
-        return new BsonDocument("$size", new BsonDocument("$ifNull", new BsonArray { source, new BsonArray() }));
+            {
+                "branches", new BsonArray
+                {
+                    // If source is a string, use $strLenCP
+                    new BsonDocument
+                    {
+                        { "case", new BsonDocument("$eq", new BsonArray { new BsonDocument("$type", source), "string" }) },
+                        { "then", new BsonDocument("$strLenCP", source) }
+                    },
+                    // If source is an array, use $size
+                    new BsonDocument
+                    {
+                        { "case", new BsonDocument("$eq", new BsonArray { new BsonDocument("$type", source), "array" }) },
+                        { "then", new BsonDocument("$size", source) }
+                    }
+                }
+            },
+            // Default: treat as array with null safety
+            { "default", new BsonDocument("$size", new BsonDocument("$ifNull", new BsonArray { source, new BsonArray() })) }
+        });
     }
 
     private static BsonValue BuildAggregateFunction(BsonValue source, string operation, string propertyName)

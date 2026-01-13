@@ -51,11 +51,20 @@ public sealed class TestController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> FunctionTest([FromServices] IDistributedMapper distributedMapper,
+    public async Task<IActionResult> FunctionTestsForEf([FromServices] IDistributedMapper distributedMapper,
         string expression)
     {
         var result = await distributedMapper
             .FetchDataAsync<CountryOfAttribute>(new DataFetchQuery(["abc"], [expression]));
+        return Ok(result);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> FunctionTestsForMongoDb([FromServices] IDistributedMapper distributedMapper,
+        string expression)
+    {
+        var result = await distributedMapper
+            .FetchDataAsync<MemberSocialOfAttribute>(new DataFetchQuery(["1"], [expression]));
         return Ok(result);
     }
 
