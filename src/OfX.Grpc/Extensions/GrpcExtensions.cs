@@ -55,7 +55,7 @@ public static class GrpcExtensions
         options.Invoke(clientsRegister);
         if (clientsRegister.ServiceHosts is not { Count: > 0 } serviceHosts) return;
         ConcurrentDictionary<HostProbe, Type[]> hostMapAttributes = [];
-        serviceHosts.Distinct().ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
+        serviceHosts.ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
         var semaphore = new SemaphoreSlim(1, 1);
         var services = ofXRegister.ServiceCollection;
         services.TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>

@@ -180,11 +180,7 @@ public sealed record ProjectionResult<TModel>(
 /// <param name="Expression">The original expression string (null for default/Id).</param>
 /// <param name="IsId">Whether this is the Id field.</param>
 /// <param name="Error">Error message if expression building failed.</param>
-public sealed record ProjectionMetadata(
-    int Index,
-    string Expression,
-    bool IsId,
-    string Error = null)
+public sealed record ProjectionMetadata(int Index, string Expression, bool IsId, string Error = null)
 {
     public bool HasError => Error != null;
 }

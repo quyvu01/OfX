@@ -4,5 +4,4 @@ using OfX.Responses;
 
 namespace OfX.Grpc.Delegates;
 
-public delegate Func<OfXRequest, IContext, Task<ItemsResponse<OfXDataResponse>>> GetOfXResponseFunc(
-    Type attributeType);
+public delegate Func<OfXRequest, IContext, Task<ItemsResponse<OfXDataResponse>>> GetOfXResponseFunc(Type attributeType);
