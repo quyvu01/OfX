@@ -24,7 +24,7 @@ public abstract class ReceivedPipelinesOrchestrator
     /// <param name="headers">Request headers that may contain context information.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The items response containing the fetched data.</returns>
-    public abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message,
+    public abstract Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken);
 }
 
@@ -53,7 +53,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     IReceivedPipelinesOrchestrator<TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
-    public async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
+    public async Task<ItemsResponse<DataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
     {
         var executableHandlers = handlers
             .Where(x => x is not DefaultQueryOfHandler)
@@ -106,14 +106,14 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
             var customResult = customResultsMerged
                 .FirstOrDefault(a => a.Key == it.Id);
             if (customResult is null) return;
-            var customValues = customResult.Select(k => new OfXValueResponse
+            var customValues = customResult.Select(k => new ValueResponse
                 { Expression = k.Expression, Value = JsonSerializer.Serialize(k.Value) });
             it.OfXValues = [..it.OfXValues, ..customValues];
         });
         return result;
     }
 
-    public override Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message,
+    public override Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
         var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);

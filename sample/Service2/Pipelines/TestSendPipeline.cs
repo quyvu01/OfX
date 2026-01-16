@@ -7,8 +7,8 @@ namespace Service2.Pipelines;
 public sealed class TestSendPipeline<TAttribute> : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next)
+    public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
+        Func<Task<ItemsResponse<DataResponse>>> next)
     {
         var result = await next.Invoke();
         return result;

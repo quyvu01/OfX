@@ -28,7 +28,7 @@ internal class KafkaClient : IRequestClient, IDisposable
     private bool _initialized;
     private Task _consumerTask;
 
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<KafkaMessage>>
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<Result>>
         _pendingRequests = new();
 
     public KafkaClient(ILogger<KafkaClient> logger = null)
@@ -58,17 +58,18 @@ internal class KafkaClient : IRequestClient, IDisposable
             .SetKeyDeserializer(Deserializers.Utf8)
             .SetValueDeserializer(Deserializers.Utf8)
             .Build();
-        _replyTo = $"{OfXKafkaConstants.ResponseTopicPrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}-{Guid.NewGuid():N}";
+        _replyTo =
+            $"{OfXKafkaConstants.ResponseTopicPrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}-{Guid.NewGuid():N}";
     }
 
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+    public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         // Lazy initialization
         await EnsureInitializedAsync(requestContext.CancellationToken);
 
         var correlationId = Guid.NewGuid().ToString();
-        var tcs = new TaskCompletionSource<KafkaMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tcs = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingRequests.TryAdd(correlationId, tcs);
 
         try
@@ -89,10 +90,19 @@ internal class KafkaClient : IRequestClient, IDisposable
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
             cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
 
-            var kafkaMessage = await tcs.Task.WaitAsync(cts.Token);
-            return kafkaMessage.IsSucceed
-                ? kafkaMessage.Response
-                : throw new OfXException.ReceivedException(kafkaMessage.ErrorDetail);
+            var response = await tcs.Task.WaitAsync(cts.Token);
+
+            if (response is null)
+                throw new OfXException.ReceivedException("Received null response from server");
+
+            if (!response.IsSuccess)
+            {
+                var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
+                                   ?? "Unknown error from server";
+                throw new OfXException.ReceivedException(errorMessage);
+            }
+
+            return response.Data;
         }
         finally
         {
@@ -131,7 +141,7 @@ internal class KafkaClient : IRequestClient, IDisposable
 
                 if (!_pendingRequests.TryRemove(consumeResult.Message.Key, out var tcs)) continue;
 
-                var response = JsonSerializer.Deserialize<KafkaMessage>(consumeResult.Message.Value);
+                var response = JsonSerializer.Deserialize<Result>(consumeResult.Message.Value);
                 tcs.TrySetResult(response);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -173,6 +183,7 @@ internal class KafkaClient : IRequestClient, IDisposable
         {
             kvp.Value.TrySetCanceled();
         }
+
         _pendingRequests.Clear();
     }
 

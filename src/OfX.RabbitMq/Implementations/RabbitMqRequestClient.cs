@@ -27,7 +27,7 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
     private bool _initialized;
     private const string RoutingKey = OfXRabbitMqConstants.RoutingKey;
 
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+    public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         // Lazy initialization - thread-safe
@@ -64,11 +64,20 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
             await using var _ = cts.Token.Register(() => tcs.TrySetCanceled());
 
             var eventArgs = await tcs.Task;
-            if (eventArgs.BasicProperties.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var error) ?? false)
-                throw new OfXException.ReceivedException(error?.ToString());
-
             var resultAsString = Encoding.UTF8.GetString(eventArgs.Body.ToArray());
-            return JsonSerializer.Deserialize<ItemsResponse<OfXDataResponse>>(resultAsString)!;
+            var response = JsonSerializer.Deserialize<Result>(resultAsString);
+
+            if (response is null)
+                throw new OfXException.ReceivedException("Received null response from server");
+
+            if (!response.IsSuccess)
+            {
+                var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
+                                   ?? "Unknown error from server";
+                throw new OfXException.ReceivedException(errorMessage);
+            }
+
+            return response.Data;
         }
         finally
         {

@@ -24,8 +24,8 @@ internal sealed class SendPipelineRoutingBehavior<TAttribute>(
 {
     private static Type _receivedPipelinesOrchestratorType;
 
-    public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next)
+    public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
+        Func<Task<ItemsResponse<DataResponse>>> next)
     {
         // Check if we have the inner handler for `TAttribute` or not. If have, we will call the ReceivedPipelinesOrchestrator<,> instead of sending via the message!
         var existedHandler = OfXStatics.AttributeMapHandlers;

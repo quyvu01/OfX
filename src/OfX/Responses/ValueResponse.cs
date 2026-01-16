@@ -3,7 +3,7 @@ namespace OfX.Responses;
 /// <summary>
 /// Represents a single property value in an OfX query response.
 /// </summary>
-public sealed class OfXValueResponse
+public sealed class ValueResponse
 {
     /// <summary>
     /// Gets or sets the expression that was used to retrieve this value.

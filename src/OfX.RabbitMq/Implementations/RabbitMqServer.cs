@@ -116,7 +116,8 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
             var headers = props.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var response = await server.ExecuteAsync(message, headers, cancellationToken);
+            var data = await server.ExecuteAsync(message, headers, cancellationToken);
+            var response = Result.Success(data);
             var responseAsString = JsonSerializer.Serialize(response);
             var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
             await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
@@ -126,12 +127,14 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger?.LogWarning("Request timeout for <{Attribute}>", props.Type);
-            await SendErrorResponseAsync(ch, props.ReplyTo, replyProps, "Request timeout", cancellationToken);
+            var response = Result.Failed(new TimeoutException($"Request timeout for {props.Type}"));
+            await SendResponseAsync(ch, props.ReplyTo, replyProps, response, cancellationToken);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error while responding <{Attribute}>", props.Type);
-            await SendErrorResponseAsync(ch, props.ReplyTo, replyProps, e.Message, stoppingToken);
+            var response = Result.Failed(e);
+            await SendResponseAsync(ch, props.ReplyTo, replyProps, response, stoppingToken);
         }
         finally
         {
@@ -147,15 +150,13 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         }
     }
 
-    private static async Task SendErrorResponseAsync(IChannel ch, string replyTo, BasicProperties replyProps,
-        string errorMessage, CancellationToken cancellationToken)
+    private static async Task SendResponseAsync(IChannel ch, string replyTo, BasicProperties replyProps,
+        Result response, CancellationToken cancellationToken)
     {
         try
         {
-            var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
+            var responseAsString = JsonSerializer.Serialize(response);
             var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
-            replyProps.Headers ??= new Dictionary<string, object>();
-            replyProps.Headers[OfXConstants.ErrorDetail] = errorMessage;
             await ch.BasicPublishAsync(exchange: string.Empty, routingKey: replyTo!,
                 mandatory: true, basicProperties: replyProps, body: responseBytes,
                 cancellationToken: cancellationToken);

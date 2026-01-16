@@ -8,6 +8,7 @@ using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Constants;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Responses;
 
@@ -65,7 +66,7 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
         }
     }
 
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
+    public async Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {
         // Lazy initialization
         await EnsureInitializedAsync(requestContext.CancellationToken);
@@ -94,7 +95,19 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
             try
             {
                 var result = await tcs.Task.WaitAsync(cts.Token);
-                return result.ToObjectFromJson<ItemsResponse<OfXDataResponse>>();
+                var response = result.ToObjectFromJson<Result>();
+
+                if (response is null)
+                    throw new OfXException.ReceivedException("Received null response from server");
+
+                if (!response.IsSuccess)
+                {
+                    var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
+                                       ?? "Unknown error from server";
+                    throw new OfXException.ReceivedException(errorMessage);
+                }
+
+                return response.Data;
             }
             catch (OperationCanceledException) when (cts.IsCancellationRequested &&
                                                      !requestContext.CancellationToken.IsCancellationRequested)

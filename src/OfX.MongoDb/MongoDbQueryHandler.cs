@@ -51,7 +51,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     private static readonly Lazy<FilterCache> FilterCacheInstance = new(() => new FilterCache());
     private static readonly ConcurrentDictionary<int, BsonDocument> ProjectionCache = new();
 
-    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
+    public async Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
         var expressions = JsonSerializer.Deserialize<List<string>>(context.Query.Expression) ?? [];
 
@@ -70,7 +70,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
         // Transform to OfXDataResponse
         var data = TransformResults(rawResults, expressions, expressionMap);
 
-        return new ItemsResponse<OfXDataResponse>(data);
+        return new ItemsResponse<DataResponse>(data);
     }
 
     /// <summary>
@@ -124,19 +124,19 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     /// <summary>
     /// Transforms MongoDB BsonDocument results to OfXDataResponse array.
     /// </summary>
-    private static OfXDataResponse[] TransformResults(
+    private static DataResponse[] TransformResults(
         List<BsonDocument> rawResults,
         List<string> originalExpressions,
         Dictionary<string, string> expressionMap)
     {
-        var result = new OfXDataResponse[rawResults.Count];
+        var result = new DataResponse[rawResults.Count];
 
         for (var i = 0; i < rawResults.Count; i++)
         {
             var doc = rawResults[i];
             var id = doc["_id"].ToString();
 
-            var values = new OfXValueResponse[originalExpressions.Count];
+            var values = new ValueResponse[originalExpressions.Count];
 
             for (var j = 0; j < originalExpressions.Count; j++)
             {
@@ -151,14 +151,14 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
                     serializedValue = BsonValueToJson(bsonValue);
                 }
 
-                values[j] = new OfXValueResponse
+                values[j] = new ValueResponse
                 {
                     Expression = originalExpr,
                     Value = serializedValue
                 };
             }
 
-            result[i] = new OfXDataResponse
+            result[i] = new DataResponse
             {
                 Id = id,
                 OfXValues = values

@@ -40,9 +40,9 @@ builder.Services.AddOfX(cfg =>
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         // cfg.AddGrpcClients(c =>
         //     c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
-        // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
+        cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddNats(c => c.Url("nats://localhost:4222"));
-        cfg.AddKafka(c => c.Host("localhost:9092"));
+        // cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

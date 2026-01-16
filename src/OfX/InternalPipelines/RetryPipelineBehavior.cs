@@ -21,8 +21,8 @@ namespace OfX.InternalPipelines;
 internal sealed class RetryPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next)
+    public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
+        Func<Task<ItemsResponse<DataResponse>>> next)
     {
         var retryPolicy = OfXStatics.RetryPolicy;
         if (retryPolicy is null) return await next.Invoke();

@@ -35,19 +35,19 @@ public class OfXRequestResponseContractTests
     public void OfXDataResponse_Should_Serialize_And_Deserialize_Correctly()
     {
         // Arrange
-        var response = new OfXDataResponse
+        var response = new DataResponse
         {
             Id = "user-1",
             OfXValues =
             [
-                new OfXValueResponse { Expression = "Name", Value = "\"John Doe\"" },
-                new OfXValueResponse { Expression = "Email", Value = "\"john@example.com\"" }
+                new ValueResponse { Expression = "Name", Value = "\"John Doe\"" },
+                new ValueResponse { Expression = "Email", Value = "\"john@example.com\"" }
             ]
         };
 
         // Act
         var json = JsonSerializer.Serialize(response);
-        var deserialized = JsonSerializer.Deserialize<OfXDataResponse>(json);
+        var deserialized = JsonSerializer.Deserialize<DataResponse>(json);
 
         // Assert
         deserialized.ShouldNotBeNull();
@@ -61,12 +61,12 @@ public class OfXRequestResponseContractTests
     public void ItemsResponse_Should_Serialize_Correctly()
     {
         // Arrange
-        var items = new List<OfXDataResponse>
+        var items = new List<DataResponse>
         {
             new() { Id = "1", OfXValues = [] },
             new() { Id = "2", OfXValues = [] }
         };
-        var response = new ItemsResponse<OfXDataResponse>([..items]);
+        var response = new ItemsResponse<DataResponse>([..items]);
 
         // Act
         var json = JsonSerializer.Serialize(response);
@@ -105,18 +105,18 @@ public class OfXRequestResponseContractTests
     public void OfXDataResponse_Should_Handle_Null_Values()
     {
         // Arrange
-        var response = new OfXDataResponse
+        var response = new DataResponse
         {
             Id = "test",
             OfXValues =
             [
-                new OfXValueResponse { Expression = "NullField", Value = "null" }
+                new ValueResponse { Expression = "NullField", Value = "null" }
             ]
         };
 
         // Act
         var json = JsonSerializer.Serialize(response);
-        var deserialized = JsonSerializer.Deserialize<OfXDataResponse>(json);
+        var deserialized = JsonSerializer.Deserialize<DataResponse>(json);
 
         // Assert
         deserialized.ShouldNotBeNull();
@@ -134,7 +134,7 @@ public class OfXRequestResponseContractTests
             Array = new[] { 1, 2, 3 }
         });
 
-        var response = new OfXValueResponse
+        var response = new ValueResponse
         {
             Expression = "ComplexProperty",
             Value = complexValue
@@ -142,7 +142,7 @@ public class OfXRequestResponseContractTests
 
         // Act
         var json = JsonSerializer.Serialize(response);
-        var deserialized = JsonSerializer.Deserialize<OfXValueResponse>(json);
+        var deserialized = JsonSerializer.Deserialize<ValueResponse>(json);
 
         // Assert
         deserialized.ShouldNotBeNull();
@@ -177,12 +177,12 @@ public class OfXRequestResponseContractTests
     public void OfXDataResponse_Json_Format_Should_Remain_Stable()
     {
         // Arrange
-        var response = new OfXDataResponse
+        var response = new DataResponse
         {
             Id = "test-id",
             OfXValues =
             [
-                new OfXValueResponse { Expression = "Name", Value = "\"Value\"" }
+                new ValueResponse { Expression = "Name", Value = "\"Value\"" }
             ]
         };
 

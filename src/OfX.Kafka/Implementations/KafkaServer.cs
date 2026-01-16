@@ -14,6 +14,7 @@ using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
 using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
+using OfX.Responses;
 using OfX.Statics;
 
 namespace OfX.Kafka.Implementations;
@@ -29,7 +30,9 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     private readonly ILogger<KafkaServer<TModel, TAttribute>> _logger;
 
     // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
-    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing, OfXStatics.MaxConcurrentProcessing);
+    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
+        OfXStatics.MaxConcurrentProcessing);
+
     private bool _topicsCreated;
 
     public KafkaServer(IServiceProvider serviceProvider)
@@ -70,7 +73,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         // Lazy topic creation
         if (!_topicsCreated)
         {
-            await CreateTopicsAsync(cancellationToken);
+            await CreateTopicsAsync();
             _topicsCreated = true;
         }
 
@@ -141,14 +144,10 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
                 .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes())) ?? [];
 
             var requestContext = new RequestContextImpl<TAttribute>(query, headers, cancellationToken);
-            var response = await pipeline.ExecuteAsync(requestContext);
+            var data = await pipeline.ExecuteAsync(requestContext);
 
-            var kafkaMessage = new KafkaMessage { Response = response, IsSucceed = true };
-            await _producer.ProduceAsync(messageUnWrapped.RelyTo, new Message<string, string>
-            {
-                Key = consumeResult.Message.Key,
-                Value = JsonSerializer.Serialize(kafkaMessage)
-            }, cancellationToken);
+            var response = Result.Success(data);
+            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, cancellationToken);
 
             // Commit offset after successful processing
             _consumer.Commit(consumeResult);
@@ -156,25 +155,27 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
-            await SendErrorResponseAsync(consumeResult, messageUnWrapped.RelyTo, "Request timeout", stoppingToken);
+            var response = Result
+                .Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
+            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, stoppingToken);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
-            await SendErrorResponseAsync(consumeResult, messageUnWrapped.RelyTo, e.Message, stoppingToken);
+            var response = Result.Failed(e);
+            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, stoppingToken);
         }
     }
 
-    private async Task SendErrorResponseAsync(ConsumeResult<string, string> consumeResult, string replyTo,
-        string errorMessage, CancellationToken cancellationToken)
+    private async Task SendResponseAsync(ConsumeResult<string, string> consumeResult, string replyTo,
+        Result response, CancellationToken cancellationToken)
     {
         try
         {
-            var kafkaMessage = new KafkaMessage { ErrorDetail = errorMessage, IsSucceed = false };
             await _producer.ProduceAsync(replyTo, new Message<string, string>
             {
                 Key = consumeResult.Message.Key,
-                Value = JsonSerializer.Serialize(kafkaMessage)
+                Value = JsonSerializer.Serialize(response)
             }, cancellationToken);
 
             // Still commit offset even on error to avoid reprocessing
@@ -182,7 +183,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to send error response for <{Attribute}>", typeof(TAttribute).Name);
+            _logger?.LogError(ex, "Failed to send response for <{Attribute}>", typeof(TAttribute).Name);
         }
     }
 
@@ -193,7 +194,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         _semaphore.Dispose();
     }
 
-    private async Task CreateTopicsAsync(CancellationToken cancellationToken)
+    private async Task CreateTopicsAsync()
     {
         const int numPartitions = 1;
         const short replicationFactor = 1;

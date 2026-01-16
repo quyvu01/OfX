@@ -44,8 +44,8 @@ public interface ISendPipelineBehavior<TAttribute> : IOfXBase<TAttribute>
     /// A task resolving to an <see cref="ItemsResponse{OfXDataResponse}"/> containing 
     /// the result of the pipeline execution and final response from the server.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> HandleAsync(
+    Task<ItemsResponse<DataResponse>> HandleAsync(
         RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next
+        Func<Task<ItemsResponse<DataResponse>>> next
     );
 }

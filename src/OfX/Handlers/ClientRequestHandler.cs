@@ -16,7 +16,7 @@ internal sealed class ClientRequestHandler<TAttribute>(IServiceProvider serviceP
     : IClientRequestHandler<TAttribute> where TAttribute : OfXAttribute
 {
     /// <inheritdoc />
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
+    public async Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {
         var client = serviceProvider.GetService<IRequestClient>();
         if (client is null) throw new OfXException.NoHandlerForAttribute(typeof(TAttribute));

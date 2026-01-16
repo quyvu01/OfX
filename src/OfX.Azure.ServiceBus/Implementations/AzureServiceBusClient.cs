@@ -8,7 +8,7 @@ namespace OfX.Azure.ServiceBus.Implementations;
 
 internal class AzureServiceBusClient(IServiceProvider serviceProvider) : IRequestClient
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+    public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var client = serviceProvider.GetRequiredService<OpenAzureServiceBusClient<TAttribute>>();

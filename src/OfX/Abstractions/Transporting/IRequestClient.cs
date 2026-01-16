@@ -40,6 +40,6 @@ public interface IRequestClient
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing
     /// the data returned from the server.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(RequestContext<TAttribute> requestContext)
+    Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(RequestContext<TAttribute> requestContext)
         where TAttribute : OfXAttribute;
 }

@@ -18,7 +18,7 @@ namespace OfX.Grpc.Implementations;
 /// </remarks>
 public sealed class GrpcRequestClient(GetOfXResponseFunc ofXResponseFunc) : IRequestClient
 {
-    public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
+    public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var func = ofXResponseFunc.Invoke(typeof(TAttribute));

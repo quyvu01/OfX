@@ -18,8 +18,8 @@ builder.Services.AddOfX(cfg =>
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
         // cfg.AddNats(config => config.Url("nats://localhost:4222"));
-        // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
-        cfg.AddKafka(c => c.Host("localhost:9092"));
+        cfg.AddRabbitMq(c => c.Host("localhost", "/"));
+        // cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 

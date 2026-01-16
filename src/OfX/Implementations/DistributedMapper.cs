@@ -61,7 +61,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
                     .Where(x => x.PropertyInformation.Order == mappableTypes.Key);
                 var tasks = mappableTypes.Select(async x =>
                 {
-                    var emptyCollection = new ItemsResponse<OfXDataResponse>([]);
+                    var emptyCollection = new ItemsResponse<DataResponse>([]);
                     var emptyResponse = (x.OfXAttributeType, Response: emptyCollection);
                     var accessors = x.Accessors.ToList();
                     if (accessors is not { Count: > 0 }) return emptyResponse;
@@ -113,10 +113,10 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
         };
     }
 
-    public Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
+    public Task<ItemsResponse<DataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
         IContext context = null) where TAttribute : OfXAttribute => FetchDataAsync(typeof(TAttribute), query, context);
 
-    public async Task<ItemsResponse<OfXDataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
+    public async Task<ItemsResponse<DataResponse>> FetchDataAsync(Type runtimeType, DataFetchQuery query,
         IContext context = null)
     {
         var sendPipelineType = SendOrchestratorTypes

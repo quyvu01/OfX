@@ -90,58 +90,57 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var requestOf = new RequestOf<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expression);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
-            var response = await pipeline.ExecuteAsync(requestContext);
-
-            var responseMessage = new ServiceBusMessage(JsonSerializer.Serialize(response))
-            {
-                CorrelationId = request.CorrelationId,
-                SessionId = request.SessionId
-            };
+            var data = await pipeline.ExecuteAsync(requestContext);
+            var response = Result.Success(data);
 
             // Get or create sender (cached)
             sender = _senders.GetOrAdd(request.ReplyTo,
                 replyTo => clientWrapper.ServiceBusClient.CreateSender(replyTo));
 
-            await sender.SendMessageAsync(responseMessage, cancellationToken);
+            await SendResponseAsync(request, sender, response, cancellationToken);
             await args.CompleteMessageAsync(request, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
-            await TrySendErrorResponseAsync(request, sender, "Request timeout", stoppingToken);
+            var response = Result.Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
+            await TrySendResponseAsync(request, sender, response, stoppingToken);
             await TryCompleteMessageAsync(args, request, stoppingToken);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
-            await TrySendErrorResponseAsync(request, sender, e.Message, stoppingToken);
+            var response = Result.Failed(e);
+            await TrySendResponseAsync(request, sender, response, stoppingToken);
             await TryCompleteMessageAsync(args, request, stoppingToken);
         }
     }
 
-    private async Task TrySendErrorResponseAsync(ServiceBusReceivedMessage request, ServiceBusSender sender,
-        string errorMessage, CancellationToken cancellationToken)
+    private async Task SendResponseAsync(ServiceBusReceivedMessage request, ServiceBusSender sender,
+        Result response, CancellationToken cancellationToken)
+    {
+        var responseMessage = new ServiceBusMessage(JsonSerializer.Serialize(response))
+        {
+            CorrelationId = request.CorrelationId,
+            SessionId = request.SessionId
+        };
+        await sender.SendMessageAsync(responseMessage, cancellationToken);
+    }
+
+    private async Task TrySendResponseAsync(ServiceBusReceivedMessage request, ServiceBusSender sender,
+        Result response, CancellationToken cancellationToken)
     {
         try
         {
             if (request.ReplyTo == null) return;
-
             sender ??= _senders.GetOrAdd(request.ReplyTo,
                 replyTo => clientWrapper.ServiceBusClient.CreateSender(replyTo));
 
-            var errorResponse = new ItemsResponse<OfXDataResponse>([]);
-            var responseMessage = new ServiceBusMessage(JsonSerializer.Serialize(errorResponse))
-            {
-                CorrelationId = request.CorrelationId,
-                SessionId = request.SessionId,
-                ApplicationProperties = { { OfXConstants.ErrorDetail, errorMessage } }
-            };
-
-            await sender.SendMessageAsync(responseMessage, cancellationToken);
+            await SendResponseAsync(request, sender, response, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger?.LogError(ex, "Failed to send error response for <{Attribute}>", typeof(TAttribute).Name);
+            _logger?.LogError(ex, "Failed to send response for <{Attribute}>", typeof(TAttribute).Name);
         }
     }
 
@@ -185,6 +184,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
                 // Ignore
             }
         }
+
         _senders.Clear();
     }
 }

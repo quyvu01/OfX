@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Primitives;
 using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -26,7 +25,8 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         .GetRequiredService<NatsClientWrapper>();
 
     // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
-    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing, OfXStatics.MaxConcurrentProcessing);
+    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
+        OfXStatics.MaxConcurrentProcessing);
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -70,31 +70,31 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
-            var response = await pipeline.ExecuteAsync(requestContext);
+            var data = await pipeline.ExecuteAsync(requestContext);
+            var response = Result.Success(data);
             await message.ReplyAsync(response, cancellationToken: cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
-            var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, "Request timeout" } };
-            await TrySendErrorResponseAsync(message, errors);
+            var response = Result.Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
+            await TrySendErrorResponseAsync(message, response);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
-            var errors = new Dictionary<string, StringValues> { { OfXConstants.ErrorDetail, e.Message } };
-            await TrySendErrorResponseAsync(message, errors);
+            var response = Result.Failed(e);
+            await TrySendErrorResponseAsync(message, response);
         }
     }
 
-    private async Task TrySendErrorResponseAsync(NatsMsg<OfXRequest> message, Dictionary<string, StringValues> errors)
+    private async Task TrySendErrorResponseAsync(NatsMsg<OfXRequest> message, Result response)
     {
         try
         {
             if (message.ReplyTo is not null)
             {
-                await _natsClientWrapped.NatsClient
-                    .PublishAsync(message.ReplyTo, new ItemsResponse<OfXDataResponse>([]), new NatsHeaders(errors));
+                await _natsClientWrapped.NatsClient.PublishAsync(message.ReplyTo, response);
             }
         }
         catch (Exception ex)
