@@ -102,6 +102,34 @@ public class OfXRegister(IServiceCollection serviceCollection)
     }
 
     /// <summary>
+    /// Sets the maximum number of concurrent message processing operations for transport servers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This setting controls backpressure in message-based transports (NATS, RabbitMQ, Kafka).
+    /// When the limit is reached, new incoming messages will wait until a processing slot becomes available.
+    /// </para>
+    /// <para>
+    /// Higher values allow more throughput but consume more memory and CPU resources.
+    /// Lower values provide better resource control but may reduce throughput under high load.
+    /// </para>
+    /// </remarks>
+    /// <param name="maxConcurrentProcessing">The maximum number of concurrent operations. Must be at least 1. Default is 128.</param>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.SetMaxConcurrentProcessing(256); // Allow up to 256 concurrent message processing
+    /// });
+    /// </code>
+    /// </example>
+    public void SetMaxConcurrentProcessing(int maxConcurrentProcessing)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxConcurrentProcessing, 1);
+        OfXStatics.MaxConcurrentProcessing = maxConcurrentProcessing;
+    }
+
+    /// <summary>
     /// Sets the default timeout for OfX requests.
     /// </summary>
     /// <param name="timeout">The timeout duration. Must be non-negative.</param>

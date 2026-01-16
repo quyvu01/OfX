@@ -4,7 +4,7 @@ namespace OfX.Azure.ServiceBus.Abstractions;
 
 internal interface IAzureServiceBusServer
 {
-    Task StartAsync();
+    Task StartAsync(CancellationToken cancellationToken = default);
 }
 
 internal interface IAzureServiceBusServer<TModel, TAttribute> : IAzureServiceBusServer

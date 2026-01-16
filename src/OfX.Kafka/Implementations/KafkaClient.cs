@@ -2,10 +2,12 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
@@ -19,20 +21,27 @@ internal class KafkaClient : IRequestClient, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
-    private readonly string _relyTo;
+    private readonly ILogger<KafkaClient> _logger;
+    private readonly string _replyTo;
+    private readonly CancellationTokenSource _consumerCts = new();
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _initialized;
+    private Task _consumerTask;
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<KafkaMessage>>
-        _pendingRequests = [];
+        _pendingRequests = new();
 
-    public KafkaClient()
+    public KafkaClient(ILogger<KafkaClient> logger = null)
     {
+        _logger = logger;
         var kafkaBootstrapServers = KafkaStatics.KafkaHost;
         var producerConfig = new ProducerConfig { BootstrapServers = kafkaBootstrapServers };
         var consumerConfig = new ConsumerConfig
         {
-            GroupId = OfXKafkaConstants.ClientGroupId,
+            GroupId = $"{OfXKafkaConstants.ClientGroupId}-{Guid.NewGuid():N}",
             BootstrapServers = kafkaBootstrapServers,
-            AutoOffsetReset = AutoOffsetReset.Earliest
+            AutoOffsetReset = AutoOffsetReset.Latest,
+            EnableAutoCommit = true
         };
 
         if (KafkaStatics.KafkaSslOptions != null)
@@ -49,38 +58,17 @@ internal class KafkaClient : IRequestClient, IDisposable
             .SetKeyDeserializer(Deserializers.Utf8)
             .SetValueDeserializer(Deserializers.Utf8)
             .Build();
-        _relyTo = $"{OfXKafkaConstants.ResponseTopicPrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}";
-        CreateTopicsAsync().Wait();
-        Task.Factory.StartNew(StartConsume);
+        _replyTo = $"{OfXKafkaConstants.ResponseTopicPrefix}-{AppDomain.CurrentDomain.FriendlyName.ToLower()}-{Guid.NewGuid():N}";
     }
-
-
-    private void StartConsume()
-    {
-        _consumer.Subscribe(_relyTo);
-        while (true)
-        {
-            try
-            {
-                var consumeResult = _consumer.Consume();
-                if (!_pendingRequests.TryGetValue(consumeResult.Message.Key, out var tcs)) continue;
-                var response = JsonSerializer
-                    .Deserialize<KafkaMessage>(consumeResult.Message.Value);
-                tcs.TrySetResult(response);
-            }
-            catch (Exception)
-            {
-                // ignore
-            }
-        }
-    }
-
 
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
+        // Lazy initialization
+        await EnsureInitializedAsync(requestContext.CancellationToken);
+
         var correlationId = Guid.NewGuid().ToString();
-        var tcs = new TaskCompletionSource<KafkaMessage>();
+        var tcs = new TaskCompletionSource<KafkaMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingRequests.TryAdd(correlationId, tcs);
 
         try
@@ -89,16 +77,19 @@ internal class KafkaClient : IRequestClient, IDisposable
             var message = new KafkaMessageWrapped<OfXRequest>
             {
                 Message = new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
-                RelyTo = _relyTo
+                RelyTo = _replyTo
             };
             await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>
             {
                 Key = correlationId,
                 Value = JsonSerializer.Serialize(message)
-            });
+            }, requestContext.CancellationToken);
 
             // Wait for response with timeout
-            var kafkaMessage = await tcs.Task.WaitAsync(requestContext.CancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
+            cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+
+            var kafkaMessage = await tcs.Task.WaitAsync(cts.Token);
             return kafkaMessage.IsSucceed
                 ? kafkaMessage.Response
                 : throw new OfXException.ReceivedException(kafkaMessage.ErrorDetail);
@@ -109,13 +100,83 @@ internal class KafkaClient : IRequestClient, IDisposable
         }
     }
 
-    public void Dispose()
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {
-        _producer?.Dispose();
-        _consumer?.Dispose();
+        if (_initialized) return;
+
+        await _initLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_initialized) return;
+            await CreateTopicsAsync(cancellationToken);
+            _consumerTask = Task.Run(() => StartConsume(_consumerCts.Token), _consumerCts.Token);
+            _initialized = true;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
-    public async Task CreateTopicsAsync()
+    private void StartConsume(CancellationToken cancellationToken)
+    {
+        _consumer.Subscribe(_replyTo);
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var consumeResult = _consumer.Consume(cancellationToken);
+                if (consumeResult?.Message == null) continue;
+
+                if (!_pendingRequests.TryRemove(consumeResult.Message.Key, out var tcs)) continue;
+
+                var response = JsonSerializer.Deserialize<KafkaMessage>(consumeResult.Message.Value);
+                tcs.TrySetResult(response);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Normal shutdown
+                break;
+            }
+            catch (ConsumeException ex)
+            {
+                _logger?.LogError(ex, "Kafka consume error");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error processing Kafka response");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _consumerCts.Cancel();
+
+        try
+        {
+            _consumerTask?.Wait(TimeSpan.FromSeconds(5));
+        }
+        catch
+        {
+            // Ignore
+        }
+
+        _producer?.Dispose();
+        _consumer?.Dispose();
+        _consumerCts.Dispose();
+        _initLock.Dispose();
+
+        // Cancel all pending requests
+        foreach (var kvp in _pendingRequests)
+        {
+            kvp.Value.TrySetCanceled();
+        }
+        _pendingRequests.Clear();
+    }
+
+    private async Task CreateTopicsAsync(CancellationToken cancellationToken)
     {
         const int numPartitions = 1;
         const short replicationFactor = 1;
@@ -128,17 +189,20 @@ internal class KafkaClient : IRequestClient, IDisposable
         {
             var topicSpecification = new TopicSpecification
             {
-                Name = _relyTo,
+                Name = _replyTo,
                 NumPartitions = numPartitions,
                 ReplicationFactor = replicationFactor
             };
 
-            // Create the topic
             await adminClient.CreateTopicsAsync([topicSpecification]);
         }
-        catch (CreateTopicsException)
+        catch (CreateTopicsException ex) when (ex.Results.Any(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
         {
-            // ignore
+            // Topic already exists - this is fine
+        }
+        catch (CreateTopicsException ex)
+        {
+            _logger?.LogWarning(ex, "Failed to create Kafka topic {Topic}", _replyTo);
         }
     }
 }

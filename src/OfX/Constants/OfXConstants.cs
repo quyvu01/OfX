@@ -14,5 +14,5 @@ public static class OfXConstants
     /// <summary>
     /// Gets the header key name used for error details in responses.
     /// </summary>
-    public static string ErrorDetail => nameof(ErrorDetail);
+    public static string ErrorDetail => "OfX-Error-Header";
 }

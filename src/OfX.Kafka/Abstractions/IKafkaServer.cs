@@ -4,7 +4,7 @@ namespace OfX.Kafka.Abstractions;
 
 internal interface IKafkaServer
 {
-    Task StartAsync();
+    Task StartAsync(CancellationToken cancellationToken = default);
 }
 
 internal interface IKafkaServer<TModel, TAttribute> : IKafkaServer

@@ -19,46 +19,22 @@ namespace OfX.RabbitMq.Implementations;
 internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
 {
     private readonly ConcurrentDictionary<string, TaskCompletionSource<BasicDeliverEventArgs>> _eventArgsMapper = new();
+    private readonly SemaphoreSlim _initLock = new(1, 1);
     private IConnection _connection;
     private IChannel _channel;
     private AsyncEventingBasicConsumer _consumer;
     private string _replyQueueName;
+    private bool _initialized;
     private const string RoutingKey = OfXRabbitMqConstants.RoutingKey;
-
-    // We have to wait this one and ensure that everything is initialized
-    public RabbitMqRequestClient() => StartAsync().Wait();
-
-    private async Task StartAsync()
-    {
-        var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
-        var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
-        var connectionFactory = new ConnectionFactory
-        {
-            HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
-            UserName = userName, Password = password
-        };
-
-        _connection = await connectionFactory.CreateConnectionAsync();
-        _channel = await _connection.CreateChannelAsync();
-        var queueDeclareResult = await _channel.QueueDeclareAsync();
-        _replyQueueName = queueDeclareResult.QueueName;
-        _consumer = new AsyncEventingBasicConsumer(_channel);
-        _consumer.ReceivedAsync += (_, ea) =>
-        {
-            var correlationId = ea.BasicProperties.CorrelationId;
-            if (string.IsNullOrEmpty(correlationId) || !_eventArgsMapper.TryRemove(correlationId, out var tcs))
-                return Task.CompletedTask;
-            tcs.TrySetResult(ea);
-            return Task.CompletedTask;
-        };
-        await _channel.BasicConsumeAsync(_replyQueueName, true, _consumer);
-    }
 
     public async Task<ItemsResponse<OfXDataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
-        if (_channel is null) throw new InvalidOperationException();
+        // Lazy initialization - thread-safe
+        await EnsureInitializedAsync(requestContext.CancellationToken);
+
+        if (_channel is null) throw new InvalidOperationException("RabbitMQ channel is not initialized");
+
         var exchangeName = typeof(TAttribute).GetExchangeName();
         var cancellationToken = requestContext.CancellationToken;
         var correlationId = Guid.NewGuid().ToString();
@@ -73,28 +49,88 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
 
         var tcs = new TaskCompletionSource<BasicDeliverEventArgs>(TaskCreationOptions.RunContinuationsAsynchronously);
         _eventArgsMapper.TryAdd(correlationId, tcs);
-        var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
-        var messageBytes = Encoding.UTF8.GetBytes(messageSerialize);
-        await _channel.BasicPublishAsync(exchangeName, routingKey: RoutingKey,
-            mandatory: true, basicProperties: props, body: messageBytes, cancellationToken: cancellationToken);
 
-        await using var ctr = cancellationToken.Register(() =>
+        try
         {
+            var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
+            var messageBytes = Encoding.UTF8.GetBytes(messageSerialize);
+            await _channel.BasicPublishAsync(exchangeName, routingKey: RoutingKey,
+                mandatory: true, basicProperties: props, body: messageBytes, cancellationToken: cancellationToken);
+
+            // Wait with timeout
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+
+            await using var _ = cts.Token.Register(() => tcs.TrySetCanceled());
+
+            var eventArgs = await tcs.Task;
+            if (eventArgs.BasicProperties.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var error) ?? false)
+                throw new OfXException.ReceivedException(error?.ToString());
+
+            var resultAsString = Encoding.UTF8.GetString(eventArgs.Body.ToArray());
+            return JsonSerializer.Deserialize<ItemsResponse<OfXDataResponse>>(resultAsString)!;
+        }
+        finally
+        {
+            // Cleanup on any exit path
             _eventArgsMapper.TryRemove(correlationId, out _);
-            tcs.SetCanceled(cancellationToken);
-        });
+        }
+    }
 
-        var eventArgs = await tcs.Task;
-        if (eventArgs.BasicProperties.Headers?.TryGetValue(OfXConstants.ErrorDetail, out var error) ?? false)
-            throw new OfXException.ReceivedException(error?.ToString());
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
+    {
+        if (_initialized) return;
 
-        var resultAsString = Encoding.UTF8.GetString(eventArgs.Body.ToArray());
-        return JsonSerializer.Deserialize<ItemsResponse<OfXDataResponse>>(resultAsString)!;
+        await _initLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_initialized) return;
+            await InitializeAsync(cancellationToken);
+            _initialized = true;
+        }
+        finally
+        {
+            _initLock.Release();
+        }
+    }
+
+    private async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        var userName = RabbitMqStatics.RabbitMqUserName ?? OfXRabbitMqConstants.DefaultUserName;
+        var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
+        var connectionFactory = new ConnectionFactory
+        {
+            HostName = RabbitMqStatics.RabbitMqHost,
+            VirtualHost = RabbitMqStatics.RabbitVirtualHost,
+            Port = RabbitMqStatics.RabbitMqPort,
+            Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
+            UserName = userName,
+            Password = password,
+            // Enable automatic recovery
+            AutomaticRecoveryEnabled = true,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
+        };
+
+        _connection = await connectionFactory.CreateConnectionAsync(cancellationToken);
+        _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
+        var queueDeclareResult = await _channel.QueueDeclareAsync(cancellationToken: cancellationToken);
+        _replyQueueName = queueDeclareResult.QueueName;
+        _consumer = new AsyncEventingBasicConsumer(_channel);
+        _consumer.ReceivedAsync += (_, ea) =>
+        {
+            var correlationId = ea.BasicProperties.CorrelationId;
+            if (string.IsNullOrEmpty(correlationId) || !_eventArgsMapper.TryRemove(correlationId, out var tcs))
+                return Task.CompletedTask;
+            tcs.TrySetResult(ea);
+            return Task.CompletedTask;
+        };
+        await _channel.BasicConsumeAsync(_replyQueueName, true, _consumer, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_channel is not null) await _channel.CloseAsync();
         if (_connection is not null) await _connection.CloseAsync();
+        _initLock.Dispose();
     }
 }

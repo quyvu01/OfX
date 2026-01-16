@@ -4,8 +4,10 @@ using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.HotChocolate.Extensions;
+using OfX.Kafka.Extensions;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
+using OfX.RabbitMq.Extensions;
 using Serilog;
 using Service1;
 using Service1.Contexts;
@@ -39,8 +41,8 @@ builder.Services.AddOfX(cfg =>
         // cfg.AddGrpcClients(c =>
         //     c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
-        cfg.AddNats(c => c.Url("nats://localhost:4222"));
-        // cfg.AddKafka(c => c.Host("localhost:9092"));
+        // cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))

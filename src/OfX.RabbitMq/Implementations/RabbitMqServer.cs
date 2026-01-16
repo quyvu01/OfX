@@ -20,8 +20,11 @@ namespace OfX.RabbitMq.Implementations;
 
 internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServer
 {
-    private static readonly Lazy<ConcurrentDictionary<string, Type>>
-        AttributeAssemblyCached = new(() => []);
+    private static readonly ConcurrentDictionary<string, Type> AttributeAssemblyCached = new();
+    private readonly ILogger<RabbitMqServer> _logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
+
+    // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
+    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing, OfXStatics.MaxConcurrentProcessing);
 
     private IConnection _connection;
     private IChannel _channel;
@@ -35,9 +38,15 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         var password = RabbitMqStatics.RabbitMqPassword ?? OfXRabbitMqConstants.DefaultPassword;
         var connectionFactory = new ConnectionFactory
         {
-            HostName = RabbitMqStatics.RabbitMqHost, VirtualHost = RabbitMqStatics.RabbitVirtualHost,
-            Port = RabbitMqStatics.RabbitMqPort, Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
-            UserName = userName, Password = password
+            HostName = RabbitMqStatics.RabbitMqHost,
+            VirtualHost = RabbitMqStatics.RabbitVirtualHost,
+            Port = RabbitMqStatics.RabbitMqPort,
+            Ssl = RabbitMqStatics.SslOption ?? new SslOption(),
+            UserName = userName,
+            Password = password,
+            // Enable automatic recovery
+            AutomaticRecoveryEnabled = true,
+            NetworkRecoveryInterval = TimeSpan.FromSeconds(10)
         };
 
         _connection = await connectionFactory.CreateConnectionAsync(cancellationToken);
@@ -60,13 +69,37 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
         consumer.ReceivedAsync += async (sender, ea) =>
         {
-            var cons = (AsyncEventingBasicConsumer)sender;
-            var ch = cons.Channel;
-            var body = ea.Body.ToArray();
-            var props = ea.BasicProperties;
-            var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
+            // Backpressure - wait for available slot
+            await _semaphore.WaitAsync(cancellationToken);
+            try
+            {
+                await ProcessMessageAsync(sender, ea, cancellationToken);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        };
 
-            var receivedPipelineOrchestrator = AttributeAssemblyCached.Value.GetOrAdd(props.Type, attributeAssembly =>
+        await _channel.BasicConsumeAsync(queueName, false, consumer, cancellationToken: cancellationToken);
+    }
+
+    private async Task ProcessMessageAsync(object sender, BasicDeliverEventArgs ea, CancellationToken stoppingToken)
+    {
+        var cons = (AsyncEventingBasicConsumer)sender;
+        var ch = cons.Channel;
+        var body = ea.Body.ToArray();
+        var props = ea.BasicProperties;
+        var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
+
+        // Create timeout CTS
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        var cancellationToken = cts.Token;
+
+        try
+        {
+            var receivedPipelineOrchestrator = AttributeAssemblyCached.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
                 if (!OfXStatics.AttributeMapHandlers.TryGetValue(ofXAttributeType, out var handlerType))
@@ -79,44 +112,63 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             var server = scope.ServiceProvider
                 .GetService(receivedPipelineOrchestrator) as ReceivedPipelinesOrchestrator;
             ArgumentNullException.ThrowIfNull(server);
+
+            var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
+            var headers = props.Headers?
+                .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
+            var response = await server.ExecuteAsync(message, headers, cancellationToken);
+            var responseAsString = JsonSerializer.Serialize(response);
+            var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
+            await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
+                mandatory: true, basicProperties: replyProps, body: responseBytes,
+                cancellationToken: cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger?.LogWarning("Request timeout for <{Attribute}>", props.Type);
+            await SendErrorResponseAsync(ch, props.ReplyTo, replyProps, "Request timeout", cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger?.LogError(e, "Error while responding <{Attribute}>", props.Type);
+            await SendErrorResponseAsync(ch, props.ReplyTo, replyProps, e.Message, stoppingToken);
+        }
+        finally
+        {
             try
             {
-                var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
-                var headers = props.Headers?
-                    .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-                var response = await server.ExecuteAsync(message, headers, ea.CancellationToken);
-                var responseAsString = JsonSerializer.Serialize(response);
-                var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
-                await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
-                    mandatory: true, basicProperties: replyProps, body: responseBytes,
-                    cancellationToken: ea.CancellationToken);
-            }
-            catch (Exception e)
-            {
-                var logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
-                logger.LogError("Error while responding <{@Attribute}> with message : {@Error}", props.Type, e);
-                var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
-                var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
-                replyProps.Headers ??= new Dictionary<string, object>();
-                replyProps.Headers.Add(OfXConstants.ErrorDetail, e.Message);
-                await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
-                    mandatory: true, basicProperties: replyProps, body: responseBytes,
-                    cancellationToken: ea.CancellationToken);
-            }
-            finally
-            {
                 await ch.BasicAckAsync(deliveryTag: ea.DeliveryTag, multiple: false,
-                    cancellationToken: ea.CancellationToken);
+                    cancellationToken: stoppingToken);
             }
-        };
-
-        await _channel.BasicConsumeAsync(queueName, false, consumer, cancellationToken: cancellationToken);
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Failed to acknowledge message");
+            }
+        }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken = default)
+    private static async Task SendErrorResponseAsync(IChannel ch, string replyTo, BasicProperties replyProps,
+        string errorMessage, CancellationToken cancellationToken)
     {
-        _channel.Dispose();
-        _connection.Dispose();
-        return Task.CompletedTask;
+        try
+        {
+            var responseAsString = JsonSerializer.Serialize(new ItemsResponse<OfXDataResponse>([]));
+            var responseBytes = Encoding.UTF8.GetBytes(responseAsString);
+            replyProps.Headers ??= new Dictionary<string, object>();
+            replyProps.Headers[OfXConstants.ErrorDetail] = errorMessage;
+            await ch.BasicPublishAsync(exchange: string.Empty, routingKey: replyTo!,
+                mandatory: true, basicProperties: replyProps, body: responseBytes,
+                cancellationToken: cancellationToken);
+        }
+        catch
+        {
+            // Ignore errors when sending error response
+        }
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        if (_channel is not null) await _channel.CloseAsync(cancellationToken);
+        if (_connection is not null) await _connection.CloseAsync(cancellationToken);
     }
 }

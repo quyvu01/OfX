@@ -19,6 +19,9 @@ public class AzureServiceBusServerWorker(IServiceProvider serviceProvider) : Bac
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Wait a bit for the application to fully start
+        await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -36,25 +39,39 @@ public class AzureServiceBusServerWorker(IServiceProvider serviceProvider) : Bac
                     var azureServiceBusServer = serviceProvider
                         .GetService(typeof(IAzureServiceBusServer<,>).MakeGenericType(modelArg, attributeType));
                     if (azureServiceBusServer is not IAzureServiceBusServer server) return;
-                    await server.StartAsync();
+                    await server.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Graceful shutdown
+                break;
+            }
             catch (Exception e)
             {
-                _logger.LogError("Error while starting AzureServiceBusServer: {@Message}", e.Message);
+                _logger?.LogError(e, "Error while starting Azure Service Bus server, retrying in 5 seconds...");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            // Only retry if not cancelled
+            if (!stoppingToken.IsCancellationRequested)
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
 
     private async Task CreateQueueIfNotExistedAsync(string queueName, CancellationToken cancellationToken)
     {
-        var adminClient = _clientWrapper.ServiceBusAdministrationClient;
-        var queueExisted = await adminClient.QueueExistsAsync(queueName, cancellationToken);
-        if (!queueExisted)
-            await adminClient.CreateQueueAsync(new CreateQueueOptions(queueName) { RequiresSession = true },
-                cancellationToken);
+        try
+        {
+            var adminClient = _clientWrapper.ServiceBusAdministrationClient;
+            var queueExisted = await adminClient.QueueExistsAsync(queueName, cancellationToken);
+            if (!queueExisted)
+                await adminClient.CreateQueueAsync(new CreateQueueOptions(queueName) { RequiresSession = true },
+                    cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to create queue {QueueName}", queueName);
+        }
     }
 }

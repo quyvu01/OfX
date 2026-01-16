@@ -22,16 +22,23 @@ internal sealed class NatsServerWorker(IServiceProvider serviceProvider, ILogger
                     var natsServerRpc = serviceProvider
                         .GetService(typeof(INatsServer<,>).MakeGenericType(modelArg, attributeType));
                     if (natsServerRpc is not INatsServer serverRpc) return;
-                    await serverRpc.StartAsync();
+                    await serverRpc.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Graceful shutdown
+                break;
+            }
             catch (Exception e)
             {
-                logger.LogError("Error while starting Nats: {@Message}", e.Message);
+                logger.LogError(e, "Error while starting Nats server, retrying in 5 seconds...");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            // Only retry if not cancelled
+            if (!stoppingToken.IsCancellationRequested)
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
 }

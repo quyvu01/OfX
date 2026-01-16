@@ -22,16 +22,23 @@ internal sealed class KafkaServerWorker(IServiceProvider serviceProvider, ILogge
                     var kafkaServerGeneric = serviceProvider
                         .GetService(typeof(IKafkaServer<,>).MakeGenericType(modelType, attributeType));
                     if (kafkaServerGeneric is not IKafkaServer kafkaServer) return;
-                    await kafkaServer.StartAsync();
+                    await kafkaServer.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Graceful shutdown
+                break;
+            }
             catch (Exception e)
             {
-                logger.LogError("Error while starting Kafka: {@Message}", e.Message);
+                logger.LogError(e, "Error while starting Kafka server, retrying in 5 seconds...");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            // Only retry if not cancelled
+            if (!stoppingToken.IsCancellationRequested)
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }
     }
 }
