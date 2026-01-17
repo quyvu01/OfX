@@ -1,7 +1,5 @@
+using OfX.Abstractions.Transporting;
+
 namespace OfX.RabbitMq.Abstractions;
 
-internal interface IRabbitMqServer
-{
-    Task StartAsync(CancellationToken cancellationToken = default);
-    Task StopAsync(CancellationToken cancellationToken = default);
-}
+internal interface IRabbitMqServer : IRequestServer;

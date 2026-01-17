@@ -14,7 +14,7 @@ public static class ProjectionTransformer
     /// <param name="rawResults">The raw results from database query (each row is object[]).</param>
     /// <param name="expressions">The original expression strings (in order).</param>
     /// <returns>Collection of OfXDataResponse objects.</returns>
-    public static IEnumerable<OfXDataResponse> Transform(
+    public static IEnumerable<DataResponse> Transform(
         IEnumerable<object[]> rawResults,
         IReadOnlyList<string> expressions)
     {
@@ -28,25 +28,25 @@ public static class ProjectionTransformer
     /// <param name="row">The raw result row (object[]).</param>
     /// <param name="expressions">The original expression strings (in order).</param>
     /// <returns>An OfXDataResponse object.</returns>
-    private static OfXDataResponse TransformRow(object[] row, IReadOnlyList<string> expressions)
+    private static DataResponse TransformRow(object[] row, IReadOnlyList<string> expressions)
     {
         // row[0] = Id
         // row[1..n] = Expression values
 
         var id = row[0]?.ToString() ?? string.Empty;
-        var values = new OfXValueResponse[expressions.Count];
+        var values = new ValueResponse[expressions.Count];
 
         for (var i = 0; i < expressions.Count; i++)
         {
             var value = row[i + 1]; // +1 because index 0 is Id
-            values[i] = new OfXValueResponse
+            values[i] = new ValueResponse
             {
                 Expression = expressions[i],
                 Value = SerializeObjects.SerializeObject(value)
             };
         }
 
-        return new OfXDataResponse
+        return new DataResponse
         {
             Id = id,
             OfXValues = values
@@ -59,7 +59,7 @@ public static class ProjectionTransformer
     /// <param name="rawResults">The raw results from database query.</param>
     /// <param name="metadata">The projection metadata.</param>
     /// <returns>Collection of OfXDataResponse objects.</returns>
-    public static IEnumerable<OfXDataResponse> TransformWithMetadata(
+    public static IEnumerable<DataResponse> TransformWithMetadata(
         IEnumerable<object[]> rawResults,
         IReadOnlyList<ProjectionMetadata> metadata)
     {
@@ -74,25 +74,25 @@ public static class ProjectionTransformer
     /// <summary>
     /// Transforms a single row using projection metadata.
     /// </summary>
-    private static OfXDataResponse TransformRowWithMetadata(object[] row,
+    private static DataResponse TransformRowWithMetadata(object[] row,
         IReadOnlyList<ProjectionMetadata> valueMetadata)
     {
         var id = row[0]?.ToString() ?? string.Empty;
-        var values = new OfXValueResponse[valueMetadata.Count];
+        var values = new ValueResponse[valueMetadata.Count];
 
         for (var i = 0; i < valueMetadata.Count; i++)
         {
             var meta = valueMetadata[i];
             var value = row[meta.Index];
 
-            values[i] = new OfXValueResponse
+            values[i] = new ValueResponse
             {
                 Expression = meta.Expression,
                 Value = meta.HasError ? null : SerializeObjects.SerializeObject(value)
             };
         }
 
-        return new OfXDataResponse
+        return new DataResponse
         {
             Id = id,
             OfXValues = values
@@ -102,9 +102,9 @@ public static class ProjectionTransformer
     /// <summary>
     /// Transforms results to an array synchronously.
     /// </summary>
-    public static OfXDataResponse[] TransformToArray(object[][] rawResults, IReadOnlyList<string> expressions)
+    public static DataResponse[] TransformToArray(object[][] rawResults, IReadOnlyList<string> expressions)
     {
-        var result = new OfXDataResponse[rawResults.Length];
+        var result = new DataResponse[rawResults.Length];
         for (var i = 0; i < rawResults.Length; i++) result[i] = TransformRow(rawResults[i], expressions);
 
         return result;

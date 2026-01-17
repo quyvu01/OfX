@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Implementations;
 
@@ -25,7 +25,7 @@ internal abstract class SendPipelinesOrchestrator
     /// <param name="message">The OfX request containing selector IDs and expressions.</param>
     /// <param name="context">Optional context containing headers and parameters.</param>
     /// <returns>The items response containing the fetched data.</returns>
-    internal abstract Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context);
+    internal abstract Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message, IContext context);
 }
 
 /// <summary>
@@ -45,12 +45,12 @@ internal abstract class SendPipelinesOrchestrator
 internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider serviceProvider) :
     SendPipelinesOrchestrator where TAttribute : OfXAttribute
 {
-    internal override async Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(OfXRequest message, IContext context)
+    internal override async Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message, IContext context)
     {
         var handler = serviceProvider.GetRequiredService<IClientRequestHandler<TAttribute>>();
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
         var parameters = context is IExpressionParameters expressionParameters ? expressionParameters.Parameters : null;
 
@@ -88,11 +88,11 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
         });
         return result;
 
-        IEnumerable<OfXValueResponse> ValueResponses(Dictionary<ExpressionWrapper, OfXValueResponse> valueLookup)
+        IEnumerable<ValueResponse> ValueResponses(Dictionary<ExpressionWrapper, ValueResponse> valueLookup)
         {
             foreach (var value in expressionMap)
                 if (valueLookup.TryGetValue(value.Key, out var valueResult))
-                    yield return new OfXValueResponse { Expression = value.Value, Value = valueResult.Value };
+                    yield return new ValueResponse { Expression = value.Value, Value = valueResult.Value };
         }
     }
 }

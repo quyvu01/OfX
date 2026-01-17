@@ -31,7 +31,7 @@ public interface IQueryOfHandler<TModel, TAttribute> where TModel : class where 
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing
     /// the resulting data from the provider.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context);
+    Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context);
 }
 
 /// <summary>
@@ -61,6 +61,6 @@ internal sealed class DefaultQueryOfHandler<TModel, TAttribute>
     where TAttribute : OfXAttribute
 {
     /// <inheritdoc />
-    public Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
-        Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
+    public Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context) =>
+        Task.FromResult(new ItemsResponse<DataResponse>([]));
 }

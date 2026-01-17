@@ -40,5 +40,5 @@ public interface IReceivedPipelinesOrchestrator<TAttribute> : IOfXBase<TAttribut
     /// A task that produces an <see cref="ItemsResponse{OfXDataResponse}"/> representing the 
     /// final result after all pipeline behaviors and the query handler have executed.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext);
+    Task<ItemsResponse<DataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext);
 }

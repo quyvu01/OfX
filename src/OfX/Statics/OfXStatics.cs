@@ -3,6 +3,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Extensions;
+using OfX.Supervision;
 
 namespace OfX.Statics;
 
@@ -21,11 +22,15 @@ namespace OfX.Statics;
 public static class OfXStatics
 {
     private const int ObjectSpawnTimes = 128;
+    private const int ConcurrentProcessing = 128;
+    public static TimeSpan DefaultRequestTimeout { get; internal set; } = TimeSpan.FromSeconds(30);
 
     internal static void Clear()
     {
         AttributesRegister = [];
         MaxObjectSpawnTimes = ObjectSpawnTimes;
+        MaxConcurrentProcessing = ConcurrentProcessing;
+        SupervisorOptions = null;
         ThrowIfExceptions = false;
         RetryPolicy = null;
         ModelConfigurationAssembly = null;
@@ -33,8 +38,15 @@ public static class OfXStatics
 
     internal static List<Assembly> AttributesRegister { get; set; } = [];
     internal static int MaxObjectSpawnTimes { get; set; } = ObjectSpawnTimes;
+    public static int MaxConcurrentProcessing { get; internal set; } = ConcurrentProcessing;
     public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
+
+    /// <summary>
+    /// Gets the global supervisor options configured for all transport servers.
+    /// Individual transport packages can override these with their own settings.
+    /// </summary>
+    public static SupervisorOptions SupervisorOptions { get; internal set; }
 
     public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
 
@@ -77,17 +89,7 @@ public static class OfXStatics
             .Where(a => typeof(OfXAttribute).IsAssignableFrom(a) && a.IsConcrete())
     ]);
 
-    /// <summary>
-    /// Gets the internal dictionary mapping attribute types to their query handler types.
-    /// </summary>
     internal static Dictionary<Type, Type> InternalAttributeMapHandlers { get; } = [];
 
-    /// <summary>
-    /// Gets a read-only view of the attribute-to-handler type mappings.
-    /// </summary>
-    /// <remarks>
-    /// The key is the <see cref="Attributes.OfXAttribute"/> type (e.g., <c>UserOfAttribute</c>),
-    /// and the value is the corresponding <see cref="Abstractions.IQueryOfHandler{TModel, TAttribute}"/> type.
-    /// </remarks>
     public static IReadOnlyDictionary<Type, Type> AttributeMapHandlers => InternalAttributeMapHandlers;
 }

@@ -39,7 +39,7 @@ internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvid
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
 
-    public async Task<ItemsResponse<OfXDataResponse>> GetDataAsync(RequestContext<TAttribute> context)
+    public async Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
         // Build filter expression
         var filter = BuildFilter(context.Query);
@@ -60,6 +60,6 @@ internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvid
         // Step 2: Transform to OfXDataResponse in memory
         var data = ProjectionTransformer.TransformToArray(rawResults, expressions);
 
-        return new ItemsResponse<OfXDataResponse>(data);
+        return new ItemsResponse<DataResponse>(data);
     }
 }

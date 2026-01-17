@@ -38,8 +38,8 @@ public interface IReceivedPipelineBehavior<TAttribute> : IOfXBase<TAttribute>
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> 
     /// containing either the pipeline-generated result or the result from the underlying handler.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> HandleAsync(
+    Task<ItemsResponse<DataResponse>> HandleAsync(
         RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next
+        Func<Task<ItemsResponse<DataResponse>>> next
     );
 }

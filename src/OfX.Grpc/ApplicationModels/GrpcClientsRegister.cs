@@ -11,7 +11,7 @@ namespace OfX.Grpc.ApplicationModels;
 /// </remarks>
 public class GrpcClientsRegister
 {
-    private readonly List<string> _serverHost = [];
+    private readonly HashSet<string> _serverHost = [];
 
     /// <summary>
     /// Gets the collection of registered service host addresses.
@@ -21,30 +21,17 @@ public class GrpcClientsRegister
     /// <summary>
     /// Adds multiple gRPC server hosts.
     /// </summary>
-    /// <param name="serviceHosts">The gRPC server URLs to add.</param>
+    /// <param name="serviceHost">The first gRPC server host</param>
+    /// <param name="serviceHosts">The gRPC server host URLs to add.</param>
     /// <example>
     /// <code>
-    /// register.AddGrpcHosts("https://service1:5001", "https://service2:5002");
+    /// register.AddGrpcHosts("https://service1", "https://service2");
     /// </code>
     /// </example>
-    public void AddGrpcHosts(params string[] serviceHosts)
+    public void AddGrpcHosts(string serviceHost, params string[] serviceHosts)
     {
         ArgumentNullException.ThrowIfNull(serviceHosts);
-        serviceHosts.Where(a => !_serverHost.Contains(a)).ForEach(a => _serverHost.Add(a));
-    }
-
-    /// <summary>
-    /// Adds a single gRPC server host.
-    /// </summary>
-    /// <param name="serviceHost">The gRPC server URL to add.</param>
-    /// <example>
-    /// <code>
-    /// register.AddGrpcHosts("https://users-service:5001");
-    /// </code>
-    /// </example>
-    public void AddGrpcHosts(string serviceHost)
-    {
-        ArgumentNullException.ThrowIfNull(serviceHost);
-        if (!_serverHost.Contains(serviceHost)) _serverHost.Add(serviceHost);
+        string[] hosts = [serviceHost, ..serviceHosts];
+        hosts.ForEach(a => _serverHost.Add(a));
     }
 }

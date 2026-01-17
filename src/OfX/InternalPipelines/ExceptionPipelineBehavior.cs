@@ -17,8 +17,8 @@ namespace OfX.InternalPipelines;
 internal sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next)
+    public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
+        Func<Task<ItemsResponse<DataResponse>>> next)
     {
         try
         {
@@ -27,7 +27,7 @@ internal sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehav
         catch (Exception)
         {
             if (OfXStatics.ThrowIfExceptions) throw;
-            return new ItemsResponse<OfXDataResponse>([]);
+            return new ItemsResponse<DataResponse>([]);
         }
     }
 }

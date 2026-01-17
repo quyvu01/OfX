@@ -153,10 +153,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// Parses the complete expression.
     /// Entry point that handles ternary expressions (lowest precedence).
     /// </summary>
-    public ExpressionNode ParseExpression()
-    {
-        return ParseTernaryExpression();
-    }
+    public ExpressionNode ParseExpression() => ParseTernaryExpression();
 
     /// <summary>
     /// Parses ternary expression: Condition ? TrueExpr : FalseExpr
@@ -212,10 +209,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// Parses a ternary branch expression (whenTrue part).
     /// This stops at ':' to avoid consuming it as a function prefix.
     /// </summary>
-    private ExpressionNode ParseTernaryBranch()
-    {
-        return ParseCoalesceBranchExpression();
-    }
+    private ExpressionNode ParseTernaryBranch() => ParseCoalesceBranchExpression();
 
     /// <summary>
     /// Parses coalesce expression for ternary branch (stops at ':').
@@ -239,14 +233,10 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     private ExpressionNode ParsePrimaryBranchExpression()
     {
         if (Check(TokenType.OpenBrace))
-        {
             return ParseRootProjection();
-        }
 
         if (Check(TokenType.String) || Check(TokenType.Number) || Check(TokenType.Boolean) || Check(TokenType.Null))
-        {
             return ParseLiteralExpression();
-        }
 
         // Parse navigation expression without function suffix
         return ParseNavigationBranchExpression();
@@ -258,8 +248,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// </summary>
     private ExpressionNode ParseNavigationBranchExpression()
     {
-        var segments = new List<ExpressionNode>();
-        segments.Add(ParseSegmentWithoutTrailingFunction());
+        var segments = new List<ExpressionNode> { ParseSegmentWithoutTrailingFunction() };
 
         while (Match(TokenType.Dot))
         {
@@ -351,10 +340,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     private static ConditionNode ConvertToCondition(ExpressionNode expr)
     {
         // If it's already a condition, return it
-        if (expr is ConditionNode condition)
-        {
-            return condition;
-        }
+        if (expr is ConditionNode condition) return condition;
 
         // If it's a boolean function (like Orders:any), wrap it as implicit boolean check
         if (expr is BooleanFunctionNode boolFunc)
@@ -393,15 +379,11 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     {
         // Check for root projection: {Id, Name, Description}
         if (Check(TokenType.OpenBrace))
-        {
             return ParseRootProjection();
-        }
 
         // Check for literal values (for ternary/coalesce right-hand side)
         if (Check(TokenType.String) || Check(TokenType.Number) || Check(TokenType.Boolean) || Check(TokenType.Null))
-        {
             return ParseLiteralExpression();
-        }
 
         // Parse navigation expression
         return ParseNavigationExpression();
@@ -413,24 +395,16 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     private LiteralNode ParseLiteralExpression()
     {
         if (Match(TokenType.String))
-        {
             return LiteralNode.String(Previous().Value);
-        }
 
         if (Match(TokenType.Number))
-        {
             return LiteralNode.Number(decimal.Parse(Previous().Value, CultureInfo.InvariantCulture));
-        }
 
         if (Match(TokenType.Boolean))
-        {
             return LiteralNode.Boolean(bool.Parse(Previous().Value));
-        }
 
         if (Match(TokenType.Null))
-        {
             return LiteralNode.Null();
-        }
 
         throw new ExpressionParseException($"Expected literal value at position {Current().Position}");
     }
@@ -440,8 +414,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// </summary>
     private ExpressionNode ParseNavigationExpression()
     {
-        var segments = new List<ExpressionNode>();
-        segments.Add(ParseSegment());
+        var segments = new List<ExpressionNode> { ParseSegment() };
 
         while (Match(TokenType.Dot))
         {
@@ -513,9 +486,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
 
         // Check for groupBy first (special handling, not a FunctionType)
         if (funcName == "groupby")
-        {
             return ParseGroupByFunction(source, funcToken);
-        }
 
         // Check for boolean functions first: :any, :all
         if (BooleanFunctionNames.TryGetValue(funcName, out var boolFuncType))
@@ -631,9 +602,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     {
         // Functions without arguments: floor, ceil, abs
         if (functionType is FunctionType.Floor or FunctionType.Ceil or FunctionType.Abs)
-        {
             return new FunctionNode(source, functionType);
-        }
 
         // :round - optional argument (decimal places)
         if (functionType == FunctionType.Round)
@@ -738,11 +707,9 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
                 // Parse projection in groupBy context
                 return ParseGroupByProjection(groupByNode);
             }
-            else
-            {
-                // Unexpected token after dot
-                throw new ExpressionParseException($"Expected '{{' for projection after groupBy at position {Current().Position}");
-            }
+
+            // Unexpected token after dot
+            throw new ExpressionParseException($"Expected '{{' for projection after groupBy at position {Current().Position}");
         }
 
         // Check for chained functions after groupBy (without projection)
@@ -948,18 +915,13 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     {
         // Functions without arguments: upper, lower, trim
         if (functionType is FunctionType.Upper or FunctionType.Lower or FunctionType.Trim)
-        {
             return new FunctionNode(source, functionType);
-        }
 
         // Functions with required arguments: substring, replace, concat, split
         if (!Match(TokenType.OpenParen))
-        {
             throw new ExpressionParseException($"Function '{funcToken.Value}' requires arguments at position {funcToken.Position}");
-        }
 
-        var arguments = new List<ExpressionNode>();
-        arguments.Add(ParseFunctionArgument());
+        var arguments = new List<ExpressionNode> { ParseFunctionArgument() };
 
         while (Match(TokenType.Comma))
         {
@@ -1047,10 +1009,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     /// <summary>
     /// Parses a condition (handles OR at top level).
     /// </summary>
-    private ConditionNode ParseCondition()
-    {
-        return ParseOrCondition();
-    }
+    private ConditionNode ParseCondition() => ParseOrCondition();
 
     /// <summary>
     /// Parses OR conditions: A || B || C
@@ -1152,24 +1111,16 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     private LiteralNode ParseValue()
     {
         if (Match(TokenType.String))
-        {
             return LiteralNode.String(Previous().Value);
-        }
 
         if (Match(TokenType.Number))
-        {
             return LiteralNode.Number(decimal.Parse(Previous().Value, CultureInfo.InvariantCulture));
-        }
 
         if (Match(TokenType.Boolean))
-        {
             return LiteralNode.Boolean(bool.Parse(Previous().Value));
-        }
 
         if (Match(TokenType.Null))
-        {
             return LiteralNode.Null();
-        }
 
         throw new ExpressionParseException($"Expected value at position {Current().Position}");
     }
@@ -1219,8 +1170,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     {
         Consume(TokenType.OpenBrace, "Expected '{' for projection");
 
-        var properties = new List<ProjectionProperty>();
-        properties.Add(ParseProjectionProperty());
+        var properties = new List<ProjectionProperty> { ParseProjectionProperty() };
 
         while (Match(TokenType.Comma))
         {
@@ -1241,13 +1191,9 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     {
         Consume(TokenType.OpenBrace, "Expected '{' for root projection");
 
-        var properties = new List<ProjectionProperty>();
-        properties.Add(ParseProjectionProperty());
+        var properties = new List<ProjectionProperty> { ParseProjectionProperty() };
 
-        while (Match(TokenType.Comma))
-        {
-            properties.Add(ParseProjectionProperty());
-        }
+        while (Match(TokenType.Comma)) properties.Add(ParseProjectionProperty());
 
         Consume(TokenType.CloseBrace, "Expected '}' after projection");
 
@@ -1278,8 +1224,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         }
 
         // Parse property path (can include navigation: Country.Name)
-        var pathParts = new List<string>();
-        pathParts.Add(Consume(TokenType.Identifier, "Expected property name in projection").Value);
+        var pathParts = new List<string> { Consume(TokenType.Identifier, "Expected property name in projection").Value };
 
         // Continue collecting path segments while we see dots (but not .{ for projection)
         while (Match(TokenType.Dot))
@@ -1411,7 +1356,4 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
 /// <summary>
 /// Exception thrown when parsing fails.
 /// </summary>
-public class ExpressionParseException : Exception
-{
-    public ExpressionParseException(string message) : base(message) { }
-}
+public class ExpressionParseException(string message) : Exception(message);

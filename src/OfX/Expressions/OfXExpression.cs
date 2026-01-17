@@ -73,10 +73,7 @@ public sealed class OfXExpression<TModel>
     /// Builds the LINQ expression and returns the result.
     /// </summary>
     /// <returns>The build result containing the expression and result type.</returns>
-    public ExpressionBuildResult Build()
-    {
-        return LinqExpressionBuilder.Build<TModel>(_rootNode, _typeAccessorProvider);
-    }
+    public ExpressionBuildResult Build() => LinqExpressionBuilder.Build<TModel>(_rootNode, _typeAccessorProvider);
 
     /// <summary>
     /// Builds a typed lambda expression.

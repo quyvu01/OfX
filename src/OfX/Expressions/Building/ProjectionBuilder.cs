@@ -147,18 +147,13 @@ public sealed class ProjectionBuilder<TModel>(
 
         // If this is the default property (expression was null, using _defaultProperty),
         // bypass ExposedName and access property directly
-        if (isDefaultProperty)
-            return BuildDefaultPropertyExpression();
+        if (isDefaultProperty) return BuildDefaultPropertyExpression();
 
         // Parse the expression using our new parser
         var node = ExpressionParser.Parse(expression);
 
         // Build context
-        var context = new ExpressionBuildContext(
-            typeof(TModel),
-            _parameter,
-            _parameter,
-            _typeAccessorProvider);
+        var context = new ExpressionBuildContext(typeof(TModel), _parameter, _parameter, _typeAccessorProvider);
 
         // Build the LINQ expression
         var builder = new LinqExpressionBuilder();
@@ -185,11 +180,7 @@ public sealed record ProjectionResult<TModel>(
 /// <param name="Expression">The original expression string (null for default/Id).</param>
 /// <param name="IsId">Whether this is the Id field.</param>
 /// <param name="Error">Error message if expression building failed.</param>
-public sealed record ProjectionMetadata(
-    int Index,
-    string Expression,
-    bool IsId,
-    string Error = null)
+public sealed record ProjectionMetadata(int Index, string Expression, bool IsId, string Error = null)
 {
     public bool HasError => Error != null;
 }

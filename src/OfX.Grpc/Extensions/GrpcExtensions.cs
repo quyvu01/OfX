@@ -55,7 +55,7 @@ public static class GrpcExtensions
         options.Invoke(clientsRegister);
         if (clientsRegister.ServiceHosts is not { Count: > 0 } serviceHosts) return;
         ConcurrentDictionary<HostProbe, Type[]> hostMapAttributes = [];
-        serviceHosts.Distinct().ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
+        serviceHosts.ForEach(h => hostMapAttributes.TryAdd(new HostProbe(h, false), []));
         var semaphore = new SemaphoreSlim(1, 1);
         var services = ofXRegister.ServiceCollection;
         services.TryAddTransient<GetOfXResponseFunc>(_ => attributeType => async (query, context) =>
@@ -83,7 +83,7 @@ public static class GrpcExtensions
                             hostMapAttributes.TryAdd(x.Key, x.Value);
                         });
                     if (hostMapAttributes.Any(a => a.Value.Contains(attributeType))) goto resolveData;
-                    return new ItemsResponse<OfXDataResponse>([]);
+                    return new ItemsResponse<DataResponse>([]);
                 }
                 finally
                 {
@@ -99,10 +99,10 @@ public static class GrpcExtensions
             var dataResponse = result.Items.Select(x =>
             {
                 var values = x.OfxValues
-                    .Select(a => new OfXValueResponse { Expression = a.Expression, Value = a.Value });
-                return new OfXDataResponse { Id = x.Id, OfXValues = [..values] };
+                    .Select(a => new ValueResponse { Expression = a.Expression, Value = a.Value });
+                return new DataResponse { Id = x.Id, OfXValues = [..values] };
             });
-            return new ItemsResponse<OfXDataResponse>([..dataResponse]);
+            return new ItemsResponse<DataResponse>([..dataResponse]);
         });
 
         services.TryAddTransient<IRequestClient, GrpcRequestClient>();

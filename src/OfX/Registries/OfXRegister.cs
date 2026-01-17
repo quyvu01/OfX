@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.Registries;
 
@@ -102,13 +102,41 @@ public class OfXRegister(IServiceCollection serviceCollection)
     }
 
     /// <summary>
+    /// Sets the maximum number of concurrent message processing operations for transport servers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This setting controls backpressure in message-based transports (NATS, RabbitMQ, Kafka).
+    /// When the limit is reached, new incoming messages will wait until a processing slot becomes available.
+    /// </para>
+    /// <para>
+    /// Higher values allow more throughput but consume more memory and CPU resources.
+    /// Lower values provide better resource control but may reduce throughput under high load.
+    /// </para>
+    /// </remarks>
+    /// <param name="maxConcurrentProcessing">The maximum number of concurrent operations. Must be at least 1. Default is 128.</param>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.SetMaxConcurrentProcessing(256); // Allow up to 256 concurrent message processing
+    /// });
+    /// </code>
+    /// </example>
+    public void SetMaxConcurrentProcessing(int maxConcurrentProcessing)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxConcurrentProcessing, 1);
+        OfXStatics.MaxConcurrentProcessing = maxConcurrentProcessing;
+    }
+
+    /// <summary>
     /// Sets the default timeout for OfX requests.
     /// </summary>
     /// <param name="timeout">The timeout duration. Must be non-negative.</param>
     public void SetRequestTimeOut(TimeSpan timeout)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
-        OfXConstants.DefaultRequestTimeout = timeout;
+        OfXStatics.DefaultRequestTimeout = timeout;
     }
 
     /// <summary>
@@ -122,5 +150,50 @@ public class OfXRegister(IServiceCollection serviceCollection)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(retryCount, 0);
         OfXStatics.RetryPolicy = new RetryPolicy(retryCount, sleepDurationProvider, onRetry);
+    }
+
+    /// <summary>
+    /// Configures the global supervisor options for message-based transport servers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This sets the supervisor configuration for message-based transports: NATS, RabbitMQ, Kafka, and Azure Service Bus.
+    /// </para>
+    /// <para>
+    /// <b>Note:</b> This configuration does <b>not</b> apply to gRPC transport. gRPC uses HTTP/2 which has built-in
+    /// connection recovery managed by ASP.NET Core's Kestrel server, making the supervisor pattern unnecessary.
+    /// </para>
+    /// <para>
+    /// The supervisor pattern provides automatic failure recovery with features like:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>Exponential backoff for restart delays</item>
+    /// <item>Configurable restart limits within a time window</item>
+    /// <item>Circuit breaker to prevent restart storms</item>
+    /// <item>Exception type to directive mapping</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="configure">An action to configure the supervisor options.</param>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.ConfigureSupervisor(opts =>
+    ///     {
+    ///         opts.Strategy = SupervisionStrategy.OneForOne;
+    ///         opts.MaxRestarts = 5;
+    ///         opts.EnableCircuitBreaker = true;
+    ///         opts.CircuitBreakerThreshold = 3;
+    ///     });
+    ///     cfg.AddRabbitMq(c => c.Host("localhost", "/"));  // Supervisor applies
+    ///     cfg.AddNats(c => c.Url("nats://localhost:4222")); // Supervisor applies
+    ///     // cfg.AddGrpcClients(...); // Supervisor does NOT apply to gRPC
+    /// });
+    /// </code>
+    /// </example>
+    public void ConfigureSupervisor(Action<SupervisorOptions> configure)
+    {
+        OfXStatics.SupervisorOptions ??= new SupervisorOptions();
+        configure(OfXStatics.SupervisorOptions);
     }
 }

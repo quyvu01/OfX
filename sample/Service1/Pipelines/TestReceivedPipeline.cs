@@ -6,8 +6,8 @@ namespace Service1.Pipelines;
 
 public sealed class TestReceivedPipeline<TAttribute> : IReceivedPipelineBehavior<TAttribute> where TAttribute : OfXAttribute
 {
-    public async Task<ItemsResponse<OfXDataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
-        Func<Task<ItemsResponse<OfXDataResponse>>> next)
+    public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
+        Func<Task<ItemsResponse<DataResponse>>> next)
     {
         var result = await next.Invoke();
         await Task.Delay(7000);

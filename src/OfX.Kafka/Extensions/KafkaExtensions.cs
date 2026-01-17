@@ -5,6 +5,8 @@ using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.BackgroundServices;
 using OfX.Kafka.Implementations;
 using OfX.Registries;
+using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.Kafka.Extensions;
 
@@ -14,8 +16,15 @@ public static class KafkaExtensions
     {
         var config = new KafkaConfigurator();
         options.Invoke(config);
-        ofXRegister.ServiceCollection.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
-        ofXRegister.ServiceCollection.AddSingleton<IRequestClient, KafkaClient>();
-        ofXRegister.ServiceCollection.AddHostedService<KafkaServerWorker>();
+        var services = ofXRegister.ServiceCollection;
+        services.AddSingleton(typeof(IKafkaServer<,>), typeof(KafkaServer<,>));
+        services.AddSingleton<IRequestClient, KafkaClient>();
+
+        // Register supervisor options: global > default
+        var supervisorOptions = OfXStatics.SupervisorOptions ?? new SupervisorOptions();
+        services.AddSingleton(supervisorOptions);
+
+        // Use KafkaSupervisorWorker with supervisor pattern
+        services.AddHostedService<KafkaSupervisorWorker>();
     }
 }

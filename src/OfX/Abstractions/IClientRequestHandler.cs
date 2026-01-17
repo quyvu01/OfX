@@ -37,7 +37,7 @@ public interface IClientRequestHandler<TAttribute> : IOfXBase<TAttribute>, IClie
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing
     /// the data returned from the server.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext);
+    Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<TAttribute> requestContext);
 }
 
 /// <summary>
@@ -54,6 +54,6 @@ internal class DefaultClientRequestHandler<TAttribute> : IClientRequestHandler<T
     where TAttribute : OfXAttribute
 {
     /// <inheritdoc />
-    public Task<ItemsResponse<OfXDataResponse>> RequestAsync(RequestContext<TAttribute> requestContext) =>
-        Task.FromResult(new ItemsResponse<OfXDataResponse>([]));
+    public Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<TAttribute> requestContext) =>
+        Task.FromResult(new ItemsResponse<DataResponse>([]));
 }

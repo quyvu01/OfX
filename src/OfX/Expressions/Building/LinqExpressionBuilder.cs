@@ -31,8 +31,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <param name="node">The AST root node.</param>
     /// <param name="typeAccessorProvider">Optional custom type accessor provider.</param>
     /// <returns>The built expression and result type.</returns>
-    public static ExpressionBuildResult Build<TModel>(
-        ExpressionNode node,
+    public static ExpressionBuildResult Build<TModel>(ExpressionNode node,
         Func<Type, ITypeAccessor> typeAccessorProvider = null)
     {
         var parameter = Expression.Parameter(typeof(TModel), "x");
@@ -85,8 +84,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
                     // Multi-key with ValueTuple: g.Key.Item1, g.Key.Item2, etc.
                     var itemFieldName = $"Item{keyIndex + 1}";
                     var itemField = groupByCtx.KeyType.GetField(itemFieldName)
-                        ?? throw new InvalidOperationException(
-                            $"Field '{itemFieldName}' not found on tuple type '{groupByCtx.KeyType.Name}'");
+                                    ?? throw new InvalidOperationException(
+                                        $"Field '{itemFieldName}' not found on tuple type '{groupByCtx.KeyType.Name}'");
                     keyAccess = Expression.Field(groupByCtx.KeyExpression, itemField);
                 }
 
@@ -122,6 +121,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             if (string.Equals(keyProperties[i], propertyName, StringComparison.OrdinalIgnoreCase))
                 return i;
         }
+
         return -1;
     }
 
@@ -315,7 +315,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         // First, build the GroupBy expression
         var groupByResult = groupByNode.Accept(this, context);
         var metadata = groupByResult.Metadata as GroupByMetadata
-            ?? throw new InvalidOperationException("GroupBy result missing metadata");
+                       ?? throw new InvalidOperationException("GroupBy result missing metadata");
 
         // Result type is IEnumerable<IGrouping<TKey, TElement>>
         var groupingType = typeof(IGrouping<,>).MakeGenericType(metadata.KeyType, metadata.ElementType);
@@ -324,7 +324,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         var groupParam = Expression.Parameter(groupingType, "g");
 
         // Create expression to access g.Key
-        var keyProperty = groupingType.GetProperty(nameof(IGrouping<object, object>.Key))!;
+        var keyProperty = groupingType.GetProperty(nameof(IGrouping<,>.Key))!;
         var keyAccess = Expression.Property(groupParam, keyProperty);
 
         // Create GroupBy context for building projection properties
@@ -340,7 +340,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         // Build Dictionary<string, object> for each group
         var dictType = typeof(Dictionary<string, object>);
-        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var addMethod = dictType.GetMethod(nameof(Dictionary<,>.Add), [typeof(string), typeof(object)])!;
         var newDictExpr = Expression.New(dictType);
 
         var elementInits = new List<ElementInit>();
@@ -415,11 +415,12 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         // Build Dictionary<string, object> for each element
         var dictType = typeof(Dictionary<string, object>);
-        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var addMethod = dictType.GetMethod(nameof(Dictionary<,>.Add), [typeof(string), typeof(object)])!;
         var newDictExpr = Expression.New(dictType);
 
         // Create context for the element - use selectParameter as both CurrentExpression and Parameter
-        var elementContext = new ExpressionBuildContext(elementType, selectParameter, selectParameter, context.TypeAccessorProvider);
+        var elementContext =
+            new ExpressionBuildContext(elementType, selectParameter, selectParameter, context.TypeAccessorProvider);
 
         var elementInits = new List<ElementInit>();
 
@@ -469,11 +470,12 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
 
         // Build: new Dictionary<string, object> { { "Id", source.Id }, { "Name", source.Name }, ... }
         var dictType = typeof(Dictionary<string, object>);
-        var addMethod = dictType.GetMethod(nameof(Dictionary<string, object>.Add), [typeof(string), typeof(object)])!;
+        var addMethod = dictType.GetMethod(nameof(Dictionary<,>.Add), [typeof(string), typeof(object)])!;
         var newDictExpr = Expression.New(dictType);
 
         // Create context for the source object - reuse the existing parameter
-        var objectContext = new ExpressionBuildContext(sourceType, sourceResult.Expression, context.Parameter, context.TypeAccessorProvider);
+        var objectContext = new ExpressionBuildContext(sourceType, sourceResult.Expression, context.Parameter,
+            context.TypeAccessorProvider);
 
         var elementInits = new List<ElementInit>();
 
@@ -625,7 +627,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     private static ExpressionBuildResult BuildStringMethodFunction(ExpressionBuildResult source, string methodName)
     {
         var method = typeof(string).GetMethod(methodName, Type.EmptyTypes)
-            ?? throw new InvalidOperationException($"Method {methodName}() not found on string");
+                     ?? throw new InvalidOperationException($"Method {methodName}() not found on string");
 
         var call = Expression.Call(source.Expression, method);
         return new ExpressionBuildResult(typeof(string), call);
@@ -634,7 +636,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Substring call: source.Substring(start) or source.Substring(start, length)
     /// </summary>
-    private ExpressionBuildResult BuildSubstringFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildSubstringFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var args = node.GetArguments();
         var startExpr = BuildArgumentExpression(args[0], context);
@@ -662,7 +665,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Replace call: source.Replace(oldValue, newValue)
     /// </summary>
-    private ExpressionBuildResult BuildReplaceFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildReplaceFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var args = node.GetArguments();
         var oldValueExpr = BuildArgumentExpression(args[0], context);
@@ -678,7 +682,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Concat: string.Concat(source, arg1, arg2, ...)
     /// </summary>
-    private ExpressionBuildResult BuildConcatFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildConcatFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var allParts = new List<Expression> { source.Expression };
 
@@ -699,7 +704,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Split call: source.Split(separator)
     /// </summary>
-    private ExpressionBuildResult BuildSplitFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildSplitFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var args = node.GetArguments();
         var separatorExpr = BuildArgumentExpression(args[0], context);
@@ -726,7 +732,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         if (underlyingType == typeof(DateTime))
         {
             // For DateTime?, access Value property first
-            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<>.Value));
         }
         else if (sourceType == typeof(DateTime))
         {
@@ -753,7 +759,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         Expression dateExpr;
         if (underlyingType == typeof(DateTime))
         {
-            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<>.Value));
         }
         else if (sourceType == typeof(DateTime))
         {
@@ -761,7 +767,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
         else
         {
-            throw new InvalidOperationException($"Cannot apply dayOfWeek function to non-DateTime type '{sourceType.Name}'");
+            throw new InvalidOperationException(
+                $"Cannot apply dayOfWeek function to non-DateTime type '{sourceType.Name}'");
         }
 
         var dayOfWeekAccess = Expression.Property(dateExpr, nameof(DateTime.DayOfWeek));
@@ -781,7 +788,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         Expression dateExpr;
         if (underlyingType == typeof(DateTime))
         {
-            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<>.Value));
         }
         else if (sourceType == typeof(DateTime))
         {
@@ -789,7 +796,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
         else
         {
-            throw new InvalidOperationException($"Cannot apply daysAgo function to non-DateTime type '{sourceType.Name}'");
+            throw new InvalidOperationException(
+                $"Cannot apply daysAgo function to non-DateTime type '{sourceType.Name}'");
         }
 
         // Build: (DateTime.Today - source).Days
@@ -803,7 +811,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds date format call: source.ToString(format)
     /// </summary>
-    private ExpressionBuildResult BuildDateFormatFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildDateFormatFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var sourceType = source.Type;
         var underlyingType = Nullable.GetUnderlyingType(sourceType);
@@ -811,7 +820,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         Expression dateExpr;
         if (underlyingType == typeof(DateTime))
         {
-            dateExpr = Expression.Property(source.Expression, nameof(Nullable<DateTime>.Value));
+            dateExpr = Expression.Property(source.Expression, nameof(Nullable<>.Value));
         }
         else if (sourceType == typeof(DateTime))
         {
@@ -819,7 +828,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
         else
         {
-            throw new InvalidOperationException($"Cannot apply format function to non-DateTime type '{sourceType.Name}'");
+            throw new InvalidOperationException(
+                $"Cannot apply format function to non-DateTime type '{sourceType.Name}'");
         }
 
         var args = node.GetArguments();
@@ -835,7 +845,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Math.Round function: Math.Round(source) or Math.Round(source, decimals)
     /// </summary>
-    private ExpressionBuildResult BuildRoundFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildRoundFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var sourceExpr = ConvertToDouble(source.Expression, source.Type);
         var args = node.GetArguments();
@@ -910,7 +921,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         // Handle nullable types by accessing Value
         if (Nullable.GetUnderlyingType(sourceType) != null)
         {
-            sourceExpr = Expression.Property(source.Expression, nameof(Nullable<int>.Value));
+            sourceExpr = Expression.Property(source.Expression, nameof(Nullable<>.Value));
         }
 
         var absCall = Expression.Call(absMethod, sourceExpr);
@@ -954,7 +965,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// <summary>
     /// Builds Math.Pow function: Math.Pow(source, exponent)
     /// </summary>
-    private ExpressionBuildResult BuildPowFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildPowFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         var args = node.GetArguments();
         if (args.Count == 0)
@@ -975,7 +987,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// Builds Distinct function: source.Select(x => x.Property).Distinct()
     /// Example: Items:distinct(Name) -> Items.Select(x => x.Name).Distinct()
     /// </summary>
-    private ExpressionBuildResult BuildDistinctFunction(ExpressionBuildResult source, FunctionNode node, ExpressionBuildContext context)
+    private ExpressionBuildResult BuildDistinctFunction(ExpressionBuildResult source, FunctionNode node,
+        ExpressionBuildContext context)
     {
         // Get element type from source collection
         if (!TryGetEnumerableElementType(source.Type, out var elementType))
@@ -1012,8 +1025,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         // Get the property accessor
         var typeAccessor = context.TypeAccessorProvider(elementType);
         var propertyInfo = typeAccessor.GetPropertyInfo(propertyName)
-            ?? throw new InvalidOperationException(
-                $"Property '{propertyName}' not found on type '{elementType.Name}'");
+                           ?? throw new InvalidOperationException(
+                               $"Property '{propertyName}' not found on type '{elementType.Name}'");
 
         var propertyAccess = Expression.Property(selectParameter, propertyInfo);
         var selectLambda = Expression.Lambda(propertyAccess, selectParameter);
@@ -1033,7 +1046,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             [propertyInfo.PropertyType],
             selectCall);
 
-        return new ExpressionBuildResult(typeof(IEnumerable<>).MakeGenericType(propertyInfo.PropertyType), distinctCall);
+        return new ExpressionBuildResult(typeof(IEnumerable<>).MakeGenericType(propertyInfo.PropertyType),
+            distinctCall);
     }
 
     /// <summary>
@@ -1077,15 +1091,11 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
     /// </summary>
     private static Expression ConvertToDouble(Expression expr, Type sourceType)
     {
-        if (sourceType == typeof(double))
-            return expr;
+        if (sourceType == typeof(double)) return expr;
 
         var underlyingType = Nullable.GetUnderlyingType(sourceType);
         if (underlyingType != null)
-        {
-            expr = Expression.Property(expr, nameof(Nullable<int>.Value));
-            sourceType = underlyingType;
-        }
+            expr = Expression.Property(expr, nameof(Nullable<>.Value));
 
         return Expression.Convert(expr, typeof(double));
     }
@@ -1100,7 +1110,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         // Handle nullable by accessing Value
         if (Nullable.GetUnderlyingType(sourceType) != null)
         {
-            expr = Expression.Property(expr, nameof(Nullable<int>.Value));
+            expr = Expression.Property(expr, nameof(Nullable<>.Value));
         }
 
         if (underlyingSource == targetType)
@@ -1372,8 +1382,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             // Single key: o => o.Status
             var propertyName = node.KeyProperties[0];
             var propertyInfo = typeAccessor.GetPropertyInfo(propertyName)
-                ?? throw new InvalidOperationException(
-                    $"Property '{propertyName}' not found on type '{elementType.Name}'");
+                               ?? throw new InvalidOperationException(
+                                   $"Property '{propertyName}' not found on type '{elementType.Name}'");
 
             keySelectorBody = Expression.Property(groupParameter, propertyInfo);
             keyType = propertyInfo.PropertyType;
@@ -1386,10 +1396,11 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             foreach (var propName in node.KeyProperties)
             {
                 var propertyInfo = typeAccessor.GetPropertyInfo(propName)
-                    ?? throw new InvalidOperationException(
-                        $"Property '{propName}' not found on type '{elementType.Name}'");
+                                   ?? throw new InvalidOperationException(
+                                       $"Property '{propName}' not found on type '{elementType.Name}'");
 
-                keyProperties.Add((propName, propertyInfo.PropertyType, Expression.Property(groupParameter, propertyInfo)));
+                keyProperties.Add((propName, propertyInfo.PropertyType,
+                    Expression.Property(groupParameter, propertyInfo)));
             }
 
             // Create ValueTuple using constructor
@@ -1415,7 +1426,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         var groupingType = typeof(IGrouping<,>).MakeGenericType(keyType, elementType);
         var resultType = typeof(IEnumerable<>).MakeGenericType(groupingType);
 
-        return new ExpressionBuildResult(resultType, groupByCall, new GroupByMetadata(node.KeyProperties, keyType, elementType));
+        return new ExpressionBuildResult(resultType, groupByCall,
+            new GroupByMetadata(node.KeyProperties, keyType, elementType));
     }
 
     public ExpressionBuildResult VisitGroupElements(GroupElementsNode node, ExpressionBuildContext context)
@@ -1694,15 +1706,18 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         {
             return typeof(ValueTuple<,>).MakeGenericType(properties[0].Type, properties[1].Type);
         }
+
         if (properties.Length == 3)
         {
             return typeof(ValueTuple<,,>).MakeGenericType(properties[0].Type, properties[1].Type, properties[2].Type);
         }
+
         if (properties.Length == 4)
         {
             return typeof(ValueTuple<,,,>).MakeGenericType(
                 properties[0].Type, properties[1].Type, properties[2].Type, properties[3].Type);
         }
+
         if (properties.Length == 5)
         {
             return typeof(ValueTuple<,,,,>).MakeGenericType(
@@ -1710,7 +1725,8 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
         }
 
         // For more than 5 keys, use nested tuples or throw
-        throw new InvalidOperationException($"GroupBy with more than 5 keys is not supported. Found {properties.Length} keys.");
+        throw new InvalidOperationException(
+            $"GroupBy with more than 5 keys is not supported. Found {properties.Length} keys.");
     }
 
     #endregion

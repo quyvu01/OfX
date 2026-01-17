@@ -3,7 +3,7 @@ namespace OfX.Responses;
 /// <summary>
 /// Represents the data response for a single entity from an OfX query.
 /// </summary>
-public sealed class OfXDataResponse
+public sealed class DataResponse
 {
     /// <summary>
     /// Gets or sets the string representation of the entity's identifier.
@@ -13,5 +13,5 @@ public sealed class OfXDataResponse
     /// <summary>
     /// Gets or sets the array of property values returned for this entity.
     /// </summary>
-    public OfXValueResponse[] OfXValues { get; set; }
+    public ValueResponse[] OfXValues { get; set; }
 }

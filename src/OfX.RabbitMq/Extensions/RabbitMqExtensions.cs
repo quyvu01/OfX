@@ -5,6 +5,8 @@ using OfX.RabbitMq.ApplicationModels;
 using OfX.RabbitMq.BackgroundServices;
 using OfX.RabbitMq.Implementations;
 using OfX.Registries;
+using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.RabbitMq.Extensions;
 
@@ -17,6 +19,12 @@ public static class RabbitMqExtensions
         var services = ofXRegister.ServiceCollection;
         services.AddSingleton<IRabbitMqServer, RabbitMqServer>();
         services.AddSingleton<IRequestClient, RabbitMqRequestClient>();
-        services.AddHostedService<RabbitMqServerHostedService>();
+
+        // Register supervisor options: global > default
+        var supervisorOptions = OfXStatics.SupervisorOptions ?? new SupervisorOptions();
+        services.AddSingleton(supervisorOptions);
+
+        // Use RabbitMqSupervisorWorker with supervisor pattern
+        services.AddHostedService<RabbitMqSupervisorWorker>();
     }
 }

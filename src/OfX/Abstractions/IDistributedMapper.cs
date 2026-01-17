@@ -66,7 +66,7 @@ public interface IDistributedMapper
     /// <returns>
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing the fetched data.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null)
+    Task<ItemsResponse<DataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query, IContext context = null)
         where TAttribute : OfXAttribute;
 
     /// <summary>
@@ -84,6 +84,6 @@ public interface IDistributedMapper
     /// <returns>
     /// A task that resolves to an <see cref="ItemsResponse{OfXDataResponse}"/> containing the fetched data.
     /// </returns>
-    Task<ItemsResponse<OfXDataResponse>>
+    Task<ItemsResponse<DataResponse>>
         FetchDataAsync(Type runtimeType, DataFetchQuery query, IContext context = null);
 }

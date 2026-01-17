@@ -97,7 +97,7 @@ internal static class ReflectionHelpers
                         .Select(a => new PropertyAssessorData(a.Model, a.PropertyInformation)), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<PropertyDescriptor> mappableProperties,
-        IEnumerable<(Type OfXAttributeType, ItemsResponse<OfXDataResponse> ItemsResponse)> dataFetched)
+        IEnumerable<(Type OfXAttributeType, ItemsResponse<DataResponse> ItemsResponse)> dataFetched)
     {
         var dataWithExpression = dataFetched
             .Select(a => a.ItemsResponse.Items
