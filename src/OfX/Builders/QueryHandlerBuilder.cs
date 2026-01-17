@@ -120,6 +120,10 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
         public IIdConverter IdConverter { get; private set; }
         private MemberExpression IdPropertyAccess { get; set; }
 
+        // Cached FilterContext type and factory delegate (faster than Activator.CreateInstance)
+        private Type FilterContextType { get; set; }
+        private Func<FilterContext> FilterContextFactory { get; set; }
+
         public void EnsureInitialized(string idPropertyName, IServiceProvider serviceProvider)
         {
             lock (_initLock)
@@ -154,20 +158,60 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
                     .First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2)
                     .MakeGenericMethod(IdPropertyType);
 
+                // Cache FilterContext type and compile factory delegate
+                FilterContextType = typeof(FilterContext<>).MakeGenericType(IdPropertyType);
+                FilterContextFactory = CompileFilterContextFactory(FilterContextType);
+
                 _isInitialized = true;
             }
         }
 
         /// <summary>
-        /// Builds filter expression using cached metadata.
-        /// Only the idsConverted constant changes between calls.
+        /// Compiles a factory delegate for creating FilterContext instances.
+        /// Much faster than Activator.CreateInstance for repeated calls.
         /// </summary>
+        private static Func<FilterContext> CompileFilterContextFactory(Type filterContextType)
+        {
+            // () => new FilterContext<TId>()
+            var newExpr = Expression.New(filterContextType);
+            var lambda = Expression.Lambda<Func<FilterContext>>(newExpr);
+            return lambda.Compile();
+        }
+
+        /// <summary>
+        /// Builds filter expression using cached metadata.
+        /// Uses MemberAccess on a closure object to enable EF Core parameterization.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// EF Core parameterizes queries when it encounters MemberAccess expressions on closure objects,
+        /// but treats direct ConstantExpression values as literal values embedded in SQL.
+        /// </para>
+        /// <para>
+        /// By wrapping ids in FilterContext and using MemberAccess, EF Core 8+ generates parameterized queries:
+        /// </para>
+        /// <code>WHERE EXISTS (SELECT 1 FROM OPENJSON(@__Ids_0) WHERE [value] = [u].[Id])</code>
+        /// <para>
+        /// Instead of inline values:
+        /// </para>
+        /// <code>WHERE [u].[Id] IN ('1', '2', '3')</code>
+        /// </remarks>
         public Expression<Func<TModel, bool>> BuildFilterExpression(object idsConverted)
         {
-            // Enumerable.Contains(ids, x.Id)
+            // Create NEW FilterContext instance per request to avoid race conditions
+            var filterContext = FilterContextFactory();
+            filterContext.SetIds(idsConverted);
+
+            // Expression.Constant with the new instance - EF Core will see MemberAccess on it
+            var filterContextExpr = Expression.Constant(filterContext, FilterContextType);
+
+            // Use cached PropertyInfo from FilterContext
+            var idsAccess = Expression.Property(filterContextExpr, filterContext.IdsPropertyInfo);
+
+            // Enumerable.Contains(filterContext.Ids, x.Id)
             var containsCall = Expression.Call(
                 ContainsMethod,
-                Expression.Constant(idsConverted),
+                idsAccess,
                 IdPropertyAccess);
 
             return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameter);

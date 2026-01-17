@@ -306,7 +306,7 @@ public class ServerSupervisor(SupervisorOptions options, ILogger<ServerSuperviso
         for (var i = failedIndex; i < serverList.Count; i++)
         {
             var state = serverList[i];
-            state.Cts?.Cancel();
+            if (state.Cts is not null) await state.Cts.CancelAsync();
             try
             {
                 await state.Server.StopAsync();
