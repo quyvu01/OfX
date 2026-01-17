@@ -8,7 +8,7 @@ public sealed class KafkaConfigurator
 
     public void Ssl(Action<KafkaSslOptions> kafkaSslOptions)
     {
-        var  options = new KafkaSslOptions();
+        var options = new KafkaSslOptions();
         kafkaSslOptions(options);
         KafkaStatics.KafkaSslOptions = options;
     }

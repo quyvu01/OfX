@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
+using OfX.Supervision;
 using Service2;
 using Service2.Contexts;
 using Service2.Models;
@@ -15,9 +17,16 @@ builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
         cfg.AddModelConfigurationsFromNamespaceContaining<IAssemblyMarker>();
-        // cfg.AddNats(config => config.Url("nats://localhost:4222"));
+        cfg.ConfigureSupervisor(opts =>
+        {
+            opts.Strategy = SupervisionStrategy.OneForOne;
+            opts.MaxRestarts = 5;
+            opts.EnableCircuitBreaker = true;
+            opts.CircuitBreakerThreshold = 3;
+        });
         cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddKafka(c => c.Host("localhost:9092"));
+        // cfg.AddNats(c => c.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 

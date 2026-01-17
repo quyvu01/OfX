@@ -7,6 +7,7 @@ using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.Registries;
 
@@ -149,5 +150,50 @@ public class OfXRegister(IServiceCollection serviceCollection)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(retryCount, 0);
         OfXStatics.RetryPolicy = new RetryPolicy(retryCount, sleepDurationProvider, onRetry);
+    }
+
+    /// <summary>
+    /// Configures the global supervisor options for message-based transport servers.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This sets the supervisor configuration for message-based transports: NATS, RabbitMQ, Kafka, and Azure Service Bus.
+    /// </para>
+    /// <para>
+    /// <b>Note:</b> This configuration does <b>not</b> apply to gRPC transport. gRPC uses HTTP/2 which has built-in
+    /// connection recovery managed by ASP.NET Core's Kestrel server, making the supervisor pattern unnecessary.
+    /// </para>
+    /// <para>
+    /// The supervisor pattern provides automatic failure recovery with features like:
+    /// </para>
+    /// <list type="bullet">
+    /// <item>Exponential backoff for restart delays</item>
+    /// <item>Configurable restart limits within a time window</item>
+    /// <item>Circuit breaker to prevent restart storms</item>
+    /// <item>Exception type to directive mapping</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="configure">An action to configure the supervisor options.</param>
+    /// <example>
+    /// <code>
+    /// services.AddOfX(cfg =>
+    /// {
+    ///     cfg.ConfigureSupervisor(opts =>
+    ///     {
+    ///         opts.Strategy = SupervisionStrategy.OneForOne;
+    ///         opts.MaxRestarts = 5;
+    ///         opts.EnableCircuitBreaker = true;
+    ///         opts.CircuitBreakerThreshold = 3;
+    ///     });
+    ///     cfg.AddRabbitMq(c => c.Host("localhost", "/"));  // Supervisor applies
+    ///     cfg.AddNats(c => c.Url("nats://localhost:4222")); // Supervisor applies
+    ///     // cfg.AddGrpcClients(...); // Supervisor does NOT apply to gRPC
+    /// });
+    /// </code>
+    /// </example>
+    public void ConfigureSupervisor(Action<SupervisorOptions> configure)
+    {
+        OfXStatics.SupervisorOptions ??= new SupervisorOptions();
+        configure(OfXStatics.SupervisorOptions);
     }
 }

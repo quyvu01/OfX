@@ -7,6 +7,8 @@ using OfX.Nats.BackgroundServices;
 using OfX.Nats.Implementations;
 using OfX.Nats.Wrappers;
 using OfX.Registries;
+using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.Nats.Extensions;
 
@@ -27,7 +29,13 @@ public static class NatsExtensions
             return new NatsClientWrapper(new NatsClient(natsOption with { Url = natsUrl }));
         });
         services.AddSingleton(typeof(INatsServer<,>), typeof(NatsServer<,>));
-        services.AddHostedService<NatsServerWorker>();
+
+        // Register supervisor options: global > default
+        var supervisorOptions = OfXStatics.SupervisorOptions ?? new SupervisorOptions();
+        services.AddSingleton(supervisorOptions);
+
+        // Use NatsSupervisorWorker with supervisor pattern
+        services.AddHostedService<NatsSupervisorWorker>();
         services.AddTransient<IRequestClient, NatsRequestClient>();
     }
 }

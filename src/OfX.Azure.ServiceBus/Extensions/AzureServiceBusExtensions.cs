@@ -8,6 +8,8 @@ using OfX.Azure.ServiceBus.BackgroundServices;
 using OfX.Azure.ServiceBus.Implementations;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Registries;
+using OfX.Statics;
+using OfX.Supervision;
 
 namespace OfX.Azure.ServiceBus.Extensions;
 
@@ -31,6 +33,12 @@ public static class AzureServiceBusExtensions
         services.AddSingleton(typeof(IAzureServiceBusServer<,>), typeof(AzureServiceBusServer<,>));
         services.AddSingleton(typeof(OpenAzureServiceBusClient<>));
         services.AddSingleton<IRequestClient, AzureServiceBusClient>();
-        services.AddHostedService<AzureServiceBusServerWorker>();
+
+        // Register supervisor options: global > default
+        var supervisorOptions = OfXStatics.SupervisorOptions ?? new SupervisorOptions();
+        services.AddSingleton(supervisorOptions);
+
+        // Use AzureServiceBusSupervisorWorker with supervisor pattern
+        services.AddHostedService<AzureServiceBusSupervisorWorker>();
     }
 }

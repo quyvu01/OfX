@@ -3,6 +3,7 @@ using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
 using OfX.Extensions;
+using OfX.Supervision;
 
 namespace OfX.Statics;
 
@@ -28,6 +29,8 @@ public static class OfXStatics
     {
         AttributesRegister = [];
         MaxObjectSpawnTimes = ObjectSpawnTimes;
+        MaxConcurrentProcessing = ConcurrentProcessing;
+        SupervisorOptions = null;
         ThrowIfExceptions = false;
         RetryPolicy = null;
         ModelConfigurationAssembly = null;
@@ -38,6 +41,12 @@ public static class OfXStatics
     public static int MaxConcurrentProcessing { get; internal set; } = ConcurrentProcessing;
     public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
+
+    /// <summary>
+    /// Gets the global supervisor options configured for all transport servers.
+    /// Individual transport packages can override these with their own settings.
+    /// </summary>
+    public static SupervisorOptions SupervisorOptions { get; internal set; }
 
     public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
 
