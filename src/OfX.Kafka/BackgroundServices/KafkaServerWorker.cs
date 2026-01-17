@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OfX.Abstractions.Transporting;
 using OfX.Kafka.Abstractions;
 using OfX.Statics;
 
@@ -21,8 +22,8 @@ internal sealed class KafkaServerWorker(IServiceProvider serviceProvider, ILogge
                     var modelType = handlerType.GetGenericArguments()[0];
                     var kafkaServerGeneric = serviceProvider
                         .GetService(typeof(IKafkaServer<,>).MakeGenericType(modelType, attributeType));
-                    if (kafkaServerGeneric is not IKafkaServer kafkaServer) return;
-                    await kafkaServer.StartAsync(stoppingToken);
+                    if (kafkaServerGeneric is not IRequestServer server) return;
+                    await server.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);
             }

@@ -101,4 +101,6 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
             _logger?.LogError(ex, "Failed to send error response for <{Attribute}>", typeof(TAttribute).Name);
         }
     }
+
+    public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 }

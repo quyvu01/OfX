@@ -2,6 +2,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OfX.Abstractions.Transporting;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Wrappers;
@@ -19,9 +20,6 @@ public class AzureServiceBusServerWorker(IServiceProvider serviceProvider) : Bac
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Wait a bit for the application to fully start
-        await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
-
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -38,7 +36,7 @@ public class AzureServiceBusServerWorker(IServiceProvider serviceProvider) : Bac
                     var modelArg = handlerType.GetGenericArguments()[0];
                     var azureServiceBusServer = serviceProvider
                         .GetService(typeof(IAzureServiceBusServer<,>).MakeGenericType(modelArg, attributeType));
-                    if (azureServiceBusServer is not IAzureServiceBusServer server) return;
+                    if (azureServiceBusServer is not IRequestServer server) return;
                     await server.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);

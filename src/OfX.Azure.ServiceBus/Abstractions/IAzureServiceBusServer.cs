@@ -1,11 +1,7 @@
+using OfX.Abstractions.Transporting;
 using OfX.Attributes;
 
 namespace OfX.Azure.ServiceBus.Abstractions;
 
-internal interface IAzureServiceBusServer
-{
-    Task StartAsync(CancellationToken cancellationToken = default);
-}
-
-internal interface IAzureServiceBusServer<TModel, TAttribute> : IAzureServiceBusServer
+internal interface IAzureServiceBusServer<TModel, TAttribute> : IRequestServer<TModel, TAttribute>
     where TAttribute : OfXAttribute where TModel : class;

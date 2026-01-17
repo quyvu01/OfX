@@ -56,7 +56,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         }
         finally
         {
-            await StopAsync();
+            await StopAsync(CancellationToken.None);
         }
     }
 
@@ -157,13 +157,13 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         }
     }
 
-    private async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         if (_processor != null)
         {
             try
             {
-                await _processor.StopProcessingAsync();
+                await _processor.StopProcessingAsync(cancellationToken);
                 await _processor.DisposeAsync();
             }
             catch (Exception ex)

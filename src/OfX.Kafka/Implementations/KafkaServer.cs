@@ -186,6 +186,12 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         }
     }
 
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        Dispose();
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
         _consumer?.Dispose();

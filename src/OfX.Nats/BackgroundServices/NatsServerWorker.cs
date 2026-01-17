@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OfX.Abstractions.Transporting;
 using OfX.Nats.Abstractions;
 using OfX.Statics;
 
@@ -21,8 +22,8 @@ internal sealed class NatsServerWorker(IServiceProvider serviceProvider, ILogger
                     var modelArg = handlerType.GetGenericArguments()[0];
                     var natsServerRpc = serviceProvider
                         .GetService(typeof(INatsServer<,>).MakeGenericType(modelArg, attributeType));
-                    if (natsServerRpc is not INatsServer serverRpc) return;
-                    await serverRpc.StartAsync(stoppingToken);
+                    if (natsServerRpc is not IRequestServer server) return;
+                    await server.StartAsync(stoppingToken);
                 });
                 await Task.WhenAll(tasks);
             }
