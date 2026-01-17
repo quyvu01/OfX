@@ -10,9 +10,9 @@ using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
-using OfX.Constants;
 using OfX.Implementations;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Azure.ServiceBus.Implementations;
 
@@ -73,7 +73,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
 
         ServiceBusSender sender = null;
@@ -116,7 +116,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
         }
     }
 
-    private async Task SendResponseAsync(ServiceBusReceivedMessage request, ServiceBusSender sender,
+    private static async Task SendResponseAsync(ServiceBusReceivedMessage request, ServiceBusSender sender,
         Result response, CancellationToken cancellationToken)
     {
         var responseMessage = new ServiceBusMessage(JsonSerializer.Serialize(response))

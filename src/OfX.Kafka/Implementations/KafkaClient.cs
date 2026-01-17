@@ -7,13 +7,13 @@ using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Kafka.Constants;
 using OfX.Kafka.Extensions;
 using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Kafka.Implementations;
 
@@ -31,7 +31,7 @@ internal class KafkaClient : IRequestClient, IDisposable
     private readonly ConcurrentDictionary<string, TaskCompletionSource<Result>>
         _pendingRequests = new();
 
-    public KafkaClient(ILogger<KafkaClient> logger = null)
+    public KafkaClient(ILogger<KafkaClient> logger)
     {
         _logger = logger;
         var kafkaBootstrapServers = KafkaStatics.KafkaHost;
@@ -88,7 +88,7 @@ internal class KafkaClient : IRequestClient, IDisposable
 
             // Wait for response with timeout
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
-            cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+            cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
             var response = await tcs.Task.WaitAsync(cts.Token);
 
@@ -96,11 +96,8 @@ internal class KafkaClient : IRequestClient, IDisposable
                 throw new OfXException.ReceivedException("Received null response from server");
 
             if (!response.IsSuccess)
-            {
-                var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
-                                   ?? "Unknown error from server";
-                throw new OfXException.ReceivedException(errorMessage);
-            }
+                throw response.Fault?.ToException()
+                      ?? new OfXException.ReceivedException("Unknown error from server");
 
             return response.Data;
         }

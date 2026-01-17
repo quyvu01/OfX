@@ -7,10 +7,10 @@ using OfX.Attributes;
 using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Azure.ServiceBus.Implementations;
 
@@ -90,7 +90,7 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
 
             // Wait with proper timeout and cancellation
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
-            cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+            cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
             try
             {
@@ -101,11 +101,8 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
                     throw new OfXException.ReceivedException("Received null response from server");
 
                 if (!response.IsSuccess)
-                {
-                    var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
-                                       ?? "Unknown error from server";
-                    throw new OfXException.ReceivedException(errorMessage);
-                }
+                    throw response.Fault?.ToException()
+                          ?? new OfXException.ReceivedException("Unknown error from server");
 
                 return response.Data;
             }

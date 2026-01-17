@@ -7,6 +7,12 @@ namespace OfX.Responses;
 public sealed class Fault
 {
     /// <summary>
+    /// The maximum depth of exception chain to capture.
+    /// Prevents infinite loops from circular exception references.
+    /// </summary>
+    private const int MaxExceptionDepth = 16;
+
+    /// <summary>
     /// Gets or sets the unique identifier for this fault.
     /// </summary>
     public string FaultId { get; set; }
@@ -36,13 +42,14 @@ public sealed class Fault
     /// </summary>
     /// <param name="exception">The exception that caused the fault.</param>
     /// <param name="faultedMessageId">Optional identifier for the faulted message.</param>
-    /// <returns>A new OfXFault instance.</returns>
+    /// <returns>A new Fault instance.</returns>
     public static Fault FromException(Exception exception, string faultedMessageId = null)
     {
         var exceptions = new List<ExceptionInfo>();
         var currentException = exception;
+        var depth = 0;
 
-        while (currentException != null)
+        while (currentException != null && depth < MaxExceptionDepth)
         {
             exceptions.Add(new ExceptionInfo
             {
@@ -52,6 +59,7 @@ public sealed class Fault
                 Source = currentException.Source
             });
             currentException = currentException.InnerException;
+            depth++;
         }
 
         return new Fault
@@ -62,6 +70,68 @@ public sealed class Fault
             Exceptions = exceptions.ToArray(),
             Host = HostInfo.Current
         };
+    }
+
+    /// <summary>
+    /// Converts this fault back to an exception.
+    /// Reconstructs the exception chain from the stored exception information.
+    /// </summary>
+    /// <returns>An exception representing this fault, or null if no exception info exists.</returns>
+    public Exception ToException()
+    {
+        if (Exceptions is not { Length: > 0 })
+            return null;
+
+        // Build exception chain from innermost to outermost
+        Exception innerException = null;
+        for (var i = Exceptions.Length - 1; i >= 0; i--)
+        {
+            var exInfo = Exceptions[i];
+            innerException = new FaultException(exInfo, innerException);
+        }
+
+        return innerException;
+    }
+}
+
+/// <summary>
+/// Represents a reconstructed exception from fault information.
+/// </summary>
+public sealed class FaultException : Exception
+{
+    /// <summary>
+    /// Gets the original exception type name.
+    /// </summary>
+    public string OriginalExceptionType { get; }
+
+    /// <summary>
+    /// Gets the original stack trace.
+    /// </summary>
+    public string OriginalStackTrace { get; }
+
+    /// <summary>
+    /// Gets the original source.
+    /// </summary>
+    public string OriginalSource { get; }
+
+    /// <summary>
+    /// Creates a new FaultException from exception info.
+    /// </summary>
+    public FaultException(ExceptionInfo exceptionInfo, Exception innerException = null)
+        : base(exceptionInfo?.Message ?? "Unknown error", innerException)
+    {
+        OriginalExceptionType = exceptionInfo?.ExceptionType;
+        OriginalStackTrace = exceptionInfo?.StackTrace;
+        OriginalSource = exceptionInfo?.Source;
+    }
+
+    /// <inheritdoc />
+    public override string ToString()
+    {
+        var result = $"{OriginalExceptionType ?? GetType().FullName}: {Message}";
+        if (!string.IsNullOrEmpty(OriginalStackTrace))
+            result += Environment.NewLine + OriginalStackTrace;
+        return result;
     }
 }
 

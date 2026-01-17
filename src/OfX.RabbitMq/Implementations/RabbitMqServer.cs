@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.ApplicationModels;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;
@@ -94,7 +93,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
 
         try

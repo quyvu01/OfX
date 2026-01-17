@@ -22,6 +22,7 @@ public static class OfXStatics
 {
     private const int ObjectSpawnTimes = 128;
     private const int ConcurrentProcessing = 128;
+    public static TimeSpan DefaultRequestTimeout { get; internal set; } = TimeSpan.FromSeconds(30);
 
     internal static void Clear()
     {

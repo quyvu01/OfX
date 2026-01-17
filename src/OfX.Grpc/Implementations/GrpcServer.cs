@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OfX.ApplicationModels;
 using OfX.Exceptions;
 using OfX.Extensions;
@@ -25,6 +25,7 @@ namespace OfX.Grpc.Implementations;
 public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportService.OfXTransportServiceBase
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>> ReceivedPipelineTypes = new(() => []);
+    private readonly ILogger<GrpcServer> _logger = serviceProvider.GetService<ILogger<GrpcServer>>();
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
@@ -65,7 +66,8 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
         }
         catch (Exception e)
         {
-            Debug.WriteLine($"Error while execute get items: {request.AttributeAssemblyType}, error: {e.Message}");
+            _logger?.LogError("Error while execute get items: {@RequestAttributeAssemblyType}, error: {@EMessage}",
+                request.AttributeAssemblyType, e.Message);
             throw;
         }
     }

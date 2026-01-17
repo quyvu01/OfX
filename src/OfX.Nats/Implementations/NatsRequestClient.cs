@@ -2,12 +2,12 @@ using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Nats.Implementations;
 
@@ -22,15 +22,14 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
             .RequestAsync<RequestOf<TAttribute>, Result>(
                 typeof(TAttribute).GetNatsSubject(),
                 requestContext!.Query, natsHeaders,
-                replyOpts: new NatsSubOpts { Timeout = OfXConstants.DefaultRequestTimeout },
+                replyOpts: new NatsSubOpts { Timeout = OfXStatics.DefaultRequestTimeout },
                 cancellationToken: requestContext.CancellationToken);
 
         var response = reply.Data;
         if (response is null) throw new OfXException.ReceivedException("Received null response from server");
 
         if (response.IsSuccess) return response.Data;
-        var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
-                           ?? "Unknown error from server";
-        throw new OfXException.ReceivedException(errorMessage);
+        throw response.Fault?.ToException()
+              ?? new OfXException.ReceivedException("Unknown error from server");
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
@@ -136,7 +135,7 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void SetRequestTimeOut(TimeSpan timeout)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(timeout, TimeSpan.Zero);
-        OfXConstants.DefaultRequestTimeout = timeout;
+        OfXStatics.DefaultRequestTimeout = timeout;
     }
 
     /// <summary>

@@ -3,10 +3,10 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Responses;
+using OfX.Statics;
 
 namespace OfX.Implementations;
 
@@ -50,7 +50,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
         var handler = serviceProvider.GetRequiredService<IClientRequestHandler<TAttribute>>();
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
         var parameters = context is IExpressionParameters expressionParameters ? expressionParameters.Parameters : null;
 

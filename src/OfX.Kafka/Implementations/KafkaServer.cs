@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Implementations;
 using OfX.Kafka.Abstractions;
 using OfX.Kafka.Constants;
@@ -127,7 +126,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
 
         // Properly dispose the service scope

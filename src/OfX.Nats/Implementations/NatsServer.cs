@@ -4,7 +4,6 @@ using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Implementations;
 using OfX.Nats.Abstractions;
 using OfX.Nats.Extensions;
@@ -58,7 +57,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         if (message.Data is null) return;
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
 
         try

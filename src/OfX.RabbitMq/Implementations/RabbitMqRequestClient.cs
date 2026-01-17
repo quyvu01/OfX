@@ -4,13 +4,13 @@ using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
 using OfX.Attributes;
-using OfX.Constants;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
 using OfX.Responses;
+using OfX.Statics;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -59,7 +59,7 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
 
             // Wait with timeout
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(OfXConstants.DefaultRequestTimeout);
+            cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
             await using var _ = cts.Token.Register(() => tcs.TrySetCanceled());
 
@@ -71,11 +71,8 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
                 throw new OfXException.ReceivedException("Received null response from server");
 
             if (!response.IsSuccess)
-            {
-                var errorMessage = response.Fault?.Exceptions?.FirstOrDefault()?.Message
-                                   ?? "Unknown error from server";
-                throw new OfXException.ReceivedException(errorMessage);
-            }
+                throw response.Fault?.ToException()
+                      ?? new OfXException.ReceivedException("Unknown error from server");
 
             return response.Data;
         }

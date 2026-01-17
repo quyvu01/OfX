@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Kafka.Extensions;
-using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using Service2;
 using Service2.Contexts;
