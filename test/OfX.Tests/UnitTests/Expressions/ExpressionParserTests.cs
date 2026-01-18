@@ -234,6 +234,72 @@ public sealed class ExpressionParserTests
         indexerNode.OrderDirection.ShouldBe(OrderDirection.Desc);
     }
 
+    [Fact]
+    public void Parse_IndexerOrderOnlyAsc_ReturnsIndexerNode()
+    {
+        // Act - Format: [asc Name] - order only without skip/take
+        var result = ExpressionParser.Parse("Orders[asc OrderDate]");
+
+        // Assert
+        result.ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)result;
+        indexerNode.Skip.ShouldBeNull();
+        indexerNode.Take.ShouldBeNull();
+        indexerNode.IsOrderOnly.ShouldBeTrue();
+        indexerNode.IsSingleItem.ShouldBeFalse();
+        indexerNode.OrderDirection.ShouldBe(OrderDirection.Asc);
+        indexerNode.OrderBy.ShouldBe("OrderDate");
+    }
+
+    [Fact]
+    public void Parse_IndexerOrderOnlyDesc_ReturnsIndexerNode()
+    {
+        // Act - Format: [desc Name] - order only without skip/take
+        var result = ExpressionParser.Parse("Orders[desc Total]");
+
+        // Assert
+        result.ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)result;
+        indexerNode.Skip.ShouldBeNull();
+        indexerNode.Take.ShouldBeNull();
+        indexerNode.IsOrderOnly.ShouldBeTrue();
+        indexerNode.IsSingleItem.ShouldBeFalse();
+        indexerNode.OrderDirection.ShouldBe(OrderDirection.Desc);
+        indexerNode.OrderBy.ShouldBe("Total");
+    }
+
+    [Fact]
+    public void Parse_IndexerOrderOnlyWithProjection_ReturnsCorrectStructure()
+    {
+        // Act - [asc Name].{Id, Name} - order then project
+        var result = ExpressionParser.Parse("Orders[asc OrderDate].{Id, Status}");
+
+        // Assert
+        result.ShouldBeOfType<ProjectionNode>();
+        var projNode = (ProjectionNode)result;
+
+        projNode.Source.ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)projNode.Source;
+        indexerNode.IsOrderOnly.ShouldBeTrue();
+        indexerNode.OrderDirection.ShouldBe(OrderDirection.Asc);
+        indexerNode.OrderBy.ShouldBe("OrderDate");
+    }
+
+    [Fact]
+    public void Parse_FilterThenIndexerOrderOnly_ReturnsCorrectStructure()
+    {
+        // Act - Filter then order only
+        var result = ExpressionParser.Parse("Orders(Status = 'Active')[desc CreatedAt]");
+
+        // Assert
+        result.ShouldBeOfType<IndexerNode>();
+        var indexerNode = (IndexerNode)result;
+        indexerNode.IsOrderOnly.ShouldBeTrue();
+        indexerNode.OrderDirection.ShouldBe(OrderDirection.Desc);
+        indexerNode.OrderBy.ShouldBe("CreatedAt");
+        indexerNode.Source.ShouldBeOfType<FilterNode>();
+    }
+
     #endregion
 
     #region Function Tests
