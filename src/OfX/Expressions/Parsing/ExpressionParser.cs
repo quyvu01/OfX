@@ -28,7 +28,7 @@ namespace OfX.Expressions.Parsing;
 /// FieldPath        := Identifier (':' FunctionName)?
 /// Operator         := '=' | '!=' | '>' | '&lt;' | '>=' | '&lt;=' | 'contains' | 'startswith' | 'endswith'
 /// Value            := String | Number | Boolean | Null
-/// Indexer          := '[' Number (Number)? ('asc' | 'desc') Identifier ']'
+/// Indexer          := '[' (Number (Number)?)? ('asc' | 'desc') Identifier ']'
 /// Projection       := '.{' Identifier (',' Identifier)* '}'
 /// Function         := ':' FunctionName ('(' Identifier ')' | '(' Condition ')')?
 /// FunctionName     := 'count' | 'sum' | 'avg' | 'min' | 'max' | 'any' | 'all'
@@ -1126,20 +1126,29 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
     }
 
     /// <summary>
-    /// Parses an indexer: [0 asc Name], [0 10 desc CreatedAt], [-1 asc Id]
+    /// Parses an indexer with 4 supported formats:
+    /// - [asc Name] - Order only (no skip/take)
+    /// - [0 asc Name] - Single item access (first item)
+    /// - [-1 desc Name] - Single item access (last item)
+    /// - [0 10 asc Name] - Range access (skip 0, take 10)
     /// </summary>
     private IndexerNode ParseIndexer(ExpressionNode source)
     {
-        var skipToken = Consume(TokenType.Number, "Expected skip/index number in indexer");
-        var skip = int.Parse(skipToken.Value);
-
+        int? skip = null;
         int? take = null;
 
-        // Check if next is a number (take) or order direction
+        // Check if starts with number (skip) or order direction
         if (Check(TokenType.Number))
         {
-            var takeToken = Advance();
-            take = int.Parse(takeToken.Value);
+            var skipToken = Advance();
+            skip = int.Parse(skipToken.Value);
+
+            // Check if next is a number (take) or order direction
+            if (Check(TokenType.Number))
+            {
+                var takeToken = Advance();
+                take = int.Parse(takeToken.Value);
+            }
         }
 
         var direction = OrderDirection.Asc;

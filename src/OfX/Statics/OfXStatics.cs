@@ -2,6 +2,7 @@ using System.Reflection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Supervision;
 
@@ -56,7 +57,7 @@ public static class OfXStatics
     public static readonly Lazy<IReadOnlyCollection<OfXModelData>> ModelConfigurations = new(() =>
     {
         var configForAttributeType = typeof(OfXConfigForAttribute<>);
-        return
+        OfXModelData[] attributeMapModels =
         [
             ..ModelConfigurationAssembly?
                 .ExportedTypes
@@ -81,6 +82,15 @@ public static class OfXStatics
                         configAttribute.OfXConfigAttribute as IOfXConfigAttribute);
                 }) ?? []
         ];
+        // Validate if one attribute is assigned to multiple models.
+        attributeMapModels.GroupBy(a => a.OfXAttributeType)
+            .ForEach(a =>
+            {
+                if (a.Count() <= 1) return;
+                throw new OfXException.OneAttributedHasBeenAssignToMultipleEntities(a.Key,
+                    [..a.Select(o => o.ModelType)]);
+            });
+        return attributeMapModels;
     });
 
     internal static readonly Lazy<IReadOnlyCollection<Type>> OfXAttributeTypes = new(() =>

@@ -233,6 +233,12 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             sourceResult.Expression,
             orderLambda);
 
+        // Order-only: just return the ordered collection [asc Name]
+        if (node.IsOrderOnly)
+        {
+            return new ExpressionBuildResult(typeof(IOrderedEnumerable<>).MakeGenericType(elementType), orderedCall);
+        }
+
         if (node.IsSingleItem)
         {
             // Single item access: FirstOrDefault or LastOrDefault
@@ -249,7 +255,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
                     nameof(Enumerable.Skip),
                     [elementType],
                     orderedCall,
-                    Expression.Constant(node.Skip));
+                    Expression.Constant(node.Skip.Value));
             }
 
             var elementCall = Expression.Call(
@@ -267,7 +273,7 @@ public sealed class LinqExpressionBuilder : IExpressionNodeVisitor<ExpressionBui
             nameof(Enumerable.Skip),
             [elementType],
             orderedCall,
-            Expression.Constant(node.Skip));
+            Expression.Constant(node.Skip!.Value));
 
         var takeCall = Expression.Call(
             typeof(Enumerable),
