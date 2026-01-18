@@ -81,4 +81,8 @@ public static class OfXException
 
     public sealed class DuplicatedNameByExposedName(Type type, PropertyInfo[] propertyInfos) : Exception(
         $"Properties: {string.Join(", ", propertyInfos.Select(p => p.Name))} cannot be dupplicated for type '{type.FullName}'.");
+
+    public sealed class OneAttributedHasBeenAssignToMultipleEntities(Type attributeType, Type[] entityTypes)
+        : Exception(
+            $"Attribute: {attributeType.FullName} has been assign to multiple entities: {string.Join(", ", entityTypes.Select(t => t.FullName))}");
 }
