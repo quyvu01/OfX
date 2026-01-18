@@ -48,7 +48,8 @@ internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvid
         var (projection, expressions) = BuildProjection(context.Query);
 
         // Get DbContext and execute query
-        var dbContextResolver = _serviceProvider.GetRequiredService<IDbContextResolver<TModel>>();
+        using var scope = _serviceProvider.CreateScope();
+        var dbContextResolver = scope.ServiceProvider.GetRequiredService<IDbContextResolver<TModel>>();
 
         // Step 1: Execute database query with object[] projection
         var rawResults = await dbContextResolver.Set

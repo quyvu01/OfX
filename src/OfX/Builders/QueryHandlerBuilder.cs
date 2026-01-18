@@ -209,10 +209,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
             var idsAccess = Expression.Property(filterContextExpr, filterContext.IdsPropertyInfo);
 
             // Enumerable.Contains(filterContext.Ids, x.Id)
-            var containsCall = Expression.Call(
-                ContainsMethod,
-                idsAccess,
-                IdPropertyAccess);
+            var containsCall = Expression.Call(ContainsMethod, idsAccess, IdPropertyAccess);
 
             return Expression.Lambda<Func<TModel, bool>>(containsCall, ModelParameter);
         }
