@@ -8,7 +8,7 @@ public string XId { get; set; }
 OfX is an open-source library focused on Attribute-based data mapping. It streamlines data handling across services,
 reduces boilerplate code, and improves maintainability.
 
-**[Full Documentation](https://ofx.world)** | **[Getting Started](https://ofx.world/docs/getting-started)** |**[Expression Language](https://ofx.world/docs/expressions)**
+**[Full Documentation](https://ofxmapper.net)** | **[Getting Started](https://ofxmapper.net/docs/getting-started)** |**[Expression Language](https://ofxmapper.net/docs/expressions)**
 
 > [!WARNING]
 > All OfX* packages need to have the same version.
@@ -89,7 +89,7 @@ public List<OrderSummary> OrdersByStatus { get; set; }
 ```
 
 For complete expression syntax including filters, indexers, functions, aggregations, boolean functions, coalesce,
-ternary operators, and more, visit **[Expression Documentation](https://ofx.world/docs/expressions)**.
+ternary operators, and more, visit **[Expression Documentation](https://ofxmapper.net/docs/expressions)**.
 
 ## Packages
 
