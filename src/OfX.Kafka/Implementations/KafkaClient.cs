@@ -78,7 +78,7 @@ internal class KafkaClient : IRequestClient, IDisposable
             var message = new KafkaMessageWrapped<OfXRequest>
             {
                 Message = new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
-                RelyTo = _replyTo
+                ReplyTo = _replyTo
             };
             await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>
             {
@@ -90,16 +90,25 @@ internal class KafkaClient : IRequestClient, IDisposable
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
             cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
-            var response = await tcs.Task.WaitAsync(cts.Token);
+            try
+            {
+                var response = await tcs.Task.WaitAsync(cts.Token);
 
-            if (response is null)
-                throw new OfXException.ReceivedException("Received null response from server");
+                if (response is null)
+                    throw new OfXException.ReceivedException("Received null response from server");
 
-            if (!response.IsSuccess)
-                throw response.Fault?.ToException()
-                      ?? new OfXException.ReceivedException("Unknown error from server");
+                if (!response.IsSuccess)
+                    throw response.Fault?.ToException()
+                          ?? new OfXException.ReceivedException("Unknown error from server");
 
-            return response.Data;
+                return response.Data;
+            }
+            catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                     !requestContext.CancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(
+                    $"Timeout waiting for Kafka response for {typeof(TAttribute).Name}");
+            }
         }
         finally
         {
@@ -115,7 +124,7 @@ internal class KafkaClient : IRequestClient, IDisposable
         try
         {
             if (_initialized) return;
-            await CreateTopicsAsync(cancellationToken);
+            await CreateTopicsAsync();
             _consumerTask = Task.Run(() => StartConsume(_consumerCts.Token), _consumerCts.Token);
             _initialized = true;
         }
@@ -184,7 +193,7 @@ internal class KafkaClient : IRequestClient, IDisposable
         _pendingRequests.Clear();
     }
 
-    private async Task CreateTopicsAsync(CancellationToken cancellationToken)
+    private async Task CreateTopicsAsync()
     {
         const int numPartitions = 1;
         const short replicationFactor = 1;

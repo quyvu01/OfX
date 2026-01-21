@@ -24,6 +24,9 @@ public static class GrpcExtensions
 {
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(3);
 
+    // Channel pool for reusing gRPC channels (channels are expensive to create)
+    private static readonly ConcurrentDictionary<string, GrpcChannel> ChannelPool = new();
+
     /// <summary>
     /// Adds gRPC client configuration for OfX distributed data fetching.
     /// </summary>
@@ -127,7 +130,7 @@ public static class GrpcExtensions
     private static async Task<OfXItemsGrpcResponse> GetOfXItemsAsync(string serverHost, IContext context,
         OfXRequest query, Type attributeType)
     {
-        using var channel = GrpcChannel.ForAddress(serverHost);
+        var channel = GetOrCreateChannel(serverHost);
         var client = new OfXTransportService.OfXTransportServiceClient(channel);
         var metadata = new Metadata();
         context?.Headers?.ForEach(h => metadata.Add(h.Key, h.Value));
@@ -145,7 +148,7 @@ public static class GrpcExtensions
     {
         try
         {
-            using var channel = GrpcChannel.ForAddress(serverHost);
+            var channel = GetOrCreateChannel(serverHost);
             var client = new OfXTransportService.OfXTransportServiceClient(channel);
             var query = new GetAttributesQuery();
             using var cancellationTokenSource = CancellationTokenSource
@@ -160,6 +163,9 @@ public static class GrpcExtensions
             return new AttributesProbe(false, []);
         }
     }
+
+    private static GrpcChannel GetOrCreateChannel(string serverHost) =>
+        ChannelPool.GetOrAdd(serverHost, static host => GrpcChannel.ForAddress(host));
 
     /// <summary>
     /// Maps the OfX gRPC service endpoint for handling incoming OfX requests.

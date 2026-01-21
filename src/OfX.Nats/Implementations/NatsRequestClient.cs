@@ -17,11 +17,11 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
         var natsHeaders = new NatsHeaders();
-        requestContext?.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
+        requestContext.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
         var reply = await natsClientWrapper.NatsClient
             .RequestAsync<RequestOf<TAttribute>, Result>(
                 typeof(TAttribute).GetNatsSubject(),
-                requestContext!.Query, natsHeaders,
+                requestContext.Query, natsHeaders,
                 replyOpts: new NatsSubOpts { Timeout = OfXStatics.DefaultRequestTimeout },
                 cancellationToken: requestContext.CancellationToken);
 

@@ -88,7 +88,16 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
                 // Backpressure - wait for available slot
                 await _semaphore.WaitAsync(cancellationToken);
-                _ = ProcessMessageWithReleaseAsync(consumeResult, cancellationToken);
+                try
+                {
+                    _ = ProcessMessageWithReleaseAsync(consumeResult, cancellationToken);
+                }
+                catch
+                {
+                    // If firing the task fails, release semaphore to prevent leak
+                    _semaphore.Release();
+                    throw;
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -146,43 +155,60 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
             var data = await pipeline.ExecuteAsync(requestContext);
 
             var response = Result.Success(data);
-            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, cancellationToken);
-
-            // Commit offset after successful processing
-            _consumer.Commit(consumeResult);
+            await SendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
             var response = Result
                 .Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
-            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, stoppingToken);
+            await TrySendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, stoppingToken);
         }
         catch (Exception e)
         {
             _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
             var response = Result.Failed(e);
-            await SendResponseAsync(consumeResult, messageUnWrapped.RelyTo, response, stoppingToken);
+            await TrySendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, stoppingToken);
+        }
+        finally
+        {
+            // Always commit to avoid reprocessing - message has been handled (success or error)
+            TryCommit(consumeResult);
         }
     }
 
     private async Task SendResponseAsync(ConsumeResult<string, string> consumeResult, string replyTo,
         Result response, CancellationToken cancellationToken)
     {
+        await _producer.ProduceAsync(replyTo, new Message<string, string>
+        {
+            Key = consumeResult.Message.Key,
+            Value = JsonSerializer.Serialize(response)
+        }, cancellationToken);
+    }
+
+    private async Task TrySendResponseAsync(ConsumeResult<string, string> consumeResult, string replyTo,
+        Result response, CancellationToken cancellationToken)
+    {
         try
         {
-            await _producer.ProduceAsync(replyTo, new Message<string, string>
-            {
-                Key = consumeResult.Message.Key,
-                Value = JsonSerializer.Serialize(response)
-            }, cancellationToken);
-
-            // Still commit offset even on error to avoid reprocessing
-            _consumer.Commit(consumeResult);
+            await SendResponseAsync(consumeResult, replyTo, response, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to send response for <{Attribute}>", typeof(TAttribute).Name);
+        }
+    }
+
+    private void TryCommit(ConsumeResult<string, string> consumeResult)
+    {
+        try
+        {
+            _consumer.Commit(consumeResult);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to commit offset for <{Attribute}>", typeof(TAttribute).Name);
         }
     }
 

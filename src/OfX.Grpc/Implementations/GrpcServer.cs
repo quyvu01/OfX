@@ -29,6 +29,11 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
+        // Create timeout CTS
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
+        cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
+        var cancellationToken = cts.Token;
+
         try
         {
             var receivedPipelinesType = ReceivedPipelineTypes.Value
@@ -45,14 +50,16 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
                     return typeof(ReceivedPipelinesOrchestrator<,>).MakeGenericType(modelArg, attributeType);
                 });
 
-            var receivedPipelinesOrchestrator = (ReceivedPipelinesOrchestrator)serviceProvider
+            // Use scoped service to prevent concurrent issues (e.g., with DbContext)
+            using var scope = serviceProvider.CreateScope();
+            var receivedPipelinesOrchestrator = (ReceivedPipelinesOrchestrator)scope.ServiceProvider
                 .GetRequiredService(receivedPipelinesType)!;
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
             var message = new OfXRequest([..request.SelectorIds], request.Expression);
             var response = await receivedPipelinesOrchestrator
-                .ExecuteAsync(message, headers, context.CancellationToken);
+                .ExecuteAsync(message, headers, cancellationToken);
 
             var res = new OfXItemsGrpcResponse();
             response.Items.ForEach(a =>
@@ -64,10 +71,17 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
             });
             return res;
         }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                 !context.CancellationToken.IsCancellationRequested)
+        {
+            _logger?.LogWarning("Request timeout for gRPC GetItems: {AttributeType}", request.AttributeAssemblyType);
+            throw new RpcException(new Status(StatusCode.DeadlineExceeded,
+                $"Request timeout for {request.AttributeAssemblyType}"));
+        }
         catch (Exception e)
         {
-            _logger?.LogError("Error while execute get items: {@RequestAttributeAssemblyType}, error: {@EMessage}",
-                request.AttributeAssemblyType, e.Message);
+            _logger?.LogError(e, "Error while execute get items: {RequestAttributeAssemblyType}",
+                request.AttributeAssemblyType);
             throw;
         }
     }

@@ -36,7 +36,16 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         {
             // Wait for available slot (backpressure)
             await _semaphore.WaitAsync(cancellationToken);
-            _ = ProcessMessageWithReleaseAsync(message, cancellationToken);
+            try
+            {
+                _ = ProcessMessageWithReleaseAsync(message, cancellationToken);
+            }
+            catch
+            {
+                // If firing the task fails, release semaphore to prevent leak
+                _semaphore.Release();
+                throw;
+            }
         }
     }
 
@@ -102,5 +111,9 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        _semaphore.Dispose();
+        return Task.CompletedTask;
+    }
 }
