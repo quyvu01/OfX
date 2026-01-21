@@ -35,7 +35,7 @@ public sealed class DataResolvers<TResponse> where TResponse : class
         if (!resolverContext.ContextData
                 .TryGetValue(fieldContextHeader, out var ctx) ||
             ctx is not FieldContext currentContext || currentContext.TargetPropertyInfo is null)
-            throw new NullReferenceException($"{nameof(FieldContext)} must be added with: {fieldContextHeader}");
+            throw new InvalidOperationException($"{nameof(FieldContext)} must be added with key: {fieldContextHeader}");
 
         List<Task<string>> allTasks =
             [FieldResultAsync(currentContext), ..GetDependencyTasks(currentContext, FieldResultAsync)];
@@ -48,10 +48,10 @@ public sealed class DataResolvers<TResponse> where TResponse : class
             var result = JsonSerializer.Deserialize(data, currentContext.TargetPropertyInfo.PropertyType);
             return result;
         }
-        catch (Exception)
+        catch (JsonException ex)
         {
-            throw new Exception(
-                $"Could not deserialize {currentContext.TargetPropertyInfo.PropertyType.FullName}.");
+            throw new InvalidOperationException(
+                $"Could not deserialize value to {currentContext.TargetPropertyInfo.PropertyType.FullName}.", ex);
         }
 
         async Task<string> FieldResultAsync(FieldContext fieldContext)

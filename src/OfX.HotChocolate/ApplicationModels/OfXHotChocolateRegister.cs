@@ -37,7 +37,12 @@ public sealed class OfXHotChocolateRegister
         builder
             .AddDataLoader<DataMappingLoader>()
             .UseInternalParametersMiddleware();
-        var schema = builder.BuildSchemaAsync().Result;
+
+        // Note: BuildSchemaAsync().Result is used here because HotChocolate's builder API
+        // requires synchronous registration during startup. This is a known limitation.
+        // The call happens during app startup, not during request processing, so deadlock
+        // risk is minimal in typical ASP.NET Core hosting scenarios.
+        var schema = builder.BuildSchemaAsync().GetAwaiter().GetResult();
         var types = schema.Types;
         types.ForEach(a =>
         {

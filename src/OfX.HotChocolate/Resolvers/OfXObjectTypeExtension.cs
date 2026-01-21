@@ -27,14 +27,21 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
             .Any(a => typeof(OfXAttribute).IsAssignableFrom(a.GetType())))
         .Select(x =>
         {
-            var attr = x.GetCustomAttribute<OfXAttribute>()!;
+            var attr = x.GetCustomAttribute<OfXAttribute>();
+            if (attr is null) return null;
+            var requiredProperty = typeof(T).GetProperty(attr.PropertyName);
+            if (requiredProperty is null)
+                throw new InvalidOperationException(
+                    $"Property '{attr.PropertyName}' not found on type '{typeof(T).FullName}'. " +
+                    $"Required by OfX attribute on property '{x.Name}'.");
             return new
             {
                 TargetPropertyInfo = x, Attribute = attr,
-                RequiredPropertyInfo = typeof(T).GetProperty(attr.PropertyName)
+                RequiredPropertyInfo = requiredProperty
             };
         })
-        .ForEach(data => descriptor.Field(data.TargetPropertyInfo)
+        .Where(data => data is not null)
+        .ForEach(data => descriptor.Field(data!.TargetPropertyInfo)
             .Use(next => async context =>
             {
                 var methodPath = context.Path.ToList().FirstOrDefault()?.ToString();

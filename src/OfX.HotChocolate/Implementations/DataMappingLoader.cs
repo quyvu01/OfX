@@ -43,17 +43,21 @@ internal class DataMappingLoader(
                 .Select(async gr =>
                 {
                     var matchedExpressionData = mapResult.Where(a =>
-                        gr.Any(x => x.NextComparable == a.Key.PreviousComparable));
+                        gr.Any(x => x.NextComparable == a.Key.PreviousComparable)).ToList();
 
                     // Re-set Id for `FieldBearing`
-                    gr.Join(matchedExpressionData, g => g.NextComparable, j => j.Key.PreviousComparable, (g, j) =>
-                    {
-                        var value = j.Value;
-                        g.SelectorId = value is null
-                            ? null
-                            : JsonSerializer.Deserialize(value, j.Key.TargetPropertyInfo.PropertyType)?.ToString();
-                        return g;
-                    }).Evaluate();
+                    gr.Join(matchedExpressionData, g => g.NextComparable,
+                        j => j.Key.PreviousComparable, (g, j) =>
+                        {
+                            var value = j.Value;
+                            g.SelectorId = value switch
+                            {
+                                null => null,
+                                _ => JsonSerializer.Deserialize(value, j.Key.TargetPropertyInfo.PropertyType)
+                                    ?.ToString()
+                            };
+                            return g;
+                        }).Evaluate();
 
                     List<string> ids = [..gr.Select(k => k.SelectorId).Where(a => a is not null).Distinct()];
                     if (ids is not { Count: > 0 }) return [];
