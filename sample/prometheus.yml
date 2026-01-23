@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'ofx-demo'
+    environment: 'development'
+
+scrape_configs:
+  - job_name: 'service1'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:5001']
+        labels:
+          service: 'Service1'
+          role: 'graphql-api'
+
+  - job_name: 'service2'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:5002']
+        labels:
+          service: 'Service2'
+          role: 'grpc-service'
+
+  - job_name: 'service3'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:5003']
+        labels:
+          service: 'Service3'
+          role: 'grpc-service'
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['nats:8222']
+        labels:
+          service: 'NATS'
+          role: 'message-broker'

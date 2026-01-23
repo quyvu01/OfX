@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using NATS.Client.Core;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
@@ -8,28 +9,107 @@ using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Nats.Implementations;
 
 internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : IRequestClient
 {
+    private const string TransportName = "nats";
+
     public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
-        var natsHeaders = new NatsHeaders();
-        requestContext.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
-        var reply = await natsClientWrapper.NatsClient
-            .RequestAsync<RequestOf<TAttribute>, Result>(
-                typeof(TAttribute).GetNatsSubject(),
-                requestContext.Query, natsHeaders,
-                replyOpts: new NatsSubOpts { Timeout = OfXStatics.DefaultRequestTimeout },
-                cancellationToken: requestContext.CancellationToken);
+        // Start client-side activity for distributed tracing
+        using var activity = OfXActivitySource.StartClientActivity<TAttribute>(TransportName);
+        var stopwatch = Stopwatch.StartNew();
 
-        var response = reply.Data;
-        if (response is null) throw new OfXException.ReceivedException("Received null response from server");
+        try
+        {
+            // Add trace context to headers for propagation
+            var natsHeaders = new NatsHeaders();
+            requestContext.Headers?.ForEach(h => natsHeaders.Add(h.Key, h.Value));
 
-        if (response.IsSuccess) return response.Data;
-        throw response.Fault?.ToException()
-              ?? new OfXException.ReceivedException("Unknown error from server");
+            // Propagate W3C trace context
+            if (activity != null)
+            {
+                natsHeaders.Add("traceparent", activity.Id);
+                if (!string.IsNullOrEmpty(activity.TraceStateString))
+                    natsHeaders.Add("tracestate", activity.TraceStateString);
+
+                // Add OfX-specific tags
+                activity.SetMessagingTags(
+                    system: TransportName,
+                    destination: typeof(TAttribute).GetNatsSubject(),
+                    operation: "publish");
+
+                if (requestContext.Query.Expression != null)
+                {
+                    activity.SetOfXTags(
+                        expression: requestContext.Query.Expression,
+                        selectorIds: requestContext.Query.SelectorIds);
+                }
+            }
+
+            // Emit diagnostic event
+            OfXDiagnostics.RequestStart(
+                typeof(TAttribute).Name,
+                TransportName,
+                requestContext.Query.SelectorIds,
+                requestContext.Query.Expression);
+
+            // Track active requests
+            OfXMetrics.UpdateActiveRequests(1);
+
+            var reply = await natsClientWrapper.NatsClient
+                .RequestAsync<RequestOf<TAttribute>, Result>(
+                    typeof(TAttribute).GetNatsSubject(),
+                    requestContext.Query, natsHeaders,
+                    replyOpts: new NatsSubOpts { Timeout = OfXStatics.DefaultRequestTimeout },
+                    cancellationToken: requestContext.CancellationToken);
+
+            var response = reply.Data;
+            if (response is null) throw new OfXException.ReceivedException("Received null response from server");
+
+            if (!response.IsSuccess)
+            {
+                throw response.Fault?.ToException()
+                      ?? new OfXException.ReceivedException("Unknown error from server");
+            }
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = response.Data?.Items?.Length ?? 0;
+
+            OfXMetrics.RecordRequest(typeof(TAttribute).Name, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                itemCount);
+
+            OfXDiagnostics.RequestStop(typeof(TAttribute).Name, TransportName, itemCount, stopwatch.Elapsed);
+
+            // Add item count to activity
+            activity?.SetOfXTags(itemCount: itemCount);
+
+            return response.Data;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+
+            // Record error metrics
+            OfXMetrics.RecordError(typeof(TAttribute).Name, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                ex.GetType().Name);
+
+            OfXDiagnostics.RequestError(typeof(TAttribute).Name, TransportName, ex, stopwatch.Elapsed);
+
+            // Record exception on activity
+            activity?.RecordException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            throw;
+        }
+        finally
+        {
+            OfXMetrics.UpdateActiveRequests(-1);
+        }
     }
 }

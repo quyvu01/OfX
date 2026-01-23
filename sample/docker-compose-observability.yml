@@ -1,0 +1,69 @@
+version: '3.8'
+
+# Observability-only stack for users who already have NATS, PostgreSQL, and MongoDB running locally
+# Use this if you have existing database infrastructure and only need Jaeger, Prometheus, and Grafana
+#
+# ARM64/Apple Silicon Compatible: All images support linux/arm64 architecture
+# Tested on MacBook with Apple Silicon (M1/M2/M3)
+
+services:
+  # Jaeger All-in-One (Distributed Tracing Backend)
+  # Multi-arch image supporting both amd64 and arm64
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: ofx-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+      - "14268:14268"  # Jaeger collector HTTP
+    networks:
+      - ofx-network
+
+  # Prometheus (Metrics Backend)
+  # Multi-arch image supporting both amd64 and arm64
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: ofx-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - ofx-network
+
+  # Grafana (Visualization & Dashboards)
+  # Multi-arch image supporting both amd64 and arm64
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: ofx-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - ofx-network
+    depends_on:
+      - prometheus
+      - jaeger
+
+networks:
+  ofx-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

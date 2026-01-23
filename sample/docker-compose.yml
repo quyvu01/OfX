@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # NATS Message Broker
+  nats:
+    image: nats:latest
+    container_name: ofx-nats
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster connections
+    command: ["-js", "-m", "8222"]  # Enable JetStream and monitoring
+    networks:
+      - ofx-network
+
+  # Jaeger All-in-One (Tracing Backend)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: ofx-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC receiver
+      - "4318:4318"    # OTLP HTTP receiver
+      - "14268:14268"  # Jaeger collector HTTP
+    networks:
+      - ofx-network
+
+  # Prometheus (Metrics Backend)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ofx-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - ofx-network
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ofx-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - ofx-network
+    depends_on:
+      - prometheus
+      - jaeger
+
+  # PostgreSQL (Database)
+  postgres:
+    image: postgres:16-alpine
+    container_name: ofx-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Abcd@2021
+      - POSTGRES_MULTIPLE_DATABASES=OfXTestService1,OfXTestOtherService1,OfXTestService2,OfXTestService3
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - ofx-network
+
+  # MongoDB (NoSQL Database)
+  mongodb:
+    image: mongo:latest
+    container_name: ofx-mongodb
+    environment:
+      - MONGO_INITDB_DATABASE=Service1MongoDb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - ofx-network
+
+networks:
+  ofx-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  postgres-data:
+  mongodb-data:

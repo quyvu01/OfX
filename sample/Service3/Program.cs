@@ -5,6 +5,9 @@ using OfX.Extensions;
 using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using OfX.Supervision;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 using Serilog;
 using Service3Api;
 using Service3Api.Contexts;
@@ -15,6 +18,31 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
+
+// Configure OpenTelemetry for distributed tracing and metrics
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService("Service3", serviceVersion: "1.0.0")
+        .AddAttributes(new Dictionary<string, object>
+        {
+            ["environment"] = builder.Environment.EnvironmentName,
+            ["host.name"] = Environment.MachineName
+        }))
+    .WithTracing(tracing => tracing
+        .AddSource("OfX")  // Subscribe to OfX traces
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddConsoleExporter()
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri("http://localhost:4317");
+        }))
+    .WithMetrics(metrics => metrics
+        .AddMeter("OfX")  // Subscribe to OfX metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddConsoleExporter());
+
 builder.Services.AddOfX(cfg =>
     {
         cfg.AddAttributesContainNamespaces(typeof(IKernelAssemblyMarker).Assembly);
@@ -26,9 +54,9 @@ builder.Services.AddOfX(cfg =>
             opts.EnableCircuitBreaker = true;
             opts.CircuitBreakerThreshold = 3;
         });
-        cfg.AddRabbitMq(c => c.Host("localhost", "/"));
+        // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddKafka(c => c.Host("localhost:9092"));
-        // cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        cfg.AddNats(c => c.Url("nats://localhost:4222"));  // Use NATS for telemetry demo
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 builder.Services.AddGrpc();

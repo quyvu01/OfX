@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
@@ -11,7 +10,6 @@ using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
 using OfX.Statics;
-using OfX.Telemetry;
 
 namespace OfX.Nats.Implementations;
 
@@ -19,8 +17,6 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
     : INatsServer<TModel, TAttribute>
     where TAttribute : OfXAttribute where TModel : class
 {
-    private const string TransportName = "nats";
-
     private readonly ILogger<NatsServer<TModel, TAttribute>> _logger =
         serviceProvider.GetService<ILogger<NatsServer<TModel, TAttribute>>>();
 
@@ -69,38 +65,12 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
     {
         if (message.Data is null) return;
 
-        // Extract parent trace context from headers
-        ActivityContext parentContext = default;
-        if (message.Headers != null && message.Headers.TryGetValue("traceparent", out var traceparent))
-        {
-            ActivityContext.TryParse(traceparent.ToString(), null, out parentContext);
-        }
-
-        // Start server-side activity
-        using var activity = OfXActivitySource.StartServerActivity(
-            typeof(TAttribute).Name,
-            parentContext);
-
-        var stopwatch = Stopwatch.StartNew();
-
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
 
         try
         {
-            // Add messaging tags to activity
-            if (activity != null) activity.SetMessagingTags(
-                system: TransportName,
-                destination: typeof(TAttribute).GetNatsSubject(),
-                operation: "process");
-
-            // Emit diagnostic event
-            OfXDiagnostics.MessageReceive(
-                TransportName,
-                typeof(TAttribute).GetNatsSubject(),
-                message.Subject);
-
             using var serviceScope = serviceProvider.CreateScope();
             var pipeline = serviceScope.ServiceProvider
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
@@ -108,70 +78,20 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
-
             var data = await pipeline.ExecuteAsync(requestContext);
             var response = Result.Success(data);
-
             await message.ReplyAsync(response, cancellationToken: cancellationToken);
-
-            // Record success
-            stopwatch.Stop();
-            var itemCount = data?.Items?.Length ?? 0;
-
-            OfXMetrics.RecordRequest(
-                typeof(TAttribute).Name,
-                TransportName,
-                stopwatch.Elapsed.TotalMilliseconds,
-                itemCount);
-
-            if (activity != null) activity.SetOfXTags(
-                expression: message.Data.Expression,
-                selectorIds: message.Data.SelectorIds,
-                itemCount: itemCount);
-
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            stopwatch.Stop();
-
             _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
             var response = Result.Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
-
-            // Record timeout as error
-            OfXMetrics.RecordError(
-                typeof(TAttribute).Name,
-                TransportName,
-                stopwatch.Elapsed.TotalMilliseconds,
-                "TimeoutException");
-
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Error, "Request timeout");
-
             await TrySendErrorResponseAsync(message, response);
         }
         catch (Exception e)
         {
-            stopwatch.Stop();
-
             _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
             var response = Result.Failed(e);
-
-            // Record error
-            OfXMetrics.RecordError(
-                typeof(TAttribute).Name,
-                TransportName,
-                stopwatch.Elapsed.TotalMilliseconds,
-                e.GetType().Name);
-
-            OfXDiagnostics.RequestError(
-                typeof(TAttribute).Name,
-                TransportName,
-                e,
-                stopwatch.Elapsed);
-
-            if (activity != null) activity.RecordException(e);
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Error, e.Message);
-
             await TrySendErrorResponseAsync(message, response);
         }
     }
