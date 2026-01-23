@@ -17,7 +17,7 @@ using OfX.Statics;
 
 namespace OfX.Kafka.Implementations;
 
-internal class KafkaClient : IRequestClient, IDisposable
+internal class KafkaClient : IRequestClient, IAsyncDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly IConsumer<string, string> _consumer;
@@ -166,33 +166,6 @@ internal class KafkaClient : IRequestClient, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _consumerCts.Cancel();
-
-        try
-        {
-            _consumerTask?.Wait(TimeSpan.FromSeconds(5));
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        _producer?.Dispose();
-        _consumer?.Dispose();
-        _consumerCts.Dispose();
-        _initLock.Dispose();
-
-        // Cancel all pending requests
-        foreach (var kvp in _pendingRequests)
-        {
-            kvp.Value.TrySetCanceled();
-        }
-
-        _pendingRequests.Clear();
-    }
-
     private async Task CreateTopicsAsync()
     {
         const int numPartitions = 1;
@@ -220,6 +193,51 @@ internal class KafkaClient : IRequestClient, IDisposable
         catch (CreateTopicsException ex)
         {
             _logger?.LogWarning(ex, "Failed to create Kafka topic {Topic}", _replyTo);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_consumerTask != null)
+        {
+            try
+            {
+                await _consumerTask.WaitAsync(TimeSpan.FromSeconds(10));
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during shutdown
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error waiting for consumer task shutdown");
+            }
+        }
+
+        await CastAndDispose(_producer);
+        await CastAndDispose(_consumer);
+        await CastAndDispose(_consumerCts);
+        await CastAndDispose(_initLock);
+        await CastAndDispose(_consumerTask);
+        // Cancel all pending requests
+        foreach (var kvp in _pendingRequests) kvp.Value.TrySetCanceled();
+
+        _pendingRequests.Clear();
+        return;
+
+        static async ValueTask CastAndDispose(IDisposable resource)
+        {
+            switch (resource)
+            {
+                case null:
+                    return;
+                case IAsyncDisposable resourceAsyncDisposable:
+                    await resourceAsyncDisposable.DisposeAsync();
+                    break;
+                default:
+                    resource.Dispose();
+                    break;
+            }
         }
     }
 }

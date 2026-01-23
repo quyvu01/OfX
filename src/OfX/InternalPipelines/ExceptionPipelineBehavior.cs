@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Responses;
@@ -14,9 +16,13 @@ namespace OfX.InternalPipelines;
 /// and returns an empty response instead of propagating the error. This enables graceful
 /// degradation in production environments where missing data shouldn't crash the application.
 /// </remarks>
-internal sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehavior<TAttribute>
+internal sealed class ExceptionPipelineBehavior<TAttribute>(IServiceProvider serviceProvider)
+    : ISendPipelineBehavior<TAttribute>
     where TAttribute : OfXAttribute
 {
+    private readonly ILogger<ExceptionPipelineBehavior<TAttribute>> _logger =
+        serviceProvider.GetService<ILogger<ExceptionPipelineBehavior<TAttribute>>>();
+
     public async Task<ItemsResponse<DataResponse>> HandleAsync(RequestContext<TAttribute> requestContext,
         Func<Task<ItemsResponse<DataResponse>>> next)
     {
@@ -24,8 +30,13 @@ internal sealed class ExceptionPipelineBehavior<TAttribute> : ISendPipelineBehav
         {
             return await next.Invoke();
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger?.LogError(ex, "Error in pipeline for {@Attribute}", typeof(TAttribute).Name);
+
+            // Only suppress non-critical exceptions
+            if (ex is OutOfMemoryException or StackOverflowException or ThreadAbortException) throw;
+
             if (OfXStatics.ThrowIfExceptions) throw;
             return new ItemsResponse<DataResponse>([]);
         }

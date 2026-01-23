@@ -23,7 +23,8 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
     private readonly ILogger<RabbitMqServer> _logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
 
     // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
-    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing, OfXStatics.MaxConcurrentProcessing);
+    private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
+        OfXStatics.MaxConcurrentProcessing);
 
     private IConnection _connection;
     private IChannel _channel;
@@ -170,5 +171,6 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
     {
         if (_channel is not null) await _channel.CloseAsync(cancellationToken);
         if (_connection is not null) await _connection.CloseAsync(cancellationToken);
+        _semaphore?.Dispose();
     }
 }
