@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
@@ -11,6 +13,7 @@ using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Azure.ServiceBus.Implementations;
 
@@ -24,6 +27,7 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
     private readonly string _sessionId;
     private readonly string _replyQueueName;
     private bool _initialized;
+    private const string TransportName = "azureservicebus";
 
     public OpenAzureServiceBusClient(AzureServiceBusClientWrapper clientWrapper,
         ILogger<OpenAzureServiceBusClient<TAttribute>> logger = null)
@@ -68,15 +72,18 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
 
     public async Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<TAttribute> requestContext)
     {
-        // Lazy initialization
-        await EnsureInitializedAsync(requestContext.CancellationToken);
-
-        var correlationId = Guid.NewGuid().ToString();
-        var tcs = new TaskCompletionSource<BinaryData>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingReplies[correlationId] = tcs;
+        // Start client-side activity for distributed tracing
+        using var activity = OfXActivitySource.StartClientActivity<TAttribute>(TransportName);
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
+            // Lazy initialization
+            await EnsureInitializedAsync(requestContext.CancellationToken);
+
+            var correlationId = Guid.NewGuid().ToString();
+            var requestQueueName = typeof(TAttribute).GetAzureServiceBusRequestQueue();
+
             var messageSerialize = JsonSerializer.Serialize(requestContext.Query);
             var requestMessage = new ServiceBusMessage(messageSerialize)
             {
@@ -86,37 +93,98 @@ internal sealed class OpenAzureServiceBusClient<TAttribute> : IAsyncDisposable w
             };
             requestContext.Headers?.ForEach(h => requestMessage.ApplicationProperties.Add(h.Key, h.Value));
 
-            await _serviceBusSender.SendMessageAsync(requestMessage, requestContext.CancellationToken);
+            // Propagate W3C trace context
+            if (activity != null)
+            {
+                if (!string.IsNullOrEmpty(activity.Id))
+                    requestMessage.ApplicationProperties.Add("traceparent", Encoding.UTF8.GetBytes(activity.Id));
+                if (!string.IsNullOrEmpty(activity.TraceStateString))
+                    requestMessage.ApplicationProperties.Add("tracestate",
+                        Encoding.UTF8.GetBytes(activity.TraceStateString));
 
-            // Wait with proper timeout and cancellation
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
-            cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
+                activity.SetMessagingTags(system: TransportName, destination: requestQueueName,
+                    messageId: correlationId,
+                    operation: "publish");
+
+                activity.SetOfXTags(expression: requestContext.Query.Expression,
+                    selectorIds: requestContext.Query.SelectorIds);
+            }
+
+            // Emit diagnostic event
+            OfXDiagnostics.RequestStart(typeof(TAttribute).Name, TransportName, requestContext.Query.SelectorIds,
+                requestContext.Query.Expression);
+
+            // Track active requests
+            OfXMetrics.UpdateActiveRequests(1);
+
+            var tcs = new TaskCompletionSource<BinaryData>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pendingReplies[correlationId] = tcs;
 
             try
             {
-                var result = await tcs.Task.WaitAsync(cts.Token);
-                var response = result.ToObjectFromJson<Result>();
+                await _serviceBusSender.SendMessageAsync(requestMessage, requestContext.CancellationToken);
 
-                if (response is null)
-                    throw new OfXException.ReceivedException("Received null response from server");
+                // Wait with proper timeout and cancellation
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
+                cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
-                if (!response.IsSuccess)
-                    throw response.Fault?.ToException()
-                          ?? new OfXException.ReceivedException("Unknown error from server");
+                try
+                {
+                    var result = await tcs.Task.WaitAsync(cts.Token);
+                    var response = result.ToObjectFromJson<Result>();
 
-                return response.Data;
+                    if (response is null)
+                        throw new OfXException.ReceivedException("Received null response from server");
+
+                    if (!response.IsSuccess)
+                        throw response.Fault?.ToException()
+                              ?? new OfXException.ReceivedException("Unknown error from server");
+
+                    // Record success metrics
+                    stopwatch.Stop();
+                    var itemCount = response.Data?.Items?.Length ?? 0;
+
+                    OfXMetrics.RecordRequest(typeof(TAttribute).Name, TransportName,
+                        stopwatch.Elapsed.TotalMilliseconds, itemCount);
+
+                    OfXDiagnostics.RequestStop(typeof(TAttribute).Name, TransportName, itemCount, stopwatch.Elapsed);
+
+                    activity?.SetOfXTags(itemCount: itemCount);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+
+                    return response.Data;
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                         !requestContext.CancellationToken.IsCancellationRequested)
+                {
+                    throw new TimeoutException(
+                        $"Timeout waiting for Azure Service Bus response for {typeof(TAttribute).Name}");
+                }
             }
-            catch (OperationCanceledException) when (cts.IsCancellationRequested &&
-                                                     !requestContext.CancellationToken.IsCancellationRequested)
+            finally
             {
-                throw new TimeoutException(
-                    $"Timeout waiting for Azure Service Bus response for {typeof(TAttribute).Name}");
+                // Always cleanup pending reply
+                _pendingReplies.TryRemove(correlationId, out _);
             }
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+
+            // Record error metrics
+            OfXMetrics.RecordError(typeof(TAttribute).Name, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                ex.GetType().Name);
+
+            OfXDiagnostics.RequestError(typeof(TAttribute).Name, TransportName, ex, stopwatch.Elapsed);
+
+            activity?.RecordException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            throw;
         }
         finally
         {
-            // Always cleanup pending reply
-            _pendingReplies.TryRemove(correlationId, out _);
+            OfXMetrics.UpdateActiveRequests(-1);
         }
     }
 

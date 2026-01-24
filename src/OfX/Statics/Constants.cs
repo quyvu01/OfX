@@ -2,7 +2,7 @@ namespace OfX.Statics;
 
 public static class Constants
 {
-    public const string Version = "8.2.5";
+    public static readonly string Version = PackageInfo.Version;
     public const string Source = "OfX";
 
     /// <summary>

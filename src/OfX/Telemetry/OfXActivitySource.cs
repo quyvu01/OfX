@@ -196,13 +196,11 @@ public static class OfXActivitySource
         /// <param name="expression">The OfX expression being evaluated.</param>
         /// <param name="selectorIds">The selector IDs being queried.</param>
         /// <param name="itemCount">The number of items returned.</param>
-        public void SetOfXTags(string expression = null,
-            string[] selectorIds = null,
-            int? itemCount = null)
+        public void SetOfXTags(string expression = null, string[] selectorIds = null, int? itemCount = null)
         {
-            if (activity == null) return;
+            if (activity is null) return;
 
-            if (expression != null) activity.SetTag(Constants.Telemetry.TagOfXExpression, expression);
+            activity.SetTag(Constants.Telemetry.TagOfXExpression, expression ?? "[null]");
             if (selectorIds is { Length: > 0 })
             {
                 activity.SetTag(Constants.Telemetry.TagOfXSelectorCount, selectorIds.Length);

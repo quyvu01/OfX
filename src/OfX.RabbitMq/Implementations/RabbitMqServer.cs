@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -28,6 +30,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
     private IConnection _connection;
     private IChannel _channel;
+    private const string TransportName = "rabbitmq";
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -92,6 +95,19 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
         var props = ea.BasicProperties;
         var replyProps = new BasicProperties { CorrelationId = props.CorrelationId };
 
+        // Extract parent trace context from headers
+        ActivityContext parentContext = default;
+        if (props.Headers?.TryGetValue("traceparent", out var traceparent) ?? false)
+            ActivityContext.TryParse(Encoding.UTF8.GetString((byte[])traceparent!), null, out parentContext);
+
+        // Parse message to get attribute name
+        var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
+        var attributeName = props.Type?.Split(',')[0].Split('.').Last() ?? "Unknown";
+
+        // Start server-side activity
+        using var activity = OfXActivitySource.StartServerActivity(attributeName, parentContext);
+        var stopwatch = Stopwatch.StartNew();
+
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
@@ -99,6 +115,13 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
         try
         {
+            // Add messaging tags to activity
+            activity?.SetMessagingTags(system: TransportName, destination: ea.Exchange, messageId: props.CorrelationId,
+                operation: "process");
+
+            // Emit diagnostic event
+            OfXDiagnostics.MessageReceive(TransportName, ea.Exchange, props.CorrelationId);
+
             var receivedPipelineOrchestrator = AttributeAssemblyCached.GetOrAdd(props.Type, attributeAssembly =>
             {
                 var ofXAttributeType = Type.GetType(attributeAssembly)!;
@@ -113,7 +136,6 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
                 .GetService(receivedPipelineOrchestrator) as ReceivedPipelinesOrchestrator;
             ArgumentNullException.ThrowIfNull(server);
 
-            var message = JsonSerializer.Deserialize<OfXRequest>(Encoding.UTF8.GetString(body));
             var headers = props.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
             var data = await server.ExecuteAsync(message, headers, cancellationToken);
@@ -123,17 +145,48 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
             await ch.BasicPublishAsync(exchange: string.Empty, routingKey: props.ReplyTo!,
                 mandatory: true, basicProperties: replyProps, body: responseBytes,
                 cancellationToken: cancellationToken);
+
+            // Record success
+            stopwatch.Stop();
+            var itemCount = data?.Items?.Length ?? 0;
+
+            OfXMetrics.RecordRequest(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds, itemCount);
+
+            activity?.SetOfXTags(expression: message?.Expression, selectorIds: message?.SelectorIds,
+                itemCount: itemCount);
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            stopwatch.Stop();
+
             _logger?.LogWarning("Request timeout for <{Attribute}>", props.Type);
             var response = Result.Failed(new TimeoutException($"Request timeout for {props.Type}"));
+
+            // Record timeout as error
+            OfXMetrics.RecordError(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                "TimeoutException");
+
+            activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
+
             await SendResponseAsync(ch, props.ReplyTo, replyProps, response, cancellationToken);
         }
         catch (Exception e)
         {
+            stopwatch.Stop();
+
             _logger?.LogError(e, "Error while responding <{Attribute}>", props.Type);
             var response = Result.Failed(e);
+
+            // Record error
+            OfXMetrics.RecordError(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds, e.GetType().Name);
+
+            OfXDiagnostics.RequestError(attributeName, TransportName, e, stopwatch.Elapsed);
+
+            activity?.RecordException(e);
+            activity?.SetStatus(ActivityStatusCode.Error, e.Message);
+
             await SendResponseAsync(ch, props.ReplyTo, replyProps, response, stoppingToken);
         }
         finally

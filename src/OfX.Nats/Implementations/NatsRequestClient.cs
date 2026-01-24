@@ -33,7 +33,8 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
             // Propagate W3C trace context
             if (activity != null)
             {
-                natsHeaders.Add("traceparent", activity.Id);
+                if (!string.IsNullOrEmpty(activity.Id))
+                    natsHeaders.Add("traceparent", activity.Id);
                 if (!string.IsNullOrEmpty(activity.TraceStateString))
                     natsHeaders.Add("tracestate", activity.TraceStateString);
 
@@ -43,12 +44,9 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
                     destination: typeof(TAttribute).GetNatsSubject(),
                     operation: "publish");
 
-                if (requestContext.Query.Expression != null)
-                {
-                    activity.SetOfXTags(
-                        expression: requestContext.Query.Expression,
-                        selectorIds: requestContext.Query.SelectorIds);
-                }
+                activity.SetOfXTags(
+                    expression: requestContext.Query.Expression,
+                    selectorIds: requestContext.Query.SelectorIds);
             }
 
             // Emit diagnostic event

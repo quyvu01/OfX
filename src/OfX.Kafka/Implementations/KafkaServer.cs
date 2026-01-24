@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
@@ -15,6 +16,7 @@ using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Kafka.Implementations;
 
@@ -27,6 +29,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     private readonly IProducer<string, string> _producer;
     private readonly string _requestTopic;
     private readonly ILogger<KafkaServer<TModel, TAttribute>> _logger;
+    private const string TransportName = "kafka";
 
     // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
     private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
@@ -133,6 +136,22 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
         var messageUnWrapped = JsonSerializer
             .Deserialize<KafkaMessageWrapped<OfXRequest>>(consumeResult.Message.Value);
 
+        // Extract parent trace context
+        ActivityContext parentContext = default;
+        if (consumeResult.Message.Headers != null)
+        {
+            var traceparentHeader = consumeResult.Message.Headers.FirstOrDefault(h => h.Key == "traceparent");
+            if (traceparentHeader != null)
+            {
+                var traceparent = Encoding.UTF8.GetString(traceparentHeader.GetValueBytes());
+                ActivityContext.TryParse(traceparent, null, out parentContext);
+            }
+        }
+
+        var attributeName = typeof(TAttribute).Name;
+        using var activity = OfXActivitySource.StartServerActivity(attributeName, parentContext);
+        var stopwatch = Stopwatch.StartNew();
+
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
@@ -143,6 +162,14 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
         try
         {
+            activity?.SetMessagingTags(
+                system: TransportName,
+                destination: _requestTopic,
+                messageId: consumeResult.Message.Key,
+                operation: "process");
+
+            OfXDiagnostics.MessageReceive(TransportName, _requestTopic, consumeResult.Message.Key);
+
             var pipeline = serviceScope.ServiceProvider
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
 
@@ -156,17 +183,58 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
 
             var response = Result.Success(data);
             await SendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, cancellationToken);
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = data?.Items?.Length ?? 0;
+
+            OfXMetrics.RecordRequest(
+                attributeName,
+                TransportName,
+                stopwatch.Elapsed.TotalMilliseconds,
+                itemCount);
+
+            activity?.SetOfXTags(
+                expression: message?.Expression,
+                selectorIds: message?.SelectorIds,
+                itemCount: itemCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
+            stopwatch.Stop();
+
+            _logger?.LogWarning("Request timeout for <{Attribute}>", attributeName);
+
+            OfXMetrics.RecordError(
+                attributeName,
+                TransportName,
+                stopwatch.Elapsed.TotalMilliseconds,
+                "TimeoutException");
+
+            activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
+
             var response = Result
-                .Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
+                .Failed(new TimeoutException($"Request timeout for {attributeName}"));
             await TrySendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, stoppingToken);
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
+            stopwatch.Stop();
+
+            _logger?.LogError(e, "Error while responding <{Attribute}>", attributeName);
+
+            OfXMetrics.RecordError(
+                attributeName,
+                TransportName,
+                stopwatch.Elapsed.TotalMilliseconds,
+                e.GetType().Name);
+
+            OfXDiagnostics.RequestError(attributeName, TransportName, e, stopwatch.Elapsed);
+
+            activity?.RecordException(e);
+            activity?.SetStatus(ActivityStatusCode.Error, e.Message);
+
             var response = Result.Failed(e);
             await TrySendResponseAsync(consumeResult, messageUnWrapped.ReplyTo, response, stoppingToken);
         }

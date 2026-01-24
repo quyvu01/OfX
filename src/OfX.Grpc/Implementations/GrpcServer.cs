@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ using OfX.Extensions;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Grpc.Implementations;
 
@@ -26,9 +28,21 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 {
     private static readonly Lazy<ConcurrentDictionary<string, Type>> ReceivedPipelineTypes = new(() => []);
     private readonly ILogger<GrpcServer> _logger = serviceProvider.GetService<ILogger<GrpcServer>>();
+    private const string TransportName = "grpc";
 
     public override async Task<OfXItemsGrpcResponse> GetItems(GetOfXGrpcQuery request, ServerCallContext context)
     {
+        // Extract attribute name for telemetry
+        var attributeName = request.AttributeAssemblyType?.Split(',')[0].Split('.').Last() ?? "Unknown";
+
+        // Extract parent trace context from gRPC metadata
+        ActivityContext parentContext = default;
+        var traceparentHeader = context.RequestHeaders.FirstOrDefault(h => h.Key == "traceparent");
+        if (traceparentHeader != null) ActivityContext.TryParse(traceparentHeader.Value, null, out parentContext);
+
+        using var activity = OfXActivitySource.StartServerActivity(attributeName, parentContext);
+        var stopwatch = Stopwatch.StartNew();
+
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(context.CancellationToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
@@ -36,6 +50,12 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 
         try
         {
+            activity?.SetMessagingTags(system: TransportName, destination: "grpc-endpoint",
+                messageId: Activity.Current?.Id ?? Guid.NewGuid().ToString(),
+                operation: "process");
+
+            OfXDiagnostics.MessageReceive(TransportName, "grpc-endpoint", Activity.Current?.Id);
+
             var receivedPipelinesType = ReceivedPipelineTypes.Value
                 .GetOrAdd(request.AttributeAssemblyType, static typeAssembly =>
                 {
@@ -69,19 +89,57 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
                     itemGrpc.OfxValues.Add(new OfXValueItemGrpc { Expression = x.Expression, Value = x.Value }));
                 res.Items.Add(itemGrpc);
             });
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = response.Items?.Length ?? 0;
+
+            OfXMetrics.RecordRequest(
+                attributeName,
+                TransportName,
+                stopwatch.Elapsed.TotalMilliseconds,
+                itemCount);
+
+            activity?.SetOfXTags(
+                expression: request.Expression,
+                selectorIds: request.SelectorIds?.ToArray(),
+                itemCount: itemCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+
             return res;
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested &&
                                                  !context.CancellationToken.IsCancellationRequested)
         {
-            _logger?.LogWarning("Request timeout for gRPC GetItems: {AttributeType}", request.AttributeAssemblyType);
+            stopwatch.Stop();
+
+            _logger?.LogWarning("Request timeout for gRPC GetItems: {AttributeType}", attributeName);
+
+            OfXMetrics.RecordError(
+                attributeName,
+                TransportName,
+                stopwatch.Elapsed.TotalMilliseconds,
+                "TimeoutException");
+
+            activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
+
             throw new RpcException(new Status(StatusCode.DeadlineExceeded,
-                $"Request timeout for {request.AttributeAssemblyType}"));
+                $"Request timeout for {attributeName}"));
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, "Error while execute get items: {RequestAttributeAssemblyType}",
-                request.AttributeAssemblyType);
+            stopwatch.Stop();
+
+            _logger?.LogError(e, "Error while execute get items: {RequestAttributeAssemblyType}", attributeName);
+
+            OfXMetrics.RecordError(attributeName, TransportName,
+                stopwatch.Elapsed.TotalMilliseconds, e.GetType().Name);
+
+            OfXDiagnostics.RequestError(attributeName, TransportName, e, stopwatch.Elapsed);
+
+            activity?.RecordException(e);
+            activity?.SetStatus(ActivityStatusCode.Error, e.Message);
+
             throw;
         }
     }

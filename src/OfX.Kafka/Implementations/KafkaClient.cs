@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
@@ -14,6 +15,7 @@ using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Kafka.Implementations;
 
@@ -27,6 +29,7 @@ internal class KafkaClient : IRequestClient, IAsyncDisposable
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private bool _initialized;
     private Task _consumerTask;
+    private const string TransportName = "kafka";
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<Result>>
         _pendingRequests = new();
@@ -65,54 +68,119 @@ internal class KafkaClient : IRequestClient, IAsyncDisposable
     public async Task<ItemsResponse<DataResponse>> RequestAsync<TAttribute>(
         RequestContext<TAttribute> requestContext) where TAttribute : OfXAttribute
     {
-        // Lazy initialization
-        await EnsureInitializedAsync(requestContext.CancellationToken);
-
-        var correlationId = Guid.NewGuid().ToString();
-        var tcs = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingRequests.TryAdd(correlationId, tcs);
+        // Start client-side activity for distributed tracing
+        using var activity = OfXActivitySource.StartClientActivity<TAttribute>(TransportName);
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            // Produce the request
+            // Lazy initialization
+            await EnsureInitializedAsync(requestContext.CancellationToken);
+
+            var correlationId = Guid.NewGuid().ToString();
+            var topic = typeof(TAttribute).RequestTopic();
+
+            // Propagate W3C trace context
             var message = new KafkaMessageWrapped<OfXRequest>
             {
                 Message = new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
                 ReplyTo = _replyTo
             };
-            await _producer.ProduceAsync(typeof(TAttribute).RequestTopic(), new Message<string, string>
-            {
-                Key = correlationId,
-                Value = JsonSerializer.Serialize(message)
-            }, requestContext.CancellationToken);
 
-            // Wait for response with timeout
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
-            cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
+            var headers = new Headers();
+            if (activity != null)
+            {
+                if (!string.IsNullOrEmpty(activity.Id))
+                    headers.Add("traceparent", System.Text.Encoding.UTF8.GetBytes(activity.Id));
+                if (!string.IsNullOrEmpty(activity.TraceStateString))
+                    headers.Add("tracestate", System.Text.Encoding.UTF8.GetBytes(activity.TraceStateString));
+
+                activity.SetMessagingTags(system: TransportName, destination: topic, messageId: correlationId,
+                    operation: "publish");
+
+                activity.SetOfXTags(expression: requestContext.Query.Expression,
+                    selectorIds: requestContext.Query.SelectorIds);
+            }
+
+            // Emit diagnostic event
+            OfXDiagnostics.RequestStart(typeof(TAttribute).Name, TransportName, requestContext.Query.SelectorIds,
+                requestContext.Query.Expression);
+
+            // Track active requests
+            OfXMetrics.UpdateActiveRequests(1);
+
+            var tcs = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pendingRequests.TryAdd(correlationId, tcs);
 
             try
             {
-                var response = await tcs.Task.WaitAsync(cts.Token);
+                // Produce the request
+                await _producer.ProduceAsync(topic, new Message<string, string>
+                {
+                    Key = correlationId,
+                    Value = JsonSerializer.Serialize(message),
+                    Headers = headers
+                }, requestContext.CancellationToken);
 
-                if (response is null)
-                    throw new OfXException.ReceivedException("Received null response from server");
+                // Wait for response with timeout
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(requestContext.CancellationToken);
+                cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
 
-                if (!response.IsSuccess)
-                    throw response.Fault?.ToException()
-                          ?? new OfXException.ReceivedException("Unknown error from server");
+                try
+                {
+                    var response = await tcs.Task.WaitAsync(cts.Token);
 
-                return response.Data;
+                    if (response is null)
+                        throw new OfXException.ReceivedException("Received null response from server");
+
+                    if (!response.IsSuccess)
+                        throw response.Fault?.ToException()
+                              ?? new OfXException.ReceivedException("Unknown error from server");
+
+                    // Record success metrics
+                    stopwatch.Stop();
+                    var itemCount = response.Data?.Items?.Length ?? 0;
+
+                    OfXMetrics.RecordRequest(typeof(TAttribute).Name, TransportName,
+                        stopwatch.Elapsed.TotalMilliseconds, itemCount);
+
+                    OfXDiagnostics.RequestStop(typeof(TAttribute).Name, TransportName, itemCount, stopwatch.Elapsed);
+
+                    activity?.SetOfXTags(itemCount: itemCount);
+                    activity?.SetStatus(ActivityStatusCode.Ok);
+
+                    return response.Data;
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested &&
+                                                         !requestContext.CancellationToken.IsCancellationRequested)
+                {
+                    throw new TimeoutException(
+                        $"Timeout waiting for Kafka response for {typeof(TAttribute).Name}");
+                }
             }
-            catch (OperationCanceledException) when (cts.IsCancellationRequested &&
-                                                     !requestContext.CancellationToken.IsCancellationRequested)
+            finally
             {
-                throw new TimeoutException(
-                    $"Timeout waiting for Kafka response for {typeof(TAttribute).Name}");
+                _pendingRequests.TryRemove(correlationId, out _);
             }
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+
+            // Record error metrics
+            OfXMetrics.RecordError(typeof(TAttribute).Name, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                ex.GetType().Name);
+
+            OfXDiagnostics.RequestError(typeof(TAttribute).Name, TransportName, ex, stopwatch.Elapsed);
+
+            activity?.RecordException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            throw;
         }
         finally
         {
-            _pendingRequests.TryRemove(correlationId, out _);
+            OfXMetrics.UpdateActiveRequests(-1);
         }
     }
 

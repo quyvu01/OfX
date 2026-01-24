@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +15,7 @@ using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Implementations;
 using OfX.Responses;
 using OfX.Statics;
+using OfX.Telemetry;
 
 namespace OfX.Azure.ServiceBus.Implementations;
 
@@ -24,6 +27,8 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 {
     private readonly ILogger<AzureServiceBusServer<TModel, TAttribute>> _logger =
         serviceProvider.GetService<ILogger<AzureServiceBusServer<TModel, TAttribute>>>();
+
+    private const string TransportName = "azureservicebus";
 
     // Cache senders to avoid creating new ones for each message
     private readonly ConcurrentDictionary<string, ServiceBusSender> _senders = new();
@@ -71,6 +76,16 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
     {
         var request = args.Message;
 
+        // Extract parent trace context
+        ActivityContext parentContext = default;
+        if (request.ApplicationProperties?.TryGetValue("traceparent", out var traceparent) ?? false)
+            ActivityContext.TryParse(Encoding.UTF8.GetString((byte[])traceparent), null, out parentContext);
+
+        var attributeName = typeof(TAttribute).Name;
+        var requestQueue = typeof(TAttribute).GetAzureServiceBusRequestQueue();
+        using var activity = OfXActivitySource.StartServerActivity(attributeName, parentContext);
+        var stopwatch = Stopwatch.StartNew();
+
         // Create timeout CTS
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
@@ -80,6 +95,11 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 
         try
         {
+            activity?.SetMessagingTags(system: TransportName, destination: requestQueue,
+                messageId: request.CorrelationId, operation: "process");
+
+            OfXDiagnostics.MessageReceive(TransportName, requestQueue, request.CorrelationId);
+
             var requestDeserialize = JsonSerializer.Deserialize<OfXRequest>(request.Body);
 
             using var serviceScope = serviceProvider.CreateScope();
@@ -99,17 +119,47 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 
             await SendResponseAsync(request, sender, response, cancellationToken);
             await args.CompleteMessageAsync(request, cancellationToken);
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = data?.Items?.Length ?? 0;
+
+            OfXMetrics.RecordRequest(attributeName, TransportName,
+                stopwatch.Elapsed.TotalMilliseconds, itemCount);
+
+            activity?.SetOfXTags(
+                expression: requestDeserialize.Expression,
+                selectorIds: requestDeserialize.SelectorIds,
+                itemCount: itemCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger?.LogWarning("Request timeout for <{Attribute}>", typeof(TAttribute).Name);
-            var response = Result.Failed(new TimeoutException($"Request timeout for {typeof(TAttribute).Name}"));
+            stopwatch.Stop();
+
+            _logger?.LogWarning("Request timeout for <{Attribute}>", attributeName);
+
+            OfXMetrics.RecordError(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds,
+                "TimeoutException");
+            activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
+
+            var response = Result.Failed(new TimeoutException($"Request timeout for {attributeName}"));
             await TrySendResponseAsync(request, sender, response, stoppingToken);
             await TryCompleteMessageAsync(args, request, stoppingToken);
         }
         catch (Exception e)
         {
-            _logger?.LogError(e, "Error while responding <{Attribute}>", typeof(TAttribute).Name);
+            stopwatch.Stop();
+
+            _logger?.LogError(e, "Error while responding <{Attribute}>", attributeName);
+
+            OfXMetrics.RecordError(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds, e.GetType().Name);
+
+            OfXDiagnostics.RequestError(attributeName, TransportName, e, stopwatch.Elapsed);
+
+            activity?.RecordException(e);
+            activity?.SetStatus(ActivityStatusCode.Error, e.Message);
+
             var response = Result.Failed(e);
             await TrySendResponseAsync(request, sender, response, stoppingToken);
             await TryCompleteMessageAsync(args, request, stoppingToken);

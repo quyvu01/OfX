@@ -60,6 +60,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
             await ProcessMessageAsync(message, stoppingToken);
         }
         finally
+
         {
             _semaphore.Release();
         }
@@ -71,15 +72,11 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
 
         // Extract parent trace context from headers
         ActivityContext parentContext = default;
-        if (message.Headers != null && message.Headers.TryGetValue("traceparent", out var traceparent))
-        {
+        if (message.Headers?.TryGetValue("traceparent", out var traceparent) ?? false)
             ActivityContext.TryParse(traceparent.ToString(), null, out parentContext);
-        }
 
         // Start server-side activity
-        using var activity = OfXActivitySource.StartServerActivity(
-            typeof(TAttribute).Name,
-            parentContext);
+        using var activity = OfXActivitySource.StartServerActivity(typeof(TAttribute).Name, parentContext);
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -90,7 +87,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         try
         {
             // Add messaging tags to activity
-            if (activity != null) activity.SetMessagingTags(
+            activity?.SetMessagingTags(
                 system: TransportName,
                 destination: typeof(TAttribute).GetNatsSubject(),
                 operation: "process");
@@ -124,10 +121,11 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 stopwatch.Elapsed.TotalMilliseconds,
                 itemCount);
 
-            if (activity != null) activity.SetOfXTags(
-                expression: message.Data.Expression,
-                selectorIds: message.Data.SelectorIds,
-                itemCount: itemCount);
+            if (activity != null)
+                activity.SetOfXTags(
+                    expression: message.Data.Expression,
+                    selectorIds: message.Data.SelectorIds,
+                    itemCount: itemCount);
 
             if (activity != null) activity.SetStatus(ActivityStatusCode.Ok);
         }

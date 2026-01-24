@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
+using OfX.Grpc.Extensions;
 using OfX.Nats.Extensions;
 using OfX.RabbitMq.Extensions;
 using OfX.Supervision;
@@ -48,8 +49,9 @@ builder.Services.AddOfX(cfg =>
             opts.CircuitBreakerThreshold = 3;
         });
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
-        // cfg.AddKafka(c => c.Host("localhost:9092"));
-        cfg.AddNats(c => c.Url("nats://localhost:4222")); // Use NATS for telemetry demo
+        // cfg.AddK  activity.SetOfXTags(expression: requestContext.Query.Expression,
+        //                       selectorIds: requestContext.Query.SelectorIds);afka(c => c.Host("localhost:9092"));
+        // cfg.AddNats(c => c.Url("nats://localhost:4222")); // Use NATS for telemetry demo
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
@@ -95,5 +97,5 @@ var app = builder.Build();
 
 await MigrationDatabase.MigrationDatabaseAsync<Service2Context>(app);
 
-// app.MapOfXGrpcService();
+app.MapOfXGrpcService();
 app.Run();
