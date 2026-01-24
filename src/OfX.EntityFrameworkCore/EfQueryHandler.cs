@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
@@ -6,6 +7,7 @@ using OfX.Builders;
 using OfX.EntityFrameworkCore.Abstractions;
 using OfX.Expressions.Building;
 using OfX.Responses;
+using OfX.Telemetry;
 
 namespace OfX.EntityFrameworkCore;
 
@@ -38,29 +40,75 @@ internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvid
     where TAttribute : OfXAttribute
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private const string DbSystem = "efcore";
 
     public async Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        // Build filter expression
-        var filter = BuildFilter(context.Query);
+        // Start database activity for distributed tracing
+        using var activity = OfXActivitySource.StartDatabaseActivity<TAttribute>(DbSystem);
+        var stopwatch = Stopwatch.StartNew();
 
-        // Build projection expression
-        var (projection, expressions) = BuildProjection(context.Query);
+        try
+        {
+            // Build filter expression
+            var filter = BuildFilter(context.Query);
 
-        // Get DbContext and execute query
-        using var scope = _serviceProvider.CreateScope();
-        var dbContextResolver = scope.ServiceProvider.GetRequiredService<IDbContextResolver<TModel>>();
+            // Build projection expression
+            var (projection, expressions) = BuildProjection(context.Query);
 
-        // Step 1: Execute database query with object[] projection
-        var rawResults = await dbContextResolver.Set
-            .AsNoTracking()
-            .Where(filter)
-            .Select(projection)
-            .ToArrayAsync(context.CancellationToken);
+            // Get DbContext and execute query
+            using var scope = _serviceProvider.CreateScope();
+            var dbContextResolver = scope.ServiceProvider.GetRequiredService<IDbContextResolver<TModel>>();
 
-        // Step 2: Transform to OfXDataResponse in memory
-        var data = ProjectionTransformer.TransformToArray(rawResults, expressions);
+            // Add database tags to activity
+            if (activity != null)
+            {
+                var dbName = dbContextResolver.DbContext.Database.ProviderName;
+                activity.SetDatabaseTags(dbSystem: DbSystem, dbName: dbName, collection: typeof(TModel).FullName,
+                    operation: "query");
+            }
 
-        return new ItemsResponse<DataResponse>(data);
+            // Emit diagnostic event
+            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expression);
+
+            // Step 1: Execute database query with object[] projection
+            var rawResults = await dbContextResolver.Set
+                .AsNoTracking()
+                .Where(filter)
+                .Select(projection)
+                .ToArrayAsync(context.CancellationToken);
+
+            // Step 2: Transform to OfXDataResponse in memory
+            var data = ProjectionTransformer.TransformToArray(rawResults, expressions);
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = data.Length;
+
+            OfXMetrics.RecordDatabaseQuery(typeof(TAttribute).Name, DbSystem, stopwatch.Elapsed.TotalMilliseconds,
+                itemCount);
+
+            OfXDiagnostics.DatabaseQueryStop(typeof(TAttribute).Name, DbSystem, itemCount, stopwatch.Elapsed);
+
+            activity?.SetOfXTags(itemCount: itemCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+
+            return new ItemsResponse<DataResponse>(data);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+
+            // Record error metrics
+            OfXMetrics.RecordDatabaseError(typeof(TAttribute).Name, DbSystem, stopwatch.Elapsed.TotalMilliseconds,
+                ex.GetType().Name);
+
+            OfXDiagnostics.DatabaseQueryError(typeof(TAttribute).Name, DbSystem, ex, stopwatch.Elapsed);
+
+            activity?.RecordException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            throw;
+        }
     }
 }

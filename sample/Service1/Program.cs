@@ -35,19 +35,14 @@ builder.Services.AddOpenTelemetry()
             ["host.name"] = Environment.MachineName
         }))
     .WithTracing(tracing => tracing
-        .AddSource("OfX")  // Subscribe to OfX traces
+        .AddSource("OfX") // Subscribe to OfX traces
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddConsoleExporter()  // Export to console for demo
-        .AddOtlpExporter(options =>
-        {
-            options.Endpoint = new Uri("http://localhost:4317");
-        }))
+        .AddOtlpExporter(options => options.Endpoint = new Uri("http://localhost:4317")))
     .WithMetrics(metrics => metrics
-        .AddMeter("OfX")  // Subscribe to OfX metrics
+        .AddMeter("OfX") // Subscribe to OfX metrics
         .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddConsoleExporter());  // Export to console for demo
+        .AddHttpClientInstrumentation());
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -75,7 +70,7 @@ builder.Services.AddOfX(cfg =>
         // cfg.AddGrpcClients(c =>
         //     c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
-        cfg.AddNats(c => c.Url("nats://localhost:4222"));  // Use NATS for telemetry demo
+        cfg.AddNats(c => c.Url("nats://localhost:4222")); // Use NATS for telemetry demo
         // cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))

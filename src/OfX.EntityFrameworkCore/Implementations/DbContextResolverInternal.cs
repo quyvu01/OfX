@@ -20,18 +20,20 @@ internal class DbContextResolverInternal<TModel>(IEnumerable<IDbContext> dbConte
 {
     private static readonly ConcurrentDictionary<Type, int> ModelTypeMapContext = new();
 
-    public DbSet<TModel> Set => GetSet();
+    public DbSet<TModel> Set => GetDbContext().Set<TModel>();
+    public DbContext DbContext => GetDbContext();
 
-    private DbSet<TModel> GetSet()
+    private DbContext GetDbContext()
     {
         var dbContextList = dbContexts.ToList();
         if (ModelTypeMapContext.TryGetValue(typeof(TModel), out var contextIndex))
-            return dbContextList.ElementAt(contextIndex).DbContext.Set<TModel>();
+            return dbContextList.ElementAt(contextIndex).DbContext;
 
-        var matchingServiceType = dbContextList.SingleOrDefault(a => a.HasCollection(typeof(TModel)));
+        var matchingServiceType = dbContextList
+            .SingleOrDefault(a => a.HasCollection(typeof(TModel)));
         if (matchingServiceType is null)
             throw new OfXEntityFrameworkException.ThereAreNoDbContextHasModel(typeof(TModel));
         ModelTypeMapContext.TryAdd(typeof(TModel), dbContextList.IndexOf(matchingServiceType));
-        return matchingServiceType.DbContext.Set<TModel>();
+        return matchingServiceType.DbContext;
     }
 }

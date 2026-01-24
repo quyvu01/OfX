@@ -36,6 +36,8 @@ public static class Constants
         public const string TagDbSystem = "db.system";
         public const string TagDbName = "db.name";
         public const string TagDbStatement = "db.statement";
+        public const string TagDbCollection = "db.collection";
+        public const string TagDbOperation = "db.operation";
 
         // Exception tags (OpenTelemetry standard - keep exception.* prefix)
         public const string TagExceptionType = "exception.type";
@@ -76,6 +78,7 @@ public static class Constants
         public const string EventMessageReceive = "ofx.message.receive";
         public const string EventDatabaseQueryStart = "ofx.database.query.start";
         public const string EventDatabaseQueryStop = "ofx.database.query.stop";
+        public const string EventDatabaseQueryError = "ofx.database.query.error";
         public const string EventExpressionParse = "ofx.expression.parse";
         public const string EventCacheLookup = "ofx.cache.lookup";
         public const string EventException = "exception";

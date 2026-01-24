@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
@@ -12,6 +13,7 @@ using OfX.Delegates;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Extensions;
 using OfX.Responses;
+using OfX.Telemetry;
 
 namespace OfX.MongoDb;
 
@@ -47,30 +49,81 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     private readonly IMongoCollectionInternal<TModel> _collectionInternal =
         serviceProvider.GetService<IMongoCollectionInternal<TModel>>();
 
+    private const string DbSystem = "mongodb";
+
     // Static cache per generic type combination
     private static readonly Lazy<FilterCache> FilterCacheInstance = new(() => new FilterCache());
     private static readonly ConcurrentDictionary<int, BsonDocument> ProjectionCache = new();
 
     public async Task<ItemsResponse<DataResponse>> GetDataAsync(RequestContext<TAttribute> context)
     {
-        var expressions = JsonSerializer.Deserialize<List<string>>(context.Query.Expression) ?? [];
+        // Start database activity for distributed tracing
+        using var activity = OfXActivitySource.StartDatabaseActivity<TAttribute>(DbSystem);
+        var stopwatch = Stopwatch.StartNew();
 
-        // Build filter
-        var filter = BuildFilter(context.Query);
+        try
+        {
+            var expressions = JsonSerializer.Deserialize<List<string>>(context.Query.Expression) ?? [];
 
-        // Build projection
-        var (projection, expressionMap) = BuildProjection(expressions);
+            // Build filter
+            var filter = BuildFilter(context.Query);
 
-        // Execute query
-        var rawResults = await _collectionInternal.Collection
-            .Find(filter)
-            .Project(projection)
-            .ToListAsync(context.CancellationToken);
+            // Build projection
+            var (projection, expressionMap) = BuildProjection(expressions);
 
-        // Transform to OfXDataResponse
-        var data = TransformResults(rawResults, expressions, expressionMap);
+            // Add database tags to activity
+            if (activity != null)
+            {
+                var collectionNamespace = _collectionInternal.Collection.CollectionNamespace;
+                var collectionName = collectionNamespace.CollectionName;
+                var dbName = collectionNamespace.DatabaseNamespace.DatabaseName;
 
-        return new ItemsResponse<DataResponse>(data);
+                activity.SetDatabaseTags(dbSystem: DbSystem, dbName: dbName, collection: collectionName,
+                    operation: "find");
+            }
+
+            // Emit diagnostic event
+            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expression);
+
+            // Execute query
+            var rawResults = await _collectionInternal.Collection
+                .Find(filter)
+                .Project(projection)
+                .ToListAsync(context.CancellationToken);
+
+            // Transform to OfXDataResponse
+            var data = TransformResults(rawResults, expressions, expressionMap);
+
+            // Record success metrics
+            stopwatch.Stop();
+            var itemCount = data.Length;
+
+            OfXMetrics.RecordDatabaseQuery(typeof(TAttribute).Name, DbSystem, stopwatch.Elapsed.TotalMilliseconds,
+                itemCount);
+
+            OfXDiagnostics.DatabaseQueryStop(typeof(TAttribute).Name, DbSystem, itemCount, stopwatch.Elapsed);
+
+            activity?.SetOfXTags(itemCount: itemCount);
+            activity?.SetStatus(ActivityStatusCode.Ok);
+
+            return new ItemsResponse<DataResponse>(data);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+
+            // Record error metrics
+            OfXMetrics.RecordDatabaseError(typeof(TAttribute).Name, DbSystem,
+                stopwatch.Elapsed.TotalMilliseconds,
+                ex.GetType().Name);
+
+            OfXDiagnostics.DatabaseQueryError(typeof(TAttribute).Name, DbSystem, ex, stopwatch.Elapsed);
+
+            activity?.RecordException(ex);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            throw;
+        }
     }
 
     /// <summary>

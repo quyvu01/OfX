@@ -88,6 +88,27 @@ public static class OfXActivitySource
         return Source.StartActivity(operationName, kind);
     }
 
+    /// <summary>
+    /// Starts a database activity for query operations.
+    /// </summary>
+    /// <typeparam name="TAttribute">The OfX attribute type.</typeparam>
+    /// <param name="dbSystem">The database system (e.g., "efcore", "mongodb").</param>
+    /// <param name="operationName">Optional operation name. Defaults to "ofx.db.query".</param>
+    /// <returns>An Activity if tracing is enabled, otherwise null.</returns>
+    public static Activity StartDatabaseActivity<TAttribute>(string dbSystem, string operationName = null)
+        where TAttribute : OfXAttribute
+    {
+        var activity = Source.StartActivity(operationName ?? "ofx.db.query", ActivityKind.Client);
+
+        if (activity == null) return null;
+
+        activity.SetTag(Constants.Telemetry.TagOfXAttribute, typeof(TAttribute).Name);
+        activity.SetTag(Constants.Telemetry.TagOfXVersion, Constants.Version);
+        activity.SetTag(Constants.Telemetry.TagDbSystem, dbSystem);
+
+        return activity;
+    }
+
     /// <param name="activity">The activity to record the exception on.</param>
     extension(Activity activity)
     {
@@ -149,18 +170,24 @@ public static class OfXActivitySource
         /// <summary>
         /// Adds database-specific tags to an activity.
         /// </summary>
-        /// <param name="system">The database system (e.g., "postgresql", "mongodb").</param>
-        /// <param name="name">The database name.</param>
+        /// <param name="dbSystem">The database system (e.g., "postgresql", "mongodb", "efcore").</param>
+        /// <param name="dbName">The database name.</param>
         /// <param name="statement">The database statement (optional, be careful with PII).</param>
-        public void SetDatabaseTags(string system,
-            string name = null,
-            string statement = null)
+        /// <param name="collection">The collection/table name (for MongoDB).</param>
+        /// <param name="operation">The database operation (e.g., "query", "find", "insert").</param>
+        public void SetDatabaseTags(string dbSystem,
+            string dbName = null,
+            string statement = null,
+            string collection = null,
+            string operation = null)
         {
             if (activity == null) return;
 
-            activity.SetTag(Constants.Telemetry.TagDbSystem, system);
-            if (name != null) activity.SetTag(Constants.Telemetry.TagDbName, name);
+            activity.SetTag(Constants.Telemetry.TagDbSystem, dbSystem);
+            if (dbName != null) activity.SetTag(Constants.Telemetry.TagDbName, dbName);
             if (statement != null) activity.SetTag(Constants.Telemetry.TagDbStatement, statement);
+            if (collection != null) activity.SetTag(Constants.Telemetry.TagDbCollection, collection);
+            if (operation != null) activity.SetTag(Constants.Telemetry.TagDbOperation, operation);
         }
 
         /// <summary>

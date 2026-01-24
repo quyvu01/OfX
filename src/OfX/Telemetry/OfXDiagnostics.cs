@@ -195,49 +195,80 @@ public static class OfXDiagnostics
 
     #region Database Events
 
+    private const string DatabaseQueryErrorEvent = Constants.Telemetry.EventDatabaseQueryError;
+
     /// <summary>
     /// Fires when a database query starts.
     /// </summary>
-    /// <param name="dbSystem">The database system.</param>
-    /// <param name="operation">The operation type.</param>
-    /// <param name="database">The database name.</param>
+    /// <param name="attribute">The OfX attribute name.</param>
+    /// <param name="dbSystem">The database system (e.g., "efcore", "mongodb").</param>
+    /// <param name="expression">The OfX expression being queried.</param>
     public static void DatabaseQueryStart(
+        string attribute,
         string dbSystem,
-        string operation,
-        string? database = null)
+        string expression)
     {
         if (!Listener.IsEnabled(DatabaseQueryStartEvent)) return;
 
         Listener.Write(DatabaseQueryStartEvent, new
         {
+            Attribute = attribute,
             DbSystem = dbSystem,
-            Operation = operation,
-            Database = database,
+            Expression = expression,
             Timestamp = DateTimeOffset.UtcNow,
             OperationId = Activity.Current?.Id
         });
     }
 
     /// <summary>
-    /// Fires when a database query completes.
+    /// Fires when a database query completes successfully.
     /// </summary>
+    /// <param name="attribute">The OfX attribute name.</param>
     /// <param name="dbSystem">The database system.</param>
-    /// <param name="operation">The operation type.</param>
-    /// <param name="rowCount">The number of rows affected/returned.</param>
+    /// <param name="itemCount">The number of items returned.</param>
     /// <param name="duration">The query duration.</param>
     public static void DatabaseQueryStop(
+        string attribute,
         string dbSystem,
-        string operation,
-        int? rowCount,
+        int itemCount,
         TimeSpan duration)
     {
         if (!Listener.IsEnabled(DatabaseQueryStopEvent)) return;
 
         Listener.Write(DatabaseQueryStopEvent, new
         {
+            Attribute = attribute,
             DbSystem = dbSystem,
-            Operation = operation,
-            RowCount = rowCount,
+            ItemCount = itemCount,
+            Duration = duration,
+            DurationMs = duration.TotalMilliseconds,
+            Timestamp = DateTimeOffset.UtcNow,
+            OperationId = Activity.Current?.Id
+        });
+    }
+
+    /// <summary>
+    /// Fires when a database query fails.
+    /// </summary>
+    /// <param name="attribute">The OfX attribute name.</param>
+    /// <param name="dbSystem">The database system.</param>
+    /// <param name="exception">The exception that occurred.</param>
+    /// <param name="duration">The query duration before failure.</param>
+    public static void DatabaseQueryError(
+        string attribute,
+        string dbSystem,
+        Exception exception,
+        TimeSpan duration)
+    {
+        if (!Listener.IsEnabled(DatabaseQueryErrorEvent)) return;
+
+        Listener.Write(DatabaseQueryErrorEvent, new
+        {
+            Attribute = attribute,
+            DbSystem = dbSystem,
+            Exception = exception,
+            ErrorType = exception.GetType().Name,
+            ErrorMessage = exception.Message,
             Duration = duration,
             DurationMs = duration.TotalMilliseconds,
             Timestamp = DateTimeOffset.UtcNow,

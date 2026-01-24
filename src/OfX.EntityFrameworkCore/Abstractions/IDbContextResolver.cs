@@ -16,4 +16,6 @@ internal interface IDbContextResolver<TModel> where TModel : class
     /// Gets the DbSet for the model type from the appropriate DbContext.
     /// </summary>
     DbSet<TModel> Set { get; }
+
+    DbContext DbContext { get; }
 }

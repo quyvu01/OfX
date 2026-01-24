@@ -185,11 +185,7 @@ public static class OfXMetrics
     /// <param name="transport">The transport mechanism.</param>
     /// <param name="durationMs">The request duration in milliseconds.</param>
     /// <param name="itemCount">The number of items returned.</param>
-    public static void RecordRequest(
-        string attributeName,
-        string transport,
-        double durationMs,
-        int itemCount)
+    public static void RecordRequest(string attributeName, string transport, double durationMs, int itemCount)
     {
         var tags = new TagList
         {
@@ -231,15 +227,53 @@ public static class OfXMetrics
     }
 
     /// <summary>
+    /// Records a successful database query.
+    /// </summary>
+    /// <param name="attributeName">The OfX attribute name.</param>
+    /// <param name="dbSystem">The database system (e.g., "efcore", "mongodb").</param>
+    /// <param name="durationMs">The query duration in milliseconds.</param>
+    /// <param name="itemCount">The number of items returned.</param>
+    public static void RecordDatabaseQuery(string attributeName, string dbSystem, double durationMs, int itemCount)
+    {
+        var tags = new TagList
+        {
+            { Constants.Telemetry.LabelOfXAttribute, attributeName },
+            { Constants.Telemetry.LabelOfXDbSystem, dbSystem },
+            { Constants.Telemetry.LabelOfXStatus, Constants.Telemetry.StatusSuccess }
+        };
+
+        DatabaseQueryDuration.Record(durationMs, tags);
+        ItemsReturned.Add(itemCount, tags);
+    }
+
+    /// <summary>
+    /// Records a failed database query.
+    /// </summary>
+    /// <param name="attributeName">The OfX attribute name.</param>
+    /// <param name="dbSystem">The database system (e.g., "efcore", "mongodb").</param>
+    /// <param name="durationMs">The query duration in milliseconds.</param>
+    /// <param name="errorType">The type of error that occurred.</param>
+    public static void RecordDatabaseError(string attributeName, string dbSystem, double durationMs, string errorType)
+    {
+        var tags = new TagList
+        {
+            { Constants.Telemetry.LabelOfXAttribute, attributeName },
+            { Constants.Telemetry.LabelOfXDbSystem, dbSystem },
+            { Constants.Telemetry.LabelOfXStatus, Constants.Telemetry.StatusError },
+            { Constants.Telemetry.LabelOfXErrorType, errorType }
+        };
+
+        DatabaseQueryDuration.Record(durationMs, tags);
+        ErrorCount.Add(1, tags);
+    }
+
+    /// <summary>
     /// Records a message send operation.
     /// </summary>
     /// <param name="transport">The transport mechanism.</param>
     /// <param name="destination">The destination (queue/topic name).</param>
     /// <param name="sizeBytes">The message size in bytes.</param>
-    public static void RecordMessageSend(
-        string transport,
-        string destination,
-        long sizeBytes)
+    public static void RecordMessageSend(string transport, string destination, long sizeBytes)
     {
         var tags = new TagList
         {
@@ -258,10 +292,7 @@ public static class OfXMetrics
     /// <param name="transport">The transport mechanism.</param>
     /// <param name="source">The source (queue/topic name).</param>
     /// <param name="sizeBytes">The message size in bytes.</param>
-    public static void RecordMessageReceive(
-        string transport,
-        string source,
-        long sizeBytes)
+    public static void RecordMessageReceive(string transport, string source, long sizeBytes)
     {
         var tags = new TagList
         {
@@ -280,10 +311,7 @@ public static class OfXMetrics
     /// <param name="dbSystem">The database system (e.g., "postgresql", "mongodb").</param>
     /// <param name="operation">The operation type (e.g., "select", "insert").</param>
     /// <param name="durationMs">The query duration in milliseconds.</param>
-    public static void RecordDatabaseQuery(
-        string dbSystem,
-        string operation,
-        double durationMs)
+    public static void RecordDatabaseQuery(string dbSystem, string operation, double durationMs)
     {
         var tags = new TagList
         {
@@ -299,9 +327,7 @@ public static class OfXMetrics
     /// </summary>
     /// <param name="expression">The expression being parsed.</param>
     /// <param name="durationMs">The parsing duration in milliseconds.</param>
-    public static void RecordExpressionParsing(
-        string expression,
-        double durationMs)
+    public static void RecordExpressionParsing(string expression, double durationMs)
     {
         var complexity = expression.Length switch
         {
