@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>8.0.25</Version>
+        <Version>8.2.5</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX-MongoDb</PackageId>
         <Description>OfX extension. Use MongoDb as Data Querying</Description>
