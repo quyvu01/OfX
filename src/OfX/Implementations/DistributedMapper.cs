@@ -3,6 +3,7 @@ using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
+using OfX.Cached;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Externals;
@@ -72,7 +73,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
 
                     if (selectorIds is not { Length: > 0 }) return emptyResponse;
 
-                    var requestCt = new RequestContext([], ObjectToDictionary(), token);
+                    var requestCt = new RequestContext([], ParameterConverter.ConvertToDictionary(parameters), token);
 
                     var expressions = accessors
                         .Select(a => a.PropertyInformation.Expression);
@@ -89,7 +90,9 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
                 .Where(a => !a.PropertyInfo.PropertyType.IsPrimitiveType())
                 .Aggregate(new List<object>(), (acc, next) =>
                 {
-                    var propertyValue = next.PropertyInfo.GetValue(next.Model);
+                    var modelAccessor = OfXModelCache.GetModelAccessor(next.Model.GetType());
+                    var propertyAccessor = modelAccessor.GetAccessor(next.PropertyInfo);
+                    var propertyValue = propertyAccessor?.Get(next.Model);
                     if (propertyValue is null) return acc;
                     acc.Add(propertyValue);
                     return acc;
@@ -98,10 +101,6 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
             _currentObjectSpawnTimes += 1;
             value = nextMappableData;
         }
-
-        return;
-
-        Dictionary<string, string> ObjectToDictionary() => ParameterConverter.ConvertToDictionary(parameters);
     }
 
     public Task<ItemsResponse<DataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,

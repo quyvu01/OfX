@@ -28,7 +28,7 @@ public static class OfXModelCache
     /// The cached or newly created <see cref="TypeModelAccessor"/> containing
     /// property accessors and dependency graphs.
     /// </returns>
-    public static TypeModelAccessor GetModel(Type type)
+    public static TypeModelAccessor GetModelAccessor(Type type)
         => Models.GetOrAdd(type, static t => new TypeModelAccessor(t));
 
     /// <summary>

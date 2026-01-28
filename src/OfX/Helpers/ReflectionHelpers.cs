@@ -42,7 +42,7 @@ internal static class ReflectionHelpers
         if (!visited.Add(obj)) yield break;
 
         var objType = obj.GetType();
-        var objectCached = OfXModelCache.GetModel(objType);
+        var objectCached = OfXModelCache.GetModelAccessor(objType);
         foreach (var (propertyInfo, accessor) in objectCached.Accessors)
         {
             var propertyInformation = objectCached.GetInformation(propertyInfo);
@@ -90,9 +90,9 @@ internal static class ReflectionHelpers
                 try
                 {
                     var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
-                    var model = OfXModelCache.GetModel(ap.Model.GetType());
-                    var accessor = model.GetAccessor(ap.PropertyInfo);
-                    accessor?.Set(ap.Model, valueSet);
+                    var modelAccessor = OfXModelCache.GetModelAccessor(ap.Model.GetType());
+                    var propertyAccessor = modelAccessor.GetAccessor(ap.PropertyInfo);
+                    propertyAccessor?.Set(ap.Model, valueSet);
                 }
                 catch (Exception)
                 {

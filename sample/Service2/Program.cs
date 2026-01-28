@@ -51,7 +51,7 @@ builder.Services.AddOfX(cfg =>
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddK  activity.SetOfXTags(expression: requestContext.Query.Expression,
         //                       selectorIds: requestContext.Query.SelectorIds);afka(c => c.Host("localhost:9092"));
-        // cfg.AddNats(c => c.Url("nats://localhost:4222")); // Use NATS for telemetry demo
+        cfg.AddNats(c => c.Url("nats://localhost:4222"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service2Context)));
 
@@ -97,5 +97,5 @@ var app = builder.Build();
 
 await MigrationDatabase.MigrationDatabaseAsync<Service2Context>(app);
 
-app.MapOfXGrpcService();
+// app.MapOfXGrpcService();
 app.Run();

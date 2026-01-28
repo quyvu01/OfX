@@ -76,7 +76,7 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
                 var attribute = data.Attribute;
                 
                 var dependencyGraphs = OfXModelCache
-                    .GetModel(typeof(T))
+                    .GetModelAccessor(typeof(T))
                     .DependencyGraphs;
 
                 var ctx = new FieldContext

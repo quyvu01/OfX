@@ -56,7 +56,7 @@ public sealed class DataResolvers<TResponse> where TResponse : class
 
         async Task<string> FieldResultAsync(FieldContext fieldContext)
         {
-            var selectorId = OfXModelCache.GetModel(typeof(TResponse))
+            var selectorId = OfXModelCache.GetModelAccessor(typeof(TResponse))
                 .GetAccessor(fieldContext.RequiredPropertyInfo)
                 .Get(response)?.ToString();
             // Fetch the dependency fields
@@ -77,7 +77,7 @@ public sealed class DataResolvers<TResponse> where TResponse : class
     {
         if (!OfXModelCache.ContainsModel(typeof(TResponse))) return [];
         var dependenciesGraph = OfXModelCache
-            .GetModel(typeof(TResponse)).DependencyGraphs;
+            .GetModelAccessor(typeof(TResponse)).DependencyGraphs;
         if (!dependenciesGraph.TryGetValue(currentContext.TargetPropertyInfo, out var infos)) return [];
         return
         [

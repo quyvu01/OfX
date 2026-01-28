@@ -53,8 +53,8 @@ public sealed class OfXHotChocolateRegister
             var objectType = dataType.GetGenericArguments().FirstOrDefault();
             if (objectType is null) return;
             if (!objectType.IsClass || objectType.IsAbstract || GeneralHelpers.IsPrimitiveType(objectType)) return;
-            var objectCache = OfXModelCache.GetModel(objectType);
-            if (objectCache.DependencyGraphs is not { Count: > 0 }) return;
+            var modelAccessor = OfXModelCache.GetModelAccessor(objectType);
+            if (modelAccessor.DependencyGraphs is not { Count: > 0 }) return;
             builder
                 .AddType(typeof(OfXObjectTypeExtension<>).MakeGenericType(objectType))
                 .AddResolver(typeof(DataResolvers<>).MakeGenericType(objectType));

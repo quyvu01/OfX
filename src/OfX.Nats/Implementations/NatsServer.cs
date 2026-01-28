@@ -83,7 +83,6 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
         var cancellationToken = cts.Token;
-
         try
         {
             // Add messaging tags to activity
