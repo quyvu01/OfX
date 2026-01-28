@@ -83,7 +83,7 @@ internal class KafkaClient : IRequestClient, IAsyncDisposable
             // Propagate W3C trace context
             var message = new KafkaMessageWrapped<OfXRequest>
             {
-                Message = new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
+                Message = new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expressions),
                 ReplyTo = _replyTo
             };
 
@@ -98,13 +98,12 @@ internal class KafkaClient : IRequestClient, IAsyncDisposable
                 activity.SetMessagingTags(system: TransportName, destination: topic, messageId: correlationId,
                     operation: "publish");
 
-                activity.SetOfXTags(expression: requestContext.Query.Expression,
-                    selectorIds: requestContext.Query.SelectorIds);
+                activity.SetOfXTags(requestContext.Query.Expressions, requestContext.Query.SelectorIds);
             }
 
             // Emit diagnostic event
             OfXDiagnostics.RequestStart(typeof(TAttribute).Name, TransportName, requestContext.Query.SelectorIds,
-                requestContext.Query.Expression);
+                requestContext.Query.Expressions);
 
             // Track active requests
             OfXMetrics.UpdateActiveRequests(1);

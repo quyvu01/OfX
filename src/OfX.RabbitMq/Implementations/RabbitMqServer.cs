@@ -152,8 +152,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
 
             OfXMetrics.RecordRequest(attributeName, TransportName, stopwatch.Elapsed.TotalMilliseconds, itemCount);
 
-            activity?.SetOfXTags(expression: message?.Expression, selectorIds: message?.SelectorIds,
-                itemCount: itemCount);
+            activity?.SetOfXTags(message?.Expressions, message?.SelectorIds, itemCount);
 
             activity?.SetStatus(ActivityStatusCode.Ok);
         }

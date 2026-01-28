@@ -75,8 +75,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
     protected (Expression<Func<TModel, object[]>> Projection, IReadOnlyList<string> Expressions) BuildProjection(
         RequestOf<TAttribute> request)
     {
-        var expressions = JsonSerializer.Deserialize<string[]>(request.Expression) ?? [];
-        var expressionList = expressions.ToList();
+        var expressionList = request.Expressions.ToList();
 
         // Try get from cache
         var cacheKey = ComputeCacheKey(expressionList);

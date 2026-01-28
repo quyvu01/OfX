@@ -59,12 +59,12 @@ public static class OfXDiagnostics
     /// <param name="attribute">The OfX attribute name.</param>
     /// <param name="transport">The transport mechanism.</param>
     /// <param name="selectorIds">The selector IDs being queried.</param>
-    /// <param name="expression">The OfX expression.</param>
+    /// <param name="expressions">The OfX expressions.</param>
     public static void RequestStart(
         string attribute,
         string transport,
         string[]? selectorIds = null,
-        string? expression = null)
+        string[]? expressions = null)
     {
         if (!Listener.IsEnabled(RequestStartEvent)) return;
 
@@ -73,7 +73,7 @@ public static class OfXDiagnostics
             Attribute = attribute,
             Transport = transport,
             SelectorIds = selectorIds,
-            Expression = expression,
+            Expressions = expressions,
             Timestamp = DateTimeOffset.UtcNow,
             OperationId = Activity.Current?.Id
         });
@@ -202,11 +202,11 @@ public static class OfXDiagnostics
     /// </summary>
     /// <param name="attribute">The OfX attribute name.</param>
     /// <param name="dbSystem">The database system (e.g., "efcore", "mongodb").</param>
-    /// <param name="expression">The OfX expression being queried.</param>
+    /// <param name="expressions">The OfX expressions being queried.</param>
     public static void DatabaseQueryStart(
         string attribute,
         string dbSystem,
-        string expression)
+        string[] expressions)
     {
         if (!Listener.IsEnabled(DatabaseQueryStartEvent)) return;
 
@@ -214,7 +214,7 @@ public static class OfXDiagnostics
         {
             Attribute = attribute,
             DbSystem = dbSystem,
-            Expression = expression,
+            Expressions = expressions,
             Timestamp = DateTimeOffset.UtcNow,
             OperationId = Activity.Current?.Id
         });

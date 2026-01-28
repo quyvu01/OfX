@@ -108,7 +108,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 
             var headers = request.ApplicationProperties?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestOf = new RequestOf<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expression);
+            var requestOf = new RequestOf<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expressions);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
             var data = await pipeline.ExecuteAsync(requestContext);
             var response = Result.Success(data);
@@ -127,10 +127,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
             OfXMetrics.RecordRequest(attributeName, TransportName,
                 stopwatch.Elapsed.TotalMilliseconds, itemCount);
 
-            activity?.SetOfXTags(
-                expression: requestDeserialize.Expression,
-                selectorIds: requestDeserialize.SelectorIds,
-                itemCount: itemCount);
+            activity?.SetOfXTags(requestDeserialize.Expressions, requestDeserialize.SelectorIds, itemCount);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
@@ -113,8 +112,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
             .GetOrAdd(runtimeType, static type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
-            .ExecuteAsync(new OfXRequest(query.SelectorIds,
-                JsonSerializer.Serialize(query.Expressions.Distinct().OrderBy(a => a))), context);
+            .ExecuteAsync(new OfXRequest(query.SelectorIds, [..query.Expressions.Distinct()]), context);
         return result;
     }
 }

@@ -8,7 +8,7 @@ using Service2.Contexts;
 
 #nullable disable
 
-namespace WorkerService1.Migrations
+namespace Service2.Migrations
 {
     [DbContext(typeof(Service2Context))]
     partial class Service2ContextModelSnapshot : ModelSnapshot

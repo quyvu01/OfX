@@ -23,13 +23,11 @@ public sealed class TestController : ControllerBase
     {
         List<MemberResponse> members =
         [
-            .. Enumerable.Range(1, 3).Select(a => new MemberResponse
-            {
-                Id = a.ToString(),
-                UserId = a.ToString(), MemberAdditionalId = a.ToString(),
-                MemberAddressId = a.ToString(),
-                MemberSocialId = a.ToString(),
-            })
+            new() { Id = "1", UserId = "user-001", MemberAdditionalId = "member-001", MemberAddressId = "addr-001", MemberSocialId = "1" },
+            new() { Id = "2", UserId = "user-002", MemberAdditionalId = "member-002", MemberAddressId = "addr-002", MemberSocialId = "2" },
+            new() { Id = "3", UserId = "user-004", MemberAdditionalId = "member-003", MemberAddressId = "addr-005", MemberSocialId = "3" },
+            new() { Id = "4", UserId = "user-013", MemberAdditionalId = "member-005", MemberAddressId = "addr-016", MemberSocialId = "5" },
+            new() { Id = "5", UserId = "user-019", MemberAdditionalId = "member-010", MemberAddressId = "addr-022", MemberSocialId = "7" }
         ];
         await distributedMapper.MapDataAsync(members);
         return Ok(members);
@@ -41,10 +39,9 @@ public sealed class TestController : ControllerBase
     {
         List<MemberWitComplexExpressionResponse> members =
         [
-            .. Enumerable.Range(1, 3).Select(a => new MemberWitComplexExpressionResponse
-            {
-                UserId = a.ToString()
-            })
+            new() { UserId = "user-001" },
+            new() { UserId = "user-013" },
+            new() { UserId = "user-019" }
         ];
         await distributedMapper.MapDataAsync(members);
         return Ok(members);
@@ -55,7 +52,7 @@ public sealed class TestController : ControllerBase
         string expression)
     {
         var result = await distributedMapper
-            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1"], [expression]));
+            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["user-001"], [expression]));
         return Ok(result);
     }
 
@@ -74,10 +71,9 @@ public sealed class TestController : ControllerBase
     {
         List<SimpleMemberResponse> members =
         [
-            .. Enumerable.Range(1, 3).Select(a => new SimpleMemberResponse
-            {
-                UserId = a.ToString()
-            })
+            new() { UserId = "user-001" },
+            new() { UserId = "user-013" },
+            new() { UserId = "user-019" }
         ];
         await distributedMapper.MapDataAsync(members, new { userAlias }, token);
         return Ok(members);
@@ -91,8 +87,8 @@ public sealed class TestController : ControllerBase
         {
             Responses = new Dictionary<SimpleMemberResponse, MemberResponse>
             {
-                { new SimpleMemberResponse { UserId = "1" }, new MemberResponse { UserId = "1" } },
-                { new SimpleMemberResponse { UserId = "2" }, new MemberResponse { UserId = "2" } }
+                { new SimpleMemberResponse { UserId = "user-001" }, new MemberResponse { UserId = "user-001" } },
+                { new SimpleMemberResponse { UserId = "user-013" }, new MemberResponse { UserId = "user-013" } }
             }
         };
 
@@ -147,14 +143,14 @@ public sealed class TestController : ControllerBase
     public async Task<IActionResult> FetchUsers([FromServices] IDistributedMapper distributedMapper)
     {
         var result = await distributedMapper
-            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["1", "2", "3"], [null, "Name", "Email"]));
+            .FetchDataAsync<UserOfAttribute>(new DataFetchQuery(["user-001", "user-013", "user-019"], [null, "Name", "Email"]));
         return Ok(result);
     }
 
     [HttpGet]
     public async Task<IActionResult> NativeDbContextTest([FromServices] OtherService1Context context)
     {
-        IEnumerable<string> ids = ["1", "2", "3"];
+        IEnumerable<string> ids = ["addr-001", "addr-016", "addr-022"];
         Expression<Func<MemberAddress, bool>> filter = x => ids.Contains(x.Id);
         var result = await context.MemberAddresses
             .Where(filter).ToListAsync();

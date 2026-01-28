@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Builder;
@@ -139,7 +140,7 @@ public static class GrpcExtensions
             .CreateLinkedTokenSource(context?.CancellationToken ?? CancellationToken.None);
         cancellationTokenSource.CancelAfter(DefaultRequestTimeout);
         grpcQuery.SelectorIds.AddRange(query.SelectorIds ?? []);
-        grpcQuery.Expression = query.Expression;
+        grpcQuery.Expression = JsonSerializer.Serialize(query.Expressions);
         grpcQuery.AttributeAssemblyType = attributeType.GetAssemblyName();
         return await client.GetItemsAsync(grpcQuery, metadata, cancellationToken: cancellationTokenSource.Token);
     }

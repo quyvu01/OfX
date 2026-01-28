@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -63,7 +62,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
 
         try
         {
-            var expressions = JsonSerializer.Deserialize<List<string>>(context.Query.Expression) ?? [];
+            var expressions = context.Query.Expressions;
 
             // Build filter
             var filter = BuildFilter(context.Query);
@@ -83,7 +82,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
             }
 
             // Emit diagnostic event
-            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expression);
+            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expressions);
 
             // Execute query
             var rawResults = await _collectionInternal.Collection
@@ -144,7 +143,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     /// Builds MongoDB BSON projection document.
     /// </summary>
     private (BsonDocument Projection, Dictionary<string, string> ExpressionMap) BuildProjection(
-        List<string> expressions)
+        string[] expressions)
     {
         // Create unique field names for each expression
         // For null expressions, use defaultProperty (actual property name, not ExposedName)
@@ -179,7 +178,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     /// </summary>
     private static DataResponse[] TransformResults(
         List<BsonDocument> rawResults,
-        List<string> originalExpressions,
+        string[] originalExpressions,
         Dictionary<string, string> expressionMap)
     {
         var result = new DataResponse[rawResults.Count];
@@ -189,9 +188,9 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
             var doc = rawResults[i];
             var id = doc["_id"].ToString();
 
-            var values = new ValueResponse[originalExpressions.Count];
+            var values = new ValueResponse[originalExpressions.Length];
 
-            for (var j = 0; j < originalExpressions.Count; j++)
+            for (var j = 0; j < originalExpressions.Length; j++)
             {
                 var originalExpr = originalExpressions[j];
                 var fieldName = $"_exp_{j}";
@@ -232,7 +231,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
         return bsonValue.ToJson();
     }
 
-    private static int ComputeCacheKey(List<string> expressions)
+    private static int ComputeCacheKey(string[] expressions)
     {
         var hash = new HashCode();
         foreach (var expr in expressions) hash.Add(expr);

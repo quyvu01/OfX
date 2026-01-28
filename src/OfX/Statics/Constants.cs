@@ -19,7 +19,7 @@ public static class Constants
         public const string TagOfXAttribute = "ofx.attribute";
         public const string TagOfXTransport = "ofx.transport";
         public const string TagOfXVersion = "ofx.version";
-        public const string TagOfXExpression = "ofx.expression";
+        public const string TagOfXExpressions = "ofx.expressions";
         public const string TagOfXSelectorCount = "ofx.selector_count";
         public const string TagOfXSelectorIds = "ofx.selector_ids";
         public const string TagOfXItemCount = "ofx.item_count";

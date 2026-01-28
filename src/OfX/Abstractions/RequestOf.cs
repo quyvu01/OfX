@@ -12,7 +12,7 @@ namespace OfX.Abstractions;
 /// The list of string-based selector IDs identifying the target entities or records to be queried.  
 /// These will later be converted into model IDs using <see cref="IIdConverter{TId}"/>.
 /// </param>
-/// <param name="Expression">
+/// <param name="Expressions">
 /// The filter or selection expression (in string form) used to shape or restrict the query results.  
 /// This expression will be parsed and executed by the server-side <see cref="IQueryOfHandler{TModel, TAttribute}"/>.
 /// </param>
@@ -26,4 +26,4 @@ namespace OfX.Abstractions;
 /// such as headers and <see cref="CancellationToken"/> for end-to-end request processing.
 /// </para>
 /// </remarks>
-public sealed record RequestOf<TAttribute>(string[] SelectorIds, string Expression) where TAttribute : OfXAttribute;
+public sealed record RequestOf<TAttribute>(string[] SelectorIds, string[] Expressions) where TAttribute : OfXAttribute;

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -51,7 +50,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(OfXStatics.DefaultRequestTimeout);
-        var expressions = JsonSerializer.Deserialize<string[]>(message.Expression);
+        var expressions = message.Expressions;
         var parameters = context is IExpressionParameters expressionParameters ? expressionParameters.Parameters : null;
 
         // Resolve expressions and build lookup in one pass
@@ -67,10 +66,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
                 return acc;
             });
 
-        // Serialize only the distinct resolved expressions
-        var expression = JsonSerializer.Serialize(resolvedExpressions);
-
-        var request = new RequestOf<TAttribute>(message.SelectorIds, expression);
+        var request = new RequestOf<TAttribute>(message.SelectorIds, [..resolvedExpressions]);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
         var result = await serviceProvider
             .GetServices<ISendPipelineBehavior<TAttribute>>()

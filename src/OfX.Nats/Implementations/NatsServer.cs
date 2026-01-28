@@ -102,7 +102,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
             var headers = message.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expression);
+            var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expressions);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
 
             var data = await pipeline.ExecuteAsync(requestContext);
@@ -114,19 +114,12 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
             stopwatch.Stop();
             var itemCount = data?.Items?.Length ?? 0;
 
-            OfXMetrics.RecordRequest(
-                typeof(TAttribute).Name,
-                TransportName,
-                stopwatch.Elapsed.TotalMilliseconds,
+            OfXMetrics.RecordRequest(typeof(TAttribute).Name, TransportName, stopwatch.Elapsed.TotalMilliseconds,
                 itemCount);
 
-            if (activity != null)
-                activity.SetOfXTags(
-                    expression: message.Data.Expression,
-                    selectorIds: message.Data.SelectorIds,
-                    itemCount: itemCount);
+            activity?.SetOfXTags(message.Data.Expressions, message.Data.SelectorIds, itemCount);
 
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Ok);
+            activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -142,7 +135,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 stopwatch.Elapsed.TotalMilliseconds,
                 "TimeoutException");
 
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Error, "Request timeout");
+            activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
 
             await TrySendErrorResponseAsync(message, response);
         }
@@ -166,8 +159,8 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 e,
                 stopwatch.Elapsed);
 
-            if (activity != null) activity.RecordException(e);
-            if (activity != null) activity.SetStatus(ActivityStatusCode.Error, e.Message);
+            activity?.RecordException(e);
+            activity?.SetStatus(ActivityStatusCode.Error, e.Message);
 
             await TrySendErrorResponseAsync(message, response);
         }

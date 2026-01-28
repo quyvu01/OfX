@@ -18,7 +18,7 @@ public class OfXRequestResponseContractTests
         // Arrange
         var request = new OfXRequest(
             SelectorIds: ["id1", "id2", "id3"],
-            Expression: "[\"Name\",\"Email\"]"
+            Expressions: ["Name", "Email"]
         );
 
         // Act
@@ -28,7 +28,7 @@ public class OfXRequestResponseContractTests
         // Assert
         deserialized.ShouldNotBeNull();
         deserialized.SelectorIds.ShouldBe(request.SelectorIds);
-        deserialized.Expression.ShouldBe(request.Expression);
+        deserialized.Expressions.ShouldBe(request.Expressions);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class OfXRequestResponseContractTests
         // Arrange
         var request = new OfXRequest(
             SelectorIds: [],
-            Expression: "[]"
+            Expressions: []
         );
 
         // Act
@@ -160,7 +160,7 @@ public class OfXRequestResponseContractTests
         // Arrange
         var request = new OfXRequest(
             SelectorIds: ["id1"],
-            Expression: "[\"Field1\"]"
+            Expressions: ["Field1"]
         );
 
         // Act
@@ -168,7 +168,7 @@ public class OfXRequestResponseContractTests
 
         // Assert - Expected JSON structure
         json.ShouldContain("\"SelectorIds\"");
-        json.ShouldContain("\"Expression\"");
+        json.ShouldContain("\"Expressions\"");
         json.ShouldContain("id1");
         json.ShouldContain("Field1");
     }

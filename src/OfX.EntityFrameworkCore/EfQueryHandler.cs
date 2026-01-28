@@ -69,7 +69,7 @@ internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvid
             }
 
             // Emit diagnostic event
-            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expression);
+            OfXDiagnostics.DatabaseQueryStart(typeof(TAttribute).Name, DbSystem, context.Query.Expressions);
 
             // Step 1: Execute database query with object[] projection
             var rawResults = await dbContextResolver.Set

@@ -44,8 +44,7 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
                     destination: typeof(TAttribute).GetNatsSubject(),
                     operation: "publish");
 
-                activity.SetOfXTags(
-                    expression: requestContext.Query.Expression,
+                activity.SetOfXTags(requestContext.Query.Expressions,
                     selectorIds: requestContext.Query.SelectorIds);
             }
 
@@ -54,7 +53,7 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
                 typeof(TAttribute).Name,
                 TransportName,
                 requestContext.Query.SelectorIds,
-                requestContext.Query.Expression);
+                requestContext.Query.Expressions);
 
             // Track active requests
             OfXMetrics.UpdateActiveRequests(1);

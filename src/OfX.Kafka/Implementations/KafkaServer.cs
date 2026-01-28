@@ -174,7 +174,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
 
             var message = messageUnWrapped.Message;
-            var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+            var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expressions);
             var headers = consumeResult.Message.Headers?
                 .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes())) ?? [];
 
@@ -194,10 +194,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
                 stopwatch.Elapsed.TotalMilliseconds,
                 itemCount);
 
-            activity?.SetOfXTags(
-                expression: message?.Expression,
-                selectorIds: message?.SelectorIds,
-                itemCount: itemCount);
+            activity?.SetOfXTags(message.Expressions, message.SelectorIds, itemCount);
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

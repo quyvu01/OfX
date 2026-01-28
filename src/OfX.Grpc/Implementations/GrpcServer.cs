@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Text.Json;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -77,7 +78,10 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
 
             var headers = context.RequestHeaders.ToDictionary(k => k.Key, v => v.Value);
 
-            var message = new OfXRequest([..request.SelectorIds], request.Expression);
+            string[] selectorIds = [..request.SelectorIds];
+            var expressions = JsonSerializer.Deserialize<string[]>(request.Expression);
+
+            var message = new OfXRequest(selectorIds, expressions);
             var response = await receivedPipelinesOrchestrator
                 .ExecuteAsync(message, headers, cancellationToken);
 
@@ -100,10 +104,7 @@ public sealed class GrpcServer(IServiceProvider serviceProvider) : OfXTransportS
                 stopwatch.Elapsed.TotalMilliseconds,
                 itemCount);
 
-            activity?.SetOfXTags(
-                expression: request.Expression,
-                selectorIds: request.SelectorIds?.ToArray(),
-                itemCount: itemCount);
+            activity?.SetOfXTags(expressions, selectorIds, itemCount);
             activity?.SetStatus(ActivityStatusCode.Ok);
 
             return res;

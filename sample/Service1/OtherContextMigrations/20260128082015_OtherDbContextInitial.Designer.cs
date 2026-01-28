@@ -8,18 +8,18 @@ using Service1.Contexts;
 
 #nullable disable
 
-namespace Service1.OtherMigrations
+namespace Service1.OtherContextMigrations
 {
     [DbContext(typeof(OtherService1Context))]
-    [Migration("20250224143729_initialOtherDb")]
-    partial class initialOtherDb
+    [Migration("20260128082015_OtherDbContextInitial")]
+    partial class OtherDbContextInitial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("ProductVersion", "9.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -29,7 +29,16 @@ namespace Service1.OtherMigrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("City")
+                        .HasColumnType("text");
+
                     b.Property<string>("ProvinceId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Street")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ZipCode")
                         .HasColumnType("text");
 
                     b.HasKey("Id");

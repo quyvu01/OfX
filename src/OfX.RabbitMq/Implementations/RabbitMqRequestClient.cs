@@ -67,16 +67,12 @@ internal class RabbitMqRequestClient : IRequestClient, IAsyncDisposable
                 activity.SetMessagingTags(system: TransportName, destination: exchangeName, messageId: correlationId,
                     operation: "publish");
 
-                if (requestContext.Query.Expression != null)
-                {
-                    activity.SetOfXTags(expression: requestContext.Query.Expression,
-                        selectorIds: requestContext.Query.SelectorIds);
-                }
+                activity.SetOfXTags(requestContext.Query.Expressions, requestContext.Query.SelectorIds);
             }
 
             // Emit diagnostic event
             OfXDiagnostics.RequestStart(typeof(TAttribute).Name, TransportName, requestContext.Query.SelectorIds,
-                requestContext.Query.Expression);
+                requestContext.Query.Expressions);
 
             // Track active requests
             OfXMetrics.UpdateActiveRequests(1);

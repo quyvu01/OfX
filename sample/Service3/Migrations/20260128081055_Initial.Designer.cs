@@ -12,8 +12,8 @@ using Service3Api.Contexts;
 namespace Service3Api.Migrations
 {
     [DbContext(typeof(Service3Context))]
-    [Migration("20250413151102_initDb")]
-    partial class initDb
+    [Migration("20260128081055_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

@@ -66,29 +66,28 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
         };
 
         // Deserialize expressions from Expression, we handle the custom expressions and original expression as well
-        var expressions = JsonSerializer.Deserialize<List<string>>(requestContext.Query.Expression);
+        var expressions = requestContext.Query.Expressions;
         var customExpressions = customExpressionHandlers
             .Select(a => a.CustomExpression())
-            .ToList();
-        var newExpressions = expressions.Except(customExpressions).ToList();
-        var newExpression = JsonSerializer.Serialize(newExpressions);
+            .ToArray();
+        var newExpressions = expressions.Except(customExpressions).ToArray();
         var customExpressionsToExecute = customExpressions.Intersect(expressions);
 
         var newRequestContext = new RequestContextImpl<TAttribute>(
-            requestContext.Query with { Expression = newExpression }, requestContext.Headers,
+            requestContext.Query with { Expressions = newExpressions }, requestContext.Headers,
             requestContext.CancellationToken);
 
         var resultTask = behaviors.Reverse()
             .Aggregate(() => handler.GetDataAsync(newRequestContext),
                 (acc, pipeline) => () => pipeline.HandleAsync(newRequestContext, acc)).Invoke();
 
-        if (newExpressions.Count == expressions.Count) return await resultTask;
+        if (newExpressions.Length == expressions.Length) return await resultTask;
 
         // Handle getting data for custom expressions
         var customResults = customExpressionHandlers
             .Where(a => customExpressionsToExecute.Contains(a.CustomExpression()))
             .Select(a => (Expression: a.CustomExpression(), ResultTask: a.HandleAsync(
-                new RequestContextImpl<TAttribute>(requestContext.Query with { Expression = a.CustomExpression() },
+                new RequestContextImpl<TAttribute>(requestContext.Query with { Expressions = [a.CustomExpression()] },
                     requestContext.Headers, requestContext.CancellationToken)))).ToList();
 
         await Task.WhenAll([resultTask, ..customResults.Select(a => a.ResultTask)]);
@@ -116,7 +115,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     public override Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
-        var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expression);
+        var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expressions);
         var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers ?? [], cancellationToken);
         return ExecuteAsync(requestContext);
     }

@@ -3,11 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
-using OfX.Grpc.Extensions;
 using OfX.HotChocolate.Extensions;
 using OfX.MongoDb.Extensions;
 using OfX.Nats.Extensions;
-using OfX.RabbitMq.Extensions;
 using OfX.Supervision;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -68,11 +66,7 @@ builder.Services.AddOfX(cfg =>
             opts.EnableCircuitBreaker = true;
             opts.CircuitBreakerThreshold = 3;
         });
-        // cfg.AddGrpcClients(c =>
-        //     c.AddGrpcHosts("http://localhost:5001", "http://localhost:5002", "http://localhost:5003"));
-        // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         cfg.AddNats(c => c.Url("nats://localhost:4222"));
-        // cfg.AddKafka(c => c.Host("localhost:9092"));
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))
@@ -80,86 +74,22 @@ builder.Services.AddOfX(cfg =>
 
 #region Setting Database and Seeding data
 
-List<string> provinceIds =
-[
-    "01962f9a-f7f8-7f61-941c-6a086fe96cd2", "01962f9a-f7f8-7b4c-9b4d-eae8ea6e5fc7",
-    "01962f9a-f7f8-7e54-a79d-575a8e882eb8"
-];
-
-// Seeding MemberSocials
-
-// foreach (var id in Enumerable.Range(1, 3))
-// {
-//     var existed = await memberSocialCollection
-//         .Find(m => m.Id.Equals(id))
-//         .FirstOrDefaultAsync();
-//     if (existed is not null)
-//         await memberSocialCollection
-//             .DeleteOneAsync(x => x.Id == id);
-//     if (existed is null)
-//         await memberSocialCollection.InsertOneAsync(new MemberSocial
-//         {
-//             Id = id, Name = $"Social name at: {id}",
-//             OtherValue = $"SomeOtherValue Of: {id}",
-//             CreatedTime = DateTime.UtcNow,
-//             Metadata =
-//             [
-//                 ..Enumerable.Range(1, id).Select(x =>
-//                     new MemerSocialMetadata
-//                     {
-//                         Key = $"Key of: {x}", Value = $"Value of: {x}", Order = x + 1, ExternalOfMetadata =
-//                             new ExternalOfMetadata
-//                             {
-//                                 JustForTest = $"Just for test: {x}"
-//                             }
-//                     })
-//             ]
-//         });
-// }
-
-
 builder.Services.AddDbContextPool<Service1Context>(options =>
 {
     options.UseNpgsql("Host=localhost;Username=postgres;Password=Abcd@2021;Database=OfXTestService1", b =>
     {
         b.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
         b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-    }).UseAsyncSeeding(async (context, _, cancellationToken) =>
-    {
-        var memberAdditionalDataSet = context.Set<MemberAdditionalData>();
-        foreach (var id in Enumerable.Range(1, 3))
-        {
-            var existedMemberAdditionalData = await memberAdditionalDataSet
-                .FirstOrDefaultAsync(a => a.Id == id.ToString(), cancellationToken);
-            if (existedMemberAdditionalData == null)
-                memberAdditionalDataSet.Add(new MemberAdditionalData { Id = id.ToString(), Name = $"Joie: {id}" });
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
     });
 }, 128);
 
 builder.Services.AddDbContextPool<OtherService1Context>(options =>
 {
     options.UseNpgsql("Host=localhost;Username=postgres;Password=Abcd@2021;Database=OfXTestOtherService1", b =>
-        {
-            b.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
-            b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-        })
-        .UseAsyncSeeding(async (context, _, cancellationToken) =>
-        {
-            var memberAddressSet = context.Set<MemberAddress>();
-            foreach (var id in Enumerable.Range(1, 3))
-            {
-                var existedMemberAddress = await memberAddressSet
-                    .FirstOrDefaultAsync(a => a.Id == id.ToString(), cancellationToken);
-                if (existedMemberAddress is null)
-                    memberAddressSet.Add(new MemberAddress
-                        { Id = id.ToString(), ProvinceId = provinceIds.ElementAtOrDefault(id - 1) });
-            }
-
-            await context.SaveChangesAsync(cancellationToken);
-        });
+    {
+        b.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name);
+        b.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+    });
 }, 128);
 
 #endregion
@@ -171,6 +101,14 @@ var app = builder.Build();
 await MigrationDatabase.MigrationDatabaseAsync<Service1Context>(app);
 await MigrationDatabase.MigrationDatabaseAsync<OtherService1Context>(app);
 
+// Seed MongoDB data
+await Service1.Data.Service1DataSeeder.SeedMemberSocialAsync(memberSocialCollection);
+
+using var scope = app.Services.CreateScope();
+var dbContext = scope.ServiceProvider.GetRequiredService<Service1Context>();
+var otherDbContext = scope.ServiceProvider.GetRequiredService<OtherService1Context>();
+await Service1.Data.Service1DataSeeder.SeedMemberAdditionalDataAsync(dbContext);
+await Service1.Data.Service1DataSeeder.SeedServiceMemberAddressAsync(otherDbContext);
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

@@ -33,7 +33,7 @@ public sealed class GrpcRequestClient(GetOfXResponseFunc ofXResponseFunc) : IReq
         {
             // Emit diagnostic event
             OfXDiagnostics.RequestStart(typeof(TAttribute).Name, TransportName, requestContext.Query.SelectorIds,
-                requestContext.Query.Expression);
+                requestContext.Query.Expressions);
 
             // Track active requests
             OfXMetrics.UpdateActiveRequests(1);
@@ -44,13 +44,12 @@ public sealed class GrpcRequestClient(GetOfXResponseFunc ofXResponseFunc) : IReq
                 activity.SetMessagingTags(system: TransportName, destination: "grpc-server",
                     messageId: Activity.Current?.Id ?? Guid.NewGuid().ToString(), operation: "call");
 
-                activity.SetOfXTags(expression: requestContext.Query.Expression,
-                    selectorIds: requestContext.Query.SelectorIds);
+                activity.SetOfXTags(requestContext.Query.Expressions, requestContext.Query.SelectorIds);
             }
 
             var func = ofXResponseFunc.Invoke(typeof(TAttribute));
             var result = await func.Invoke(
-                new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expression),
+                new OfXRequest(requestContext.Query.SelectorIds, requestContext.Query.Expressions),
                 new GrpcClientContext(requestContext.Headers, requestContext.CancellationToken));
 
             // Record success metrics

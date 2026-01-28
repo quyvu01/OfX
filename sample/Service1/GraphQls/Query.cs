@@ -10,22 +10,19 @@ public class Query
     {
         return
         [
-            .. Enumerable.Range(1, 3).Select(a => new MemberResponse
-            {
-                Id = a.ToString(),
-                UserId = a.ToString(), MemberAdditionalId = a.ToString(),
-                MemberSocialId = a.ToString(),
-                MemberAddressId = a.ToString()
-            })
+            new MemberResponse { Id = "1", UserId = "user-001", MemberAdditionalId = "member-001", MemberAddressId = "addr-001", MemberSocialId = "1" },
+            new MemberResponse { Id = "2", UserId = "user-002", MemberAdditionalId = "member-002", MemberAddressId = "addr-002", MemberSocialId = "2" },
+            new MemberResponse { Id = "3", UserId = "user-004", MemberAdditionalId = "member-003", MemberAddressId = "addr-005", MemberSocialId = "3" },
+            new MemberResponse { Id = "4", UserId = "user-013", MemberAdditionalId = "member-005", MemberAddressId = "addr-016", MemberSocialId = "5" },
+            new MemberResponse { Id = "5", UserId = "user-019", MemberAdditionalId = "member-010", MemberAddressId = "addr-022", MemberSocialId = "7" }
         ];
     }
 
     public List<SimpleMemberResponse> GetSimpleMembers([Parameters] GetMembersParameters parameters) =>
     [
-        .. Enumerable.Range(1, 3).Select(a => new SimpleMemberResponse
-        {
-            UserId = a.ToString(),
-        })
+        new() { UserId = "user-001" },
+        new() { UserId = "user-013" },
+        new() { UserId = "user-019" }
     ];
 }
 

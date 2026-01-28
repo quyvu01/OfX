@@ -2,24 +2,24 @@
 
 #nullable disable
 
-namespace Service1.OtherMigrations
+namespace Service1.ContextMigrations
 {
     /// <inheritdoc />
-    public partial class initialOtherDb : Migration
+    public partial class InitialDbContext : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "MemberAddresses",
+                name: "MemberAdditionalDatas",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
-                    ProvinceId = table.Column<string>(type: "text", nullable: true)
+                    Name = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MemberAddresses", x => x.Id);
+                    table.PrimaryKey("PK_MemberAdditionalDatas", x => x.Id);
                 });
         }
 
@@ -27,7 +27,7 @@ namespace Service1.OtherMigrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "MemberAddresses");
+                name: "MemberAdditionalDatas");
         }
     }
 }
