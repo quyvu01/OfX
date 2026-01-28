@@ -10,7 +10,7 @@ public sealed class UserOfHandler : IClientRequestHandler<UserOfAttribute>
     public Task<ItemsResponse<DataResponse>> RequestAsync(RequestContext<UserOfAttribute> requestContext)
     {
         var query = requestContext.Query;
-        var expressions = JsonSerializer.Deserialize<string[]>(query.Expression);
+        var expressions = query.Expressions;
         var result = query.SelectorIds
             .Select(id => new DataResponse
             {
