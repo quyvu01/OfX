@@ -23,23 +23,23 @@ internal static class ReflectionHelpers
 {
     internal static IEnumerable<PropertyDescriptor> DiscoverResolvableProperties(object rootObject)
     {
-        if (rootObject.IsNullOrPrimitive()) yield break;
-        Stack<object> stack = [];
-        ObjectProcessing(rootObject, stack);
-
-        while (stack.TryPop(out var obj))
-            foreach (var mappableDataProperty in GetResolvablePropertiesRecursive(obj, stack))
-                yield return mappableDataProperty;
+        var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        return GetResolvablePropertiesRecursive(rootObject, visited);
     }
 
-    private static IEnumerable<PropertyDescriptor> GetResolvablePropertiesRecursive(object obj, Stack<object> stack)
+    private static IEnumerable<PropertyDescriptor> GetResolvablePropertiesRecursive(object obj, HashSet<object> visited)
     {
         if (obj.IsNullOrPrimitive()) yield break;
+
         if (obj is IEnumerable enumerable)
         {
-            EnumerableObject(enumerable, stack);
+            foreach (var item in enumerable is IDictionary dictionary ? dictionary.Values : enumerable)
+            foreach (var prop in GetResolvablePropertiesRecursive(item, visited))
+                yield return prop;
             yield break;
         }
+
+        if (!visited.Add(obj)) yield break;
 
         var objType = obj.GetType();
         var objectCached = OfXModelCache.GetModel(objType);
@@ -53,35 +53,8 @@ internal static class ReflectionHelpers
             }
 
             var propValue = accessor.Get(obj);
-            if (propValue.IsNullOrPrimitive()) continue;
-            foreach (var value in GetResolvablePropertiesRecursive(propValue, stack)) yield return value;
-        }
-    }
-
-    // private static bool InvalidObject(object obj) => obj is null || GeneralHelpers.IsPrimitiveType(obj);
-
-    private static void EnumerableObject(IEnumerable enumerableObject, Stack<object> stack)
-    {
-        if (enumerableObject is not IDictionary dictionary)
-        {
-            foreach (var item in enumerableObject) ObjectProcessing(item, stack);
-            return;
-        }
-
-        foreach (var value in dictionary.Values) ObjectProcessing(value, stack);
-    }
-
-    private static void ObjectProcessing(object obj, Stack<object> stack)
-    {
-        if (obj.IsNullOrPrimitive()) return;
-        switch (obj)
-        {
-            case IEnumerable enumerable:
-                EnumerableObject(enumerable, stack);
-                break;
-            default:
-                if (!stack.Contains(obj)) stack.Push(obj);
-                break;
+            foreach (var value in GetResolvablePropertiesRecursive(propValue, visited))
+                yield return value;
         }
     }
 

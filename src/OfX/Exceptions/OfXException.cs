@@ -85,4 +85,7 @@ public static class OfXException
     public sealed class OneAttributedHasBeenAssignToMultipleEntities(Type attributeType, Type[] entityTypes)
         : Exception(
             $"Attribute: {attributeType.FullName} has been assign to multiple entities: {string.Join(", ", entityTypes.Select(t => t.FullName))}");
+
+    public sealed class InvalidParameterType(string message)
+        : Exception(message);
 }

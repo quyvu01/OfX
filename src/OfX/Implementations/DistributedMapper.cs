@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Reflection;
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
@@ -102,15 +101,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
 
         return;
 
-        Dictionary<string, string> ObjectToDictionary() => parameters switch
-        {
-            null => [],
-            Dictionary<string, string> val => val,
-            _ => parameters
-                .GetType()
-                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .ToDictionary(p => p.Name, p => p.GetValue(parameters)?.ToString())
-        };
+        Dictionary<string, string> ObjectToDictionary() => ParameterConverter.ConvertToDictionary(parameters);
     }
 
     public Task<ItemsResponse<DataResponse>> FetchDataAsync<TAttribute>(DataFetchQuery query,
