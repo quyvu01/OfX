@@ -45,8 +45,7 @@ internal class OfXObjectTypeExtension<T> : ObjectTypeExtension<T> where T : clas
             .Use(next => async context =>
             {
                 var methodPath = context.Path.ToList().FirstOrDefault()?.ToString();
-                var modelCached = OfXModelCache
-                    .ContainsModel(typeof(T));
+                var modelCached = OfXModelCache.ContainsModel(typeof(T));
                 if (!modelCached)
                 {
                     await next(context);

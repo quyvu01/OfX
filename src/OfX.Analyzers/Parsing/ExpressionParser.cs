@@ -1,8 +1,8 @@
 using System.Globalization;
-using OfX.Expressions.Nodes;
-using OfX.Expressions.Tokens;
+using OfX.Analyzers.Nodes;
+using OfX.Analyzers.Tokens;
 
-namespace OfX.Expressions.Parsing;
+namespace OfX.Analyzers.Parsing;
 
 /// <summary>
 /// Parses OfX expression strings into an Abstract Syntax Tree (AST).
@@ -563,7 +563,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
             }
             else
             {
-                result = new FunctionNode(source, functionType);
+                result = new FunctionNode(source, functionType, argument);
             }
         }
 
@@ -1169,7 +1169,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
             }
         }
 
-        OrderDirection direction;
+        var direction = OrderDirection.Asc;
         if (Match(TokenType.Asc))
         {
             direction = OrderDirection.Asc;
@@ -1292,7 +1292,7 @@ public sealed class ExpressionParser(IReadOnlyList<Token> tokens)
         }
         else
         {
-            var segments = pathParts.Select(ExpressionNode (p) => new PropertyNode(p)).ToList();
+            var segments = pathParts.Select(p => (ExpressionNode)new PropertyNode(p)).ToList();
             source = new NavigationNode(segments);
         }
 

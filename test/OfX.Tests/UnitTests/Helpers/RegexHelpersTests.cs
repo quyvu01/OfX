@@ -169,7 +169,9 @@ public class RegexHelpersTests
     [InlineData("${PascalCase|Default}", "PascalCase", "Default")]
     public void ResolvePlaceholders_Should_Accept_Valid_Parameter_Names(
         string pattern,
+#pragma warning disable xUnit1026
         string paramName,
+#pragma warning restore xUnit1026
         string defaultValue)
     {
         // Arrange

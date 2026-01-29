@@ -6,18 +6,27 @@
         <LangVersion>default</LangVersion>
         <Version>8.2.6</Version>
         <Authors>Quy Vu</Authors>
-        <PackageId>OfX-EFCore</PackageId>
-        <Description>OfX extension. Use EntityFramework as Data Querying</Description>
-        <PackageTags>OfX;mappable;open-source;entity-framework;ORM</PackageTags>
+        <PackageId>OfX.Analyzers</PackageId>
+        <Description>The Expression Analyzers for OfX</Description>
+        <PackageTags>OfX;mappable;open-source;expression-analyzers</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
         <PackageIcon>OfX.png</PackageIcon>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseFile>LICENSE</PackageLicenseFile>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+        <!-- Analyzer-specific settings -->
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <IsPackable>true</IsPackable>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.0, )" />
+        <!-- Roslyn analyzer packages -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -26,10 +35,6 @@
             <PackagePath/>
             <Link>OfX.png</Link>
         </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\OfX\OfX.csproj"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
         <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
     </ItemGroup>

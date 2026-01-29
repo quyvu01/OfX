@@ -53,6 +53,7 @@ builder.Services.AddOfX(cfg =>
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddKafka(c => c.Host("localhost:9092"));
         cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        cfg.ThrowIfException();
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
 builder.Services.AddGrpc();

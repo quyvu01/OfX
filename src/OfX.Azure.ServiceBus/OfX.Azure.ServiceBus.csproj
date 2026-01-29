@@ -3,7 +3,7 @@
     <PropertyGroup>
         <ImplicitUsings>enable</ImplicitUsings>
         <LangVersion>default</LangVersion>
-        <Version>8.2.5</Version>
+        <Version>8.2.6</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX-Azure.ServiceBus</PackageId>
         <Description>Azure ServiceBus extension. Use Azure ServiceBus as Data transporting</Description>

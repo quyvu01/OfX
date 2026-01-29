@@ -67,6 +67,7 @@ builder.Services.AddOfX(cfg =>
             opts.CircuitBreakerThreshold = 3;
         });
         cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        cfg.ThrowIfException();
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context), typeof(OtherService1Context)))
     .AddMongoDb(cfg => cfg.AddCollection(memberSocialCollection))
