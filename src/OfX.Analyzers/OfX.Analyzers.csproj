@@ -6,7 +6,7 @@
         <LangVersion>default</LangVersion>
         <Version>8.2.6</Version>
         <Authors>Quy Vu</Authors>
-        <PackageId>OfX.Analyzers</PackageId>
+        <PackageId>OfX-Analyzers</PackageId>
         <Description>The Expression Analyzers for OfX</Description>
         <PackageTags>OfX;mappable;open-source;expression-analyzers</PackageTags>
         <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
