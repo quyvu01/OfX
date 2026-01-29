@@ -53,6 +53,9 @@ jobs:
 
       - name: Run Integration Tests (EF Core)
         run: dotnet test test/OfX.Tests/OfX.Tests.csproj -c Release --framework net${{ matrix.dotnet-version == '8.0.x' && '8.0' || '9.0' }} --filter "FullyQualifiedName~OfX.Tests.IntegrationTests.EfCore" --logger "console;verbosity=normal"
+
+      - name: Run Analyzer Tests
+        run: dotnet test test/OfX.Analyzers.Tests/OfX.Analyzers.Tests.csproj -c Release --framework net${{ matrix.dotnet-version == '8.0.x' && '8.0' || '9.0' }} --logger "console;verbosity=normal"
   
   calc-version:
     name: Calculate Version
