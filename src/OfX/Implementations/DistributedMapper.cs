@@ -27,8 +27,7 @@ namespace OfX.Implementations;
 /// </list>
 /// </remarks>
 /// <param name="serviceProvider">The service provider for resolving transport handlers and pipelines.</param>
-internal sealed class DistributedMapper(IServiceProvider serviceProvider)
-    : IDistributedMapper
+internal sealed class DistributedMapper(IServiceProvider serviceProvider) : IDistributedMapper
 {
     private int _currentObjectSpawnTimes;
 
@@ -74,11 +73,11 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
 
                     var requestCt = new RequestContext([], ParameterConverter.ConvertToDictionary(parameters), token);
 
-                    var expressions = accessors
-                        .Select(a => a.PropertyInformation.Expression);
+                    var expressions = new HashSet<string>(accessors
+                        .Select(a => a.PropertyInformation.Expression));
 
                     var result = await FetchDataAsync(x.OfXAttributeType,
-                        new DataFetchQuery(selectorIds, [..expressions.Distinct()]), requestCt);
+                        new DataFetchQuery(selectorIds, [..expressions]), requestCt);
                     return (x.OfXAttributeType, Response: result);
                 });
                 var fetchedResult = await Task.WhenAll(tasks);
@@ -112,7 +111,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider)
             .GetOrAdd(runtimeType, static type => typeof(SendPipelinesOrchestrator<>).MakeGenericType(type));
         var sendPipelineWrapped = (SendPipelinesOrchestrator)serviceProvider.GetService(sendPipelineType)!;
         var result = await sendPipelineWrapped
-            .ExecuteAsync(new OfXRequest(query.SelectorIds, [..query.Expressions.Distinct()]), context);
+            .ExecuteAsync(new OfXRequest(query.SelectorIds, [..new HashSet<string>(query.Expressions)]), context);
         return result;
     }
 }

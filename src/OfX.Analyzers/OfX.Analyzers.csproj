@@ -39,4 +39,70 @@
         <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Include="..\OfX\Expressions\Nodes\AggregationNode.cs">
+        <Link>Nodes\AggregationNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\BinaryConditionNode.cs">
+        <Link>Nodes\BinaryConditionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\BooleanFunctionNode.cs">
+        <Link>Nodes\BooleanFunctionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\CoalesceNode.cs">
+        <Link>Nodes\CoalesceNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\ExpressionNode.cs">
+        <Link>Nodes\ExpressionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\FilterNode.cs">
+        <Link>Nodes\FilterNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\FunctionNode.cs">
+        <Link>Nodes\FunctionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\GroupByNode.cs">
+        <Link>Nodes\GroupByNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\GroupElementsNode.cs">
+        <Link>Nodes\GroupElementsNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\IndexerNode.cs">
+        <Link>Nodes\IndexerNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\LiteralNode.cs">
+        <Link>Nodes\LiteralNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\LogicalConditionNode.cs">
+        <Link>Nodes\LogicalConditionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\NavigationNode.cs">
+        <Link>Nodes\NavigationNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\ProjectionNode.cs">
+        <Link>Nodes\ProjectionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\PropertyNode.cs">
+        <Link>Nodes\PropertyNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\RootProjectionNode.cs">
+        <Link>Nodes\RootProjectionNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Nodes\TernaryNode.cs">
+        <Link>Nodes\TernaryNode.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Parsing\ExpressionParser.cs">
+        <Link>Parsing\ExpressionParser.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Tokens\Token.cs">
+        <Link>Tokens\Token.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Tokens\Tokenizer.cs">
+        <Link>Tokens\Tokenizer.cs</Link>
+      </Compile>
+      <Compile Include="..\OfX\Expressions\Tokens\TokenType.cs">
+        <Link>Tokens\TokenType.cs</Link>
+      </Compile>
+    </ItemGroup>
+
 </Project>

@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using OfX.Analyzers.Parsing;
+using OfX.Expressions.Parsing;
 
 namespace OfX.Analyzers;
 
