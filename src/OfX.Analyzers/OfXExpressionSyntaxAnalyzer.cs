@@ -54,12 +54,17 @@ public partial class OfXExpressionSyntaxAnalyzer : DiagnosticAnalyzer
     {
         var attributeSyntax = (AttributeSyntax)context.Node;
 
-        // Only run analyze attributes endswith "Of" -> We will try to update this one later
-        // I.e: CountryOf, ProvinceOf, MemberOf
-        var attributeName = attributeSyntax.Name.ToString();
-        if (!attributeName.EndsWith("Of")) return;
+        // Get semantic information about the attribute
+        var attributeSymbol = context.SemanticModel.GetSymbolInfo(attributeSyntax).Symbol;
+        if (attributeSymbol is not IMethodSymbol constructorSymbol) return;
 
-        // Tìm argument có tên "Expression"
+        var attributeType = constructorSymbol.ContainingType;
+
+        // Check if this is an OfX attribute using semantic analysis (preferred)
+        // or fallback to naming convention (for test scenarios where OfX types are not available)
+        if (!IsOfXAttribute(attributeType)) return;
+
+        // Find argument named "Expression"
         var expressionArgument = attributeSyntax.ArgumentList?.Arguments
             .FirstOrDefault(arg => arg.NameEquals?.Name.Identifier.Text == "Expression");
 
@@ -78,6 +83,33 @@ public partial class OfXExpressionSyntaxAnalyzer : DiagnosticAnalyzer
             validationError);
 
         context.ReportDiagnostic(diagnostic);
+    }
+
+    /// <summary>
+    /// Check if the attribute is an OfX attribute.
+    /// Uses semantic analysis (preferred) and falls back to naming convention.
+    /// </summary>
+    private static bool IsOfXAttribute(INamedTypeSymbol attributeType) => InheritsFromOfXAttribute(attributeType);
+
+    /// <summary>
+    /// Check if the attribute type inherits from OfX.Attributes.OfXAttribute
+    /// </summary>
+    private static bool InheritsFromOfXAttribute(INamedTypeSymbol attributeType)
+    {
+        var currentType = attributeType.BaseType;
+        while (currentType != null)
+        {
+            // Check if base class is OfXAttribute in OfX.Attributes namespace
+            if (currentType.Name == "OfXAttribute" &&
+                currentType.ContainingNamespace?.ToDisplayString() == "OfX.Attributes")
+            {
+                return true;
+            }
+
+            currentType = currentType.BaseType;
+        }
+
+        return false;
     }
 
     /// <summary>
