@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+        <LangVersion>default</LangVersion>
+        <Version>8.2.6</Version>
+        <Authors>Quy Vu</Authors>
+        <PackageId>OfX-Aws.Sqs</PackageId>
+        <Description>OfX-Aws-Sqs extension. Use Amazon SQS as Data transporting</Description>
+        <PackageTags>OfX;mappable;open-source;AWS;SQS;Amazon</PackageTags>
+        <RepositoryUrl>https://github.com/quyvu01/OfX</RepositoryUrl>
+        <PackageIcon>OfX.png</PackageIcon>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\OfX\OfX.csproj"/>
+        <None Include="..\..\LICENSE" Pack="true" PackagePath="\"/>
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+        <None Include="..\..\OfX.png">
+            <Pack>True</Pack>
+            <PackagePath/>
+            <Link>OfX.png</Link>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="[8.0.0, )"/>
+        <PackageReference Include="AWSSDK.SQS" Version="[3.7.0, )"/>
+    </ItemGroup>
+
+</Project>
