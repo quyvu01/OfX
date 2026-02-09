@@ -1,5 +1,7 @@
 using System.Reflection;
+using Amazon;
 using Microsoft.EntityFrameworkCore;
+using OfX.Aws.Sqs.Extensions;
 using OfX.EntityFrameworkCore.Extensions;
 using OfX.Extensions;
 using OfX.Grpc.Extensions;
@@ -52,7 +54,16 @@ builder.Services.AddOfX(cfg =>
         });
         // cfg.AddRabbitMq(c => c.Host("localhost", "/"));
         // cfg.AddKafka(c => c.Host("localhost:9092"));
-        cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        // cfg.AddNats(c => c.Url("nats://localhost:4222"));
+        cfg.AddSqs(c =>
+        {
+            c.Region(RegionEndpoint.USEast1, credential =>
+            {
+                credential.ServiceUrl("http://localhost:4566");
+                credential.AccessKeyId("test");
+                credential.SecretAccessKey("test");
+            });
+        });
         cfg.ThrowIfException();
     })
     .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service3Context)));
@@ -76,5 +87,5 @@ var app = builder.Build();
 using var scope = app.Services.CreateScope();
 var dbContext = scope.ServiceProvider.GetRequiredService<Service3Context>();
 await Service3Api.Data.Service3DataSeeder.SeedAsync(dbContext);
-app.MapOfXGrpcService();
+// app.MapOfXGrpcService();
 app.Run();

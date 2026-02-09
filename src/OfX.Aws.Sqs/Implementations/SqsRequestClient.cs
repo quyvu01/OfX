@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Text;
 using System.Text.Json;
 using Amazon;
 using Amazon.Runtime;
@@ -51,18 +50,28 @@ internal class SqsRequestClient : IRequestClient, IAsyncDisposable
             // Propagate W3C trace context
             var messageAttributes = new Dictionary<string, MessageAttributeValue>
             {
-                { "CorrelationId", new MessageAttributeValue { DataType = "String", StringValue = correlationId } },
-                { "ReplyTo", new MessageAttributeValue { DataType = "String", StringValue = _responseQueueUrl } },
-                { "Type", new MessageAttributeValue { DataType = "String", StringValue = typeof(TAttribute).AssemblyQualifiedName } }
+                {
+                    OfXSqsConstants.MessageAttributeCorrelationId,
+                    new MessageAttributeValue { DataType = "String", StringValue = correlationId }
+                },
+                {
+                    OfXSqsConstants.MessageAttributeReplyTo,
+                    new MessageAttributeValue { DataType = "String", StringValue = _responseQueueUrl }
+                },
+                {
+                    OfXSqsConstants.MessageAttributeType,
+                    new MessageAttributeValue
+                        { DataType = "String", StringValue = typeof(TAttribute).AssemblyQualifiedName }
+                }
             };
 
             if (activity != null)
             {
                 if (!string.IsNullOrEmpty(activity.Id))
-                    messageAttributes.Add("traceparent",
+                    messageAttributes.Add(OfXSqsConstants.MessageAttributeTraceparent,
                         new MessageAttributeValue { DataType = "String", StringValue = activity.Id });
                 if (!string.IsNullOrEmpty(activity.TraceStateString))
-                    messageAttributes.Add("tracestate",
+                    messageAttributes.Add(OfXSqsConstants.MessageAttributeTracestate,
                         new MessageAttributeValue { DataType = "String", StringValue = activity.TraceStateString });
 
                 activity.SetMessagingTags(system: TransportName, destination: queueName, messageId: correlationId,
@@ -207,9 +216,15 @@ internal class SqsRequestClient : IRequestClient, IAsyncDisposable
             QueueName = responseQueueName,
             Attributes = new Dictionary<string, string>
             {
-                { "MessageRetentionPeriod", OfXSqsConstants.DefaultMessageRetentionPeriod.ToString() },
-                { "VisibilityTimeout", OfXSqsConstants.DefaultVisibilityTimeout.ToString() },
-                { "ReceiveMessageWaitTimeSeconds", OfXSqsConstants.DefaultWaitTimeSeconds.ToString() }
+                {
+                    OfXSqsConstants.AttributeMessageRetentionPeriod,
+                    OfXSqsConstants.DefaultMessageRetentionPeriod.ToString()
+                },
+                { OfXSqsConstants.AttributeVisibilityTimeout, OfXSqsConstants.DefaultVisibilityTimeout.ToString() },
+                {
+                    OfXSqsConstants.AttributeReceiveMessageWaitTimeSeconds,
+                    OfXSqsConstants.DefaultWaitTimeSeconds.ToString()
+                }
             }
         }, cancellationToken);
 
@@ -217,7 +232,7 @@ internal class SqsRequestClient : IRequestClient, IAsyncDisposable
 
         // Start background receiver loop
         _receiverCts = new CancellationTokenSource();
-        _ = Task.Run(async () => await ReceiveResponsesLoopAsync(_receiverCts.Token), CancellationToken.None);
+        ReceiveResponsesLoopAsync(_receiverCts.Token).Forget();
     }
 
     private async Task ReceiveResponsesLoopAsync(CancellationToken ct)
@@ -232,27 +247,48 @@ internal class SqsRequestClient : IRequestClient, IAsyncDisposable
                     QueueUrl = _responseQueueUrl,
                     MaxNumberOfMessages = OfXSqsConstants.MaxNumberOfMessages,
                     WaitTimeSeconds = OfXSqsConstants.DefaultWaitTimeSeconds,
-                    MessageAttributeNames = ["All"]
+                    MessageAttributeNames = [OfXSqsConstants.MessageAttributeAll]
                 }, ct);
 
-                // Process received responses
-                foreach (var message in response.Messages)
+                if (response.Messages.Count == 0) continue;
+
+                // Process messages in parallel
+                var processingResults = response.Messages.Select(message =>
                 {
-                    // Get correlation ID
-                    if (!message.MessageAttributes.TryGetValue("CorrelationId", out var correlationIdAttr))
-                        continue;
-
-                    var correlationId = correlationIdAttr.StringValue;
-
-                    // Find pending request
-                    if (_eventArgsMapper.TryRemove(correlationId, out var tcs))
+                    try
                     {
-                        tcs.TrySetResult(message);
-                    }
+                        // Get correlation ID
+                        if (!message.MessageAttributes.TryGetValue(OfXSqsConstants.MessageAttributeCorrelationId,
+                                out var correlationIdValue)) return message.ReceiptHandle;
 
-                    // Delete message from queue
-                    await _sqsClient.DeleteMessageAsync(_responseQueueUrl, message.ReceiptHandle, ct);
-                }
+                        var correlationId = correlationIdValue.StringValue;
+
+                        // Find pending request
+                        if (!_eventArgsMapper.TryRemove(correlationId, out var tcs)) return message.ReceiptHandle;
+                        tcs.TrySetResult(message);
+                        return message.ReceiptHandle;
+                    }
+                    catch
+                    {
+                        // On error, mark for deletion to avoid reprocessing
+                        return message.ReceiptHandle;
+                    }
+                });
+
+
+                // Batch delete processed messages
+                var receiptHandles = processingResults.ToList();
+
+                if (receiptHandles.Count > 0)
+                    await _sqsClient.DeleteMessageBatchAsync(new DeleteMessageBatchRequest
+                    {
+                        QueueUrl = _responseQueueUrl,
+                        Entries = receiptHandles.Select((handle, index) => new DeleteMessageBatchRequestEntry
+                        {
+                            Id = index.ToString(),
+                            ReceiptHandle = handle
+                        }).ToList()
+                    }, ct);
             }
             catch (Exception) when (!ct.IsCancellationRequested)
             {
@@ -266,8 +302,7 @@ internal class SqsRequestClient : IRequestClient, IAsyncDisposable
 
     private async Task<string> GetOrCreateQueueUrlAsync(string queueName, CancellationToken cancellationToken)
     {
-        if (_queueUrlCache.TryGetValue(queueName, out var cachedUrl))
-            return cachedUrl;
+        if (_queueUrlCache.TryGetValue(queueName, out var cachedUrl)) return cachedUrl;
 
         try
         {

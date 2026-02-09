@@ -74,6 +74,7 @@ That All, enjoy your moment!
 | **Integrations**                                   |                                                                                                                         |
 | [OfX-HotChocolate][OfX-HotChocolate.nuget]         | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
 | **Transports**                                     |                                                                                                                         |
+| [OfX-Aws.Sqs][OfX-Aws.Sqs.nuget]                   | OfX-Aws-Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation.                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Aws.Sqs/README.md)             |
 | [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Azure.ServiceBus/README.md)    |
 | [OfX-gRPC][OfX-gRPC.nuget]                         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
@@ -89,6 +90,8 @@ That All, enjoy your moment!
 [OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
 
 [OfX-HotChocolate.nuget]: https://www.nuget.org/packages/OfX-HotChocolate/
+
+[OfX-Aws.Sqs.nuget]: https://www.nuget.org/packages/OfX-Aws.Sqs/
 
 [OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
 

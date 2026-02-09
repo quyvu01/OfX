@@ -1,21 +1,44 @@
 # OfX-Aws-Sqs
 
-Amazon SQS transport implementation for OfX framework.
+OfX-Aws-Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX's Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+
+[Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
+
+---
+
+## Introduction
+
+Amazon SQS-based Transport: Implements Amazon SQS to handle data communication between services, providing a fast, secure, and scalable solution with features like long polling, batch processing, and automatic supervision.
+
+---
 
 ## Installation
 
+To install the OfX-Aws-Sqs package, use the following NuGet command:
+
 ```bash
-dotnet add package OfX-Aws-Sqs
+dotnet add package OfX-Aws.Sqs
 ```
 
-## Usage
+Or via the NuGet Package Manager:
 
-### Configuration
+```bash
+Install-Package OfX-Aws.Sqs
+```
+
+---
+
+## How to Use
+
+### 1. Register OfX-Aws-Sqs
+
+Add OfX-Aws-Sqs to your service configuration during application startup:
 
 ```csharp
-builder.Services.AddOfX(register =>
+builder.Services.AddOfX(cfg =>
 {
-    register.AddSqs(sqs =>
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddSqs(sqs =>
     {
         sqs.Region(RegionEndpoint.USEast1, credential =>
         {
@@ -24,14 +47,22 @@ builder.Services.AddOfX(register =>
         });
     });
 });
+
+...
+
+var app = builder.Build();
+
+app.Run();
+
 ```
 
 ### LocalStack Support (for testing)
 
 ```csharp
-builder.Services.AddOfX(register =>
+builder.Services.AddOfX(cfg =>
 {
-    register.AddSqs(sqs =>
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddSqs(sqs =>
     {
         sqs.Region(RegionEndpoint.USEast1, credential =>
         {
@@ -46,64 +77,55 @@ builder.Services.AddOfX(register =>
 ### Using IAM Roles (recommended for AWS environments)
 
 ```csharp
-builder.Services.AddOfX(register =>
+builder.Services.AddOfX(cfg =>
 {
-    register.AddSqs(sqs =>
+    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
+    cfg.AddSqs(sqs =>
     {
         sqs.Region(RegionEndpoint.USEast1); // No credentials needed, uses IAM role
     });
 });
 ```
 
-## Features
+`Note:` OfX-Aws-Sqs uses queues that start with `ofx-{namespace}-{attributename}`. Therefore, you should avoid using other queues. Additionally, OfX-Aws-Sqs automatically creates response queues `ofx-response-{machinename}-{guid}`, so you should avoid creating a queue with the same name in your application.
 
-- ✅ Request/Reply pattern using SQS queues
-- ✅ Long polling for efficient message receiving
-- ✅ Automatic queue creation and management
-- ✅ OpenTelemetry tracing integration (W3C Trace Context)
-- ✅ Circuit breaker and supervision pattern
-- ✅ Backpressure control
-- ✅ Message correlation with unique IDs
-- ✅ Persistent response queues per client
-- ✅ Automatic cleanup on disposal
+That All, enjoy your moment!
 
-## How It Works
+| Package Name                                       | Description                                                                                                             | .NET Version | Document                                                                                 |
+|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|--------------|------------------------------------------------------------------------------------------|
+| **Core**                                           |                                                                                                                         |
+| [OfX][OfX.nuget]                                   | OfX core                                                                                                                | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/README.md)                             |
+| **Data Providers**                                 |                                                                                                                         |
+| [OfX-EFCore][OfX-EFCore.nuget]                     | This is the OfX extension package using EntityFramework to fetch data                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.EntityFrameworkCore/README.md) |
+| [OfX-MongoDb][OfX-MongoDb.nuget]                   | This is the OfX extension package using MongoDb to fetch data                                                           | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.MongoDb/README.md)             |
+| **Integrations**                                   |                                                                                                                         |
+| [OfX-HotChocolate][OfX-HotChocolate.nuget]         | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
+| **Transports**                                     |                                                                                                                         |
+| [OfX-Aws.Sqs][OfX-Aws.Sqs.nuget]                   | OfX-Aws-Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation.                | 8.0, 9.0     | This Document                                                                            |
+| [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Azure.ServiceBus/README.md)    |
+| [OfX-gRPC][OfX-gRPC.nuget]                         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
+| [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
+| [OfX-Nats][OfX-Nats.nuget]                         | OfX-Nats is an extension package for OfX that leverages Nats for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Nats/README.md)                |
+| [OfX-RabbitMq][OfX-RabbitMq.nuget]                 | OfX-RabbitMq is an extension package for OfX that leverages RabbitMq for efficient data transportation.                 | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.RabbitMq/README.md)            |
 
-### Request/Reply Pattern
+---
 
-1. **Client**: Creates a persistent response queue and sends requests to server queues
-2. **Server**: Listens on request queues, processes messages, and sends responses back
-3. **Correlation**: Uses `CorrelationId` message attribute to match requests with responses
-4. **Tracing**: W3C Trace Context propagation via `traceparent` and `tracestate` attributes
+[OfX.nuget]: https://www.nuget.org/packages/OfX/
 
-### Queue Naming Convention
+[OfX-EFCore.nuget]: https://www.nuget.org/packages/OfX-EFCore/
 
-- Request queues: `ofx-{namespace}-{attributename}` (e.g., `ofx-myapp-attributes-countryofattribute`)
-- Response queues: `ofx-response-{machinename}-{guid}`
+[OfX-MongoDb.nuget]: https://www.nuget.org/packages/OfX-MongoDb/
 
-### Supervisor Pattern
+[OfX-HotChocolate.nuget]: https://www.nuget.org/packages/OfX-HotChocolate/
 
-The SQS transport includes automatic supervision with:
-- Circuit breaker for fault tolerance
-- Health monitoring (Healthy, Degraded, Unhealthy, CircuitOpen, Stopped)
-- Automatic restart on failures
-- Exponential backoff
+[OfX-Aws.Sqs.nuget]: https://www.nuget.org/packages/OfX-Aws.Sqs/
 
-## Configuration Options
+[OfX-gRPC.nuget]: https://www.nuget.org/packages/OfX-gRPC/
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| VisibilityTimeout | Time message is invisible after being received | 30 seconds |
-| WaitTimeSeconds | Long polling wait time | 20 seconds |
-| MessageRetentionPeriod | TTL for unprocessed messages | 300 seconds (5 min) |
-| MaxNumberOfMessages | Max messages per receive call | 10 |
+[OfX-Nats.nuget]: https://www.nuget.org/packages/OfX-Nats/
 
-## Requirements
+[OfX-RabbitMq.nuget]: https://www.nuget.org/packages/OfX-RabbitMq/
 
-- AWS Account with SQS access
-- IAM permissions for SQS operations (CreateQueue, SendMessage, ReceiveMessage, DeleteMessage, DeleteQueue)
-- .NET 8.0 or .NET 9.0
+[OfX-Kafka.nuget]: https://www.nuget.org/packages/OfX-Kafka/
 
-## License
-
-MIT License - see LICENSE file for details
+[OfX-Azure.ServiceBus.nuget]: https://www.nuget.org/packages/OfX-Azure.ServiceBus/

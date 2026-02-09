@@ -13,6 +13,7 @@ using OfX.Aws.Sqs.Constants;
 using OfX.Aws.Sqs.Extensions;
 using OfX.Aws.Sqs.Statics;
 using OfX.Exceptions;
+using OfX.Extensions;
 using OfX.Implementations;
 using OfX.Responses;
 using OfX.Statics;
@@ -22,7 +23,7 @@ namespace OfX.Aws.Sqs.Implementations;
 
 internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
 {
-    private static readonly ConcurrentDictionary<string, Type> AttributeAssemblyCached = new();
+    private static readonly ConcurrentDictionary<string, Type> AttributeAssemblyCached = [];
     private readonly ILogger<SqsServer> _logger = serviceProvider.GetService<ILogger<SqsServer>>();
 
     // Backpressure: limit concurrent processing
@@ -60,10 +61,8 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
         if (attributeTypes is not { Count: > 0 }) return;
 
         // Create request queues for each attribute type
-        foreach (var attributeType in attributeTypes)
+        foreach (var queueName in attributeTypes.Select(attributeType => attributeType.GetQueueName()))
         {
-            var queueName = attributeType.GetQueueName();
-
             try
             {
                 // Try to get existing queue
@@ -78,8 +77,14 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
                     QueueName = queueName,
                     Attributes = new Dictionary<string, string>
                     {
-                        { "VisibilityTimeout", OfXSqsConstants.DefaultVisibilityTimeout.ToString() },
-                        { "ReceiveMessageWaitTimeSeconds", OfXSqsConstants.DefaultWaitTimeSeconds.ToString() }
+                        {
+                            OfXSqsConstants.AttributeVisibilityTimeout,
+                            OfXSqsConstants.DefaultVisibilityTimeout.ToString()
+                        },
+                        {
+                            OfXSqsConstants.AttributeReceiveMessageWaitTimeSeconds,
+                            OfXSqsConstants.DefaultWaitTimeSeconds.ToString()
+                        }
                     }
                 }, cancellationToken);
 
@@ -88,10 +93,7 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
         }
 
         // Start receiver loops for each queue (parallel processing)
-        foreach (var queueUrl in _requestQueueUrls)
-        {
-            _ = Task.Run(async () => await ProcessQueueAsync(queueUrl, _processingCts.Token), CancellationToken.None);
-        }
+        foreach (var queueUrl in _requestQueueUrls) ProcessQueueAsync(queueUrl, cancellationToken).Forget();
     }
 
     private async Task ProcessQueueAsync(string queueUrl, CancellationToken ct)
@@ -104,27 +106,49 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
                 var response = await _sqsClient.ReceiveMessageAsync(new ReceiveMessageRequest
                 {
                     QueueUrl = queueUrl,
-                    MaxNumberOfMessages = 1, // Process one at a time for backpressure
+                    MaxNumberOfMessages = OfXSqsConstants.MaxNumberOfMessages,
                     WaitTimeSeconds = OfXSqsConstants.DefaultWaitTimeSeconds,
-                    MessageAttributeNames = ["All"]
+                    MessageAttributeNames = [OfXSqsConstants.MessageAttributeAll]
                 }, ct);
 
-                foreach (var message in response.Messages)
+                if (response.Messages.Count == 0) continue;
+
+                // Process messages with backpressure control
+                var processingTasks = response.Messages.Select(async message =>
                 {
-                    // Backpressure - wait for available slot
+                    // Acquire slot inside task (parallel)
                     await _semaphore.WaitAsync(ct);
                     try
                     {
-                        await ProcessMessageAsync(queueUrl, message, ct);
+                        // Process message (now awaited, not fire-and-forget)
+                        ProcessMessageAsync(queueUrl, message, ct).Forget();
+                        return message.ReceiptHandle;
                     }
-                    finally
+                    catch (Exception ex)
                     {
+                        _logger?.LogError(ex, "Error processing message {CorrelationId}",
+                            message.MessageAttributes.GetValueOrDefault(OfXSqsConstants.MessageAttributeCorrelationId)
+                                ?.StringValue ?? "Unknown");
                         _semaphore.Release();
+                        return message.ReceiptHandle;
                     }
+                });
 
-                    // Delete after successful processing
-                    await _sqsClient.DeleteMessageAsync(queueUrl, message.ReceiptHandle, ct);
-                }
+                var results = await Task.WhenAll(processingTasks);
+
+                // Batch delete all processed messages
+                var receiptHandles = results.ToList();
+
+                if (receiptHandles.Count > 0)
+                    await _sqsClient.DeleteMessageBatchAsync(new DeleteMessageBatchRequest
+                    {
+                        QueueUrl = queueUrl,
+                        Entries = receiptHandles.Select((handle, index) => new DeleteMessageBatchRequestEntry
+                        {
+                            Id = index.ToString(),
+                            ReceiptHandle = handle
+                        }).ToList()
+                    }, ct);
             }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
@@ -137,13 +161,18 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
     private async Task ProcessMessageAsync(string queueUrl, Message message, CancellationToken stoppingToken)
     {
         // Extract metadata
-        var correlationId = message.MessageAttributes.GetValueOrDefault("CorrelationId")?.StringValue ?? "Unknown";
-        var replyToQueueUrl = message.MessageAttributes.GetValueOrDefault("ReplyTo")?.StringValue;
-        var attributeTypeString = message.MessageAttributes.GetValueOrDefault("Type")?.StringValue;
+        var correlationId = message.MessageAttributes
+            .GetValueOrDefault(OfXSqsConstants.MessageAttributeCorrelationId)?.StringValue ?? "Unknown";
+        var replyToQueueUrl = message.MessageAttributes
+            .GetValueOrDefault(OfXSqsConstants.MessageAttributeReplyTo)
+            ?.StringValue;
+        var attributeTypeString = message.MessageAttributes
+            .GetValueOrDefault(OfXSqsConstants.MessageAttributeType)
+            ?.StringValue;
 
         // Extract parent trace context
         ActivityContext parentContext = default;
-        if (message.MessageAttributes.TryGetValue("traceparent", out var traceparent))
+        if (message.MessageAttributes.TryGetValue(OfXSqsConstants.MessageAttributeTraceparent, out var traceparent))
             ActivityContext.TryParse(traceparent.StringValue, null, out parentContext);
 
         // Parse message to get attribute name
@@ -198,7 +227,7 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
                     MessageAttributes = new Dictionary<string, MessageAttributeValue>
                     {
                         {
-                            "CorrelationId",
+                            OfXSqsConstants.MessageAttributeCorrelationId,
                             new MessageAttributeValue { DataType = "String", StringValue = correlationId }
                         }
                     }
@@ -229,6 +258,7 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
             activity?.SetStatus(ActivityStatusCode.Error, "Request timeout");
 
             await SendResponseAsync(replyToQueueUrl, correlationId, response, stoppingToken);
+            throw; // Re-throw to mark message for deletion in batch
         }
         catch (Exception e)
         {
@@ -246,6 +276,11 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
             activity?.SetStatus(ActivityStatusCode.Error, e.Message);
 
             await SendResponseAsync(replyToQueueUrl, correlationId, response, stoppingToken);
+            throw; // Re-throw to mark message for deletion in batch
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
@@ -262,7 +297,10 @@ internal class SqsServer(IServiceProvider serviceProvider) : ISqsServer
                 MessageBody = JsonSerializer.Serialize(response),
                 MessageAttributes = new Dictionary<string, MessageAttributeValue>
                 {
-                    { "CorrelationId", new MessageAttributeValue { DataType = "String", StringValue = correlationId } }
+                    {
+                        OfXSqsConstants.MessageAttributeCorrelationId,
+                        new MessageAttributeValue { DataType = "String", StringValue = correlationId }
+                    }
                 }
             }, cancellationToken);
         }
