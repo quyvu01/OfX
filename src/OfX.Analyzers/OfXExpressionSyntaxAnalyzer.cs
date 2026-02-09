@@ -87,9 +87,18 @@ public partial class OfXExpressionSyntaxAnalyzer : DiagnosticAnalyzer
 
     /// <summary>
     /// Check if the attribute is an OfX attribute.
-    /// Uses semantic analysis (preferred) and falls back to naming convention.
+    /// Uses semantic analysis (preferred) and falls back to naming convention for test scenarios.
     /// </summary>
-    private static bool IsOfXAttribute(INamedTypeSymbol attributeType) => InheritsFromOfXAttribute(attributeType);
+    private static bool IsOfXAttribute(INamedTypeSymbol attributeType)
+    {
+        // Preferred: Check if attribute inherits from OfX.Attributes.OfXAttribute
+        if (InheritsFromOfXAttribute(attributeType))
+            return true;
+
+        // Fallback: Check naming convention for test scenarios where OfX assembly causes version conflicts
+        // Attributes ending with "OfAttribute" are considered OfX attributes
+        return attributeType.Name.EndsWith("OfAttribute", StringComparison.Ordinal);
+    }
 
     /// <summary>
     /// Check if the attribute type inherits from OfX.Attributes.OfXAttribute
@@ -102,9 +111,7 @@ public partial class OfXExpressionSyntaxAnalyzer : DiagnosticAnalyzer
             // Check if base class is OfXAttribute in OfX.Attributes namespace
             if (currentType.Name == "OfXAttribute" &&
                 currentType.ContainingNamespace?.ToDisplayString() == "OfX.Attributes")
-            {
                 return true;
-            }
 
             currentType = currentType.BaseType;
         }

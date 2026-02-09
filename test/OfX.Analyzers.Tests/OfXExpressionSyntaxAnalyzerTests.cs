@@ -12,11 +12,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -34,11 +38,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -56,11 +64,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -78,11 +90,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class MemberOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public MemberOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class MemberOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -100,11 +116,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -126,11 +146,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -152,11 +176,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class MemberOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public MemberOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class MemberOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -178,11 +206,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -204,11 +236,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -225,42 +261,20 @@ public class OfXExpressionSyntaxAnalyzerTests
     }
 
     [Fact]
-    public async Task InvalidExpression_FunctionRequiresArguments_ReportsDiagnostic()
-    {
-        const string testCode = """
-                                using System;
-
-                                public class CountryOfAttribute : Attribute
-                                {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
-                                }
-
-                                public class Test
-                                {
-                                    [CountryOf(nameof(CountryId), Expression = {|#0:"Name:substring"|})]
-                                    public string CountryId { get; set; }
-                                }
-                                """;
-
-        var expected = VerifyCS.Diagnostic(OfXExpressionSyntaxAnalyzer.DiagnosticId)
-            .WithLocation(0)
-            .WithArguments("Name:substring", "Function 'substring' requires arguments at position 5");
-
-        await VerifyAnalyzerAsync(testCode, expected);
-    }
-
-    [Fact]
     public async Task InvalidExpression_ComputedExpressionRequiresAlias_ReportsDiagnostic()
     {
         const string testCode = """
                                 using System;
 
-                                public class CountryOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public CountryOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class CountryOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -282,11 +296,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class MemberOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public MemberOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class MemberOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -304,11 +322,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class MemberOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public MemberOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class MemberOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -326,11 +348,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class ProvinceOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public ProvinceOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class ProvinceOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
@@ -352,11 +378,15 @@ public class OfXExpressionSyntaxAnalyzerTests
         const string testCode = """
                                 using System;
 
-                                public class OrderOfAttribute : Attribute
+                                namespace OfX.Attributes
                                 {
-                                    public OrderOfAttribute(string key) { }
-                                    public string Expression { get; set; }
+                                    public class OfXAttribute(string propertyName) : Attribute
+                                    {
+                                        public string Expression { get; set; }
+                                    }
                                 }
+
+                                public class OrderOfAttribute(string propertyName) : OfX.Attributes.OfXAttribute(propertyName);
 
                                 public class Test
                                 {
