@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
         <LangVersion>default</LangVersion>
-        <Version>8.2.6</Version>
+        <Version>8.3.0</Version>
         <Authors>Quy Vu</Authors>
         <PackageId>OfX-Kafka</PackageId>
         <Description>OfX-Kafka extension. Use Kafka as Data transporting</Description>
