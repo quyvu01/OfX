@@ -1,6 +1,6 @@
-# OfX-Aws-Sqs
+# OfX-Aws.Sqs
 
-OfX-Aws-Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX's Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
+OfX-Aws.Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation. This package provides a high-performance, strongly-typed communication layer for OfX's Attribute-based Data Mapping, enabling streamlined data retrieval across distributed systems.
 
 [Demo Project!](https://github.com/quyvu01/TestOfX-Demo)
 
@@ -14,7 +14,7 @@ Amazon SQS-based Transport: Implements Amazon SQS to handle data communication b
 
 ## Installation
 
-To install the OfX-Aws-Sqs package, use the following NuGet command:
+To install the OfX-Aws.Sqs package, use the following NuGet command:
 
 ```bash
 dotnet add package OfX-Aws.Sqs
@@ -30,9 +30,9 @@ Install-Package OfX-Aws.Sqs
 
 ## How to Use
 
-### 1. Register OfX-Aws-Sqs
+### 1. Register OfX-Aws.Sqs
 
-Add OfX-Aws-Sqs to your service configuration during application startup:
+Add OfX-Aws.Sqs to your service configuration during application startup:
 
 ```csharp
 builder.Services.AddOfX(cfg =>
@@ -87,7 +87,7 @@ builder.Services.AddOfX(cfg =>
 });
 ```
 
-`Note:` OfX-Aws-Sqs uses queues that start with `ofx-{namespace}-{attributename}`. Therefore, you should avoid using other queues. Additionally, OfX-Aws-Sqs automatically creates response queues `ofx-response-{machinename}-{guid}`, so you should avoid creating a queue with the same name in your application.
+`Note:` OfX-Aws.Sqs uses queues that start with `ofx-{namespace}-{attributename}`. Therefore, you should avoid using other queues. Additionally, OfX-Aws.Sqs automatically creates response queues `ofx-response-{machinename}-{guid}`, so you should avoid creating a queue with the same name in your application.
 
 That All, enjoy your moment!
 
@@ -101,7 +101,7 @@ That All, enjoy your moment!
 | **Integrations**                                   |                                                                                                                         |
 | [OfX-HotChocolate][OfX-HotChocolate.nuget]         | OfX.HotChocolate is an integration package with HotChocolate for OfX.                                                   | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.HotChocolate/README.md)        |
 | **Transports**                                     |                                                                                                                         |
-| [OfX-Aws.Sqs][OfX-Aws.Sqs.nuget]                   | OfX-Aws-Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation.                | 8.0, 9.0     | This Document                                                                            |
+| [OfX-Aws.Sqs][OfX-Aws.Sqs.nuget]                   | OfX-Aws.Sqs is an extension package for OfX that leverages Amazon SQS for efficient data transportation.                | 8.0, 9.0     | This Document                                                                            |
 | [OfX-Azure.ServiceBus][OfX-Azure.ServiceBus.nuget] | OfX.Azure.ServiceBus is an extension package for OfX that leverages Azure ServiceBus for efficient data transportation. | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Azure.ServiceBus/README.md)    |
 | [OfX-gRPC][OfX-gRPC.nuget]                         | OfX.gRPC is an extension package for OfX that leverages gRPC for efficient data transportation.                         | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Grpc/README.md)                |
 | [OfX-Kafka][OfX-Kafka.nuget]                       | OfX-Kafka is an extension package for OfX that leverages Kafka for efficient data transportation.                       | 8.0, 9.0     | [ReadMe](https://github.com/quyvu01/OfX/blob/main/src/OfX.Kafka/README.md)               |
