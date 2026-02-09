@@ -39,18 +39,6 @@ Add OfX-gRPC to your service configuration during application startup:
 For Client:
 
 ```csharp
-// Older version
-builder.Services.AddOfX(cfg =>
-{
-    cfg.AddContractsContainNamespaces(typeof(SomeContractAssemblyMarker).Assembly);
-    cfg.AddGrpcClients(config => config
-        .AddGrpcHostWithOfXAttributes("http://localhost:5001", [typeof(UserOfAttribute)])
-        .AddGrpcHostWithOfXAttributes("http://localhost:5002", [typeof(CountryOfAttribute), typeof(ProvinceOfAttribute)...])
-        ... //Other host configurations, you can also filter attributes by creating an interface and then filtering the attributes that implement the interface...
-    ); //gRPC server host
-});
-```
-```csharp
 // Current version: OfX-gRPC is now smarter and stronger than ever.
 builder.Services.AddOfX(cfg =>
 {
