@@ -1,0 +1,42 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/OfX.Analyzers/">
+    <Project Path="src/OfX.Analyzers/OfX.Analyzers.csproj" />
+    <Project Path="test/OfX.Analyzers.Tests/OfX.Analyzers.Tests.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Core/">
+    <Project Path="src/OfX/OfX.csproj" />
+  </Folder>
+  <Folder Name="/OfX.DataProviders/">
+    <Project Path="src/OfX.EntityFrameworkCore/OfX.EntityFrameworkCore.csproj" />
+    <Project Path="src/OfX.MongoDb/OfX.MongoDb.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Demo/">
+    <Project Path="sample/Service1/Service1.csproj" />
+    <Project Path="sample/Service2/Service2.csproj" />
+    <Project Path="sample/Service3/Service3.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Demo/Contracts/">
+    <Project Path="sample/Service1.Contract/Service1.Contract.csproj" />
+    <Project Path="sample/Shared/Shared.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Integrations/">
+    <Project Path="src/OfX.HotChocolate/OfX.HotChocolate.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Tests/">
+    <Project Path="test/OfX.Benchmark/OfX.Benchmark.csproj" />
+    <Project Path="test/OfX.Tests/OfX.Tests.csproj" />
+  </Folder>
+  <Folder Name="/OfX.Transports/">
+    <Project Path="src/OfX.Aws.Sqs/OfX.Aws.Sqs.csproj" />
+    <Project Path="src/OfX.Azure.ServiceBus/OfX.Azure.ServiceBus.csproj" />
+    <Project Path="src/OfX.Grpc/OfX.Grpc.csproj" />
+    <Project Path="src/OfX.Kafka/OfX.Kafka.csproj" />
+    <Project Path="src/OfX.Nats/OfX.Nats.csproj" />
+    <Project Path="src/OfX.RabbitMq/OfX.RabbitMq.csproj" />
+  </Folder>
+</Solution>
