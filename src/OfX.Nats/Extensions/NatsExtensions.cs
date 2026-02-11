@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NATS.Net;
 using OfX.Abstractions.Transporting;
 using OfX.Nats.Abstractions;
-using OfX.Nats.ApplicationModels;
+using OfX.Nats.Configuration;
 using OfX.Nats.BackgroundServices;
 using OfX.Nats.Implementations;
 using OfX.Nats.Wrappers;

@@ -2,7 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;

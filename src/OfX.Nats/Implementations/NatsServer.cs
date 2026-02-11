@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NATS.Client.Core;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Attributes;
 using OfX.Implementations;
 using OfX.Nats.Abstractions;

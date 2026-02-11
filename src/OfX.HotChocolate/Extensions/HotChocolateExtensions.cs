@@ -1,4 +1,4 @@
-using OfX.HotChocolate.ApplicationModels;
+using OfX.HotChocolate.Registration;
 using OfX.Wrappers;
 
 namespace OfX.HotChocolate.Extensions;

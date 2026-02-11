@@ -1,4 +1,4 @@
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Registries;
 
 namespace OfX.Extensions;

@@ -1,5 +1,5 @@
 using Confluent.Kafka;
-using OfX.Kafka.ApplicationModels;
+using OfX.Kafka.Configuration;
 
 namespace OfX.Kafka.Statics;
 

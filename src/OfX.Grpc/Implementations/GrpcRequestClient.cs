@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Attributes;
 using OfX.Grpc.Delegates;
 using OfX.Grpc.Internals;

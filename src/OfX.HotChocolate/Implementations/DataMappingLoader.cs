@@ -2,7 +2,7 @@ using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Extensions;
 using OfX.PublicContracts;
-using OfX.HotChocolate.ApplicationModels;
+using OfX.HotChocolate.Registration;
 using OfX.Queries;
 
 namespace OfX.HotChocolate.Implementations;

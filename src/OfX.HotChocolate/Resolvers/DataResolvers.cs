@@ -2,7 +2,7 @@ using System.Text.Json;
 using HotChocolate.Resolvers;
 using OfX.MetadataCache;
 using OfX.Extensions;
-using OfX.HotChocolate.ApplicationModels;
+using OfX.HotChocolate.Registration;
 using OfX.HotChocolate.Constants;
 using OfX.HotChocolate.GraphQlContext;
 using OfX.HotChocolate.Implementations;

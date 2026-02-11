@@ -6,7 +6,7 @@ using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Attributes;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;

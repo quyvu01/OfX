@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions.Transporting;
 using OfX.Aws.Sqs.Abstractions;
-using OfX.Aws.Sqs.ApplicationModels;
+using OfX.Aws.Sqs.Configuration;
 using OfX.Aws.Sqs.BackgroundServices;
 using OfX.Aws.Sqs.Implementations;
 using OfX.Registries;

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.MongoDb.ApplicationModels;
+using OfX.MongoDb.Registration;
 using OfX.Configuration;
 using OfX.Wrappers;
 

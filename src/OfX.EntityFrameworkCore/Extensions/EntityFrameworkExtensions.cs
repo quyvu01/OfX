@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.EntityFrameworkCore.Abstractions;
-using OfX.EntityFrameworkCore.ApplicationModels;
+using OfX.EntityFrameworkCore.Registration;
 using OfX.EntityFrameworkCore.Implementations;
 using OfX.Exceptions;
 using OfX.Extensions;

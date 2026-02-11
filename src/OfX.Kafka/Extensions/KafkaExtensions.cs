@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions.Transporting;
 using OfX.Kafka.Abstractions;
-using OfX.Kafka.ApplicationModels;
+using OfX.Kafka.Configuration;
 using OfX.Kafka.BackgroundServices;
 using OfX.Kafka.Implementations;
 using OfX.Registries;

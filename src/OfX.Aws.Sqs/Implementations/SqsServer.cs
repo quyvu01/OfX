@@ -7,7 +7,7 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Aws.Sqs.Abstractions;
 using OfX.Aws.Sqs.Constants;
 using OfX.Aws.Sqs.Extensions;

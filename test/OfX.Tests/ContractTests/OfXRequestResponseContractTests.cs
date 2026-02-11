@@ -1,5 +1,5 @@
 using System.Text.Json;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Responses;
 using Shouldly;
 using Xunit;

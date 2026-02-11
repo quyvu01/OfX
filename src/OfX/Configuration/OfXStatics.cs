@@ -1,6 +1,6 @@
 using System.Reflection;
 using OfX.Abstractions;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Extensions;

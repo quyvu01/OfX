@@ -6,7 +6,7 @@ using Confluent.Kafka.Admin;
 using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.Abstractions.Transporting;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Attributes;
 using OfX.Exceptions;
 using OfX.Kafka.Constants;

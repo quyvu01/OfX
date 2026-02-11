@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Exceptions;
 using OfX.Implementations;
 using OfX.RabbitMq.Abstractions;

@@ -4,7 +4,7 @@ using System.Text.Json;
 using Grpc.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Grpc.Exceptions;

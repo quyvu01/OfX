@@ -1,5 +1,5 @@
 using OfX.Abstractions;
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Responses;
 
 namespace OfX.Grpc.Delegates;

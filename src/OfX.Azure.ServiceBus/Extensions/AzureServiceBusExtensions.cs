@@ -3,7 +3,7 @@ using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions.Transporting;
 using OfX.Azure.ServiceBus.Abstractions;
-using OfX.Azure.ServiceBus.ApplicationModels;
+using OfX.Azure.ServiceBus.Configuration;
 using OfX.Azure.ServiceBus.BackgroundServices;
 using OfX.Azure.ServiceBus.Implementations;
 using OfX.Azure.ServiceBus.Wrappers;

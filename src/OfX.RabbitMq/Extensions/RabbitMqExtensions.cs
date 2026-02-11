@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions.Transporting;
 using OfX.RabbitMq.Abstractions;
-using OfX.RabbitMq.ApplicationModels;
+using OfX.RabbitMq.Configuration;
 using OfX.RabbitMq.BackgroundServices;
 using OfX.RabbitMq.Implementations;
 using OfX.Registries;

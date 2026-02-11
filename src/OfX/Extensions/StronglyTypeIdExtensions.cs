@@ -1,4 +1,4 @@
-using OfX.ApplicationModels;
+using OfX.Models;
 using OfX.Exceptions;
 using OfX.Registries;
 
