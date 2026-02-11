@@ -6,7 +6,7 @@ using OfX.ApplicationModels;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Helpers;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Supervision;
 
 namespace OfX.Registries;
@@ -31,7 +31,7 @@ namespace OfX.Registries;
 /// </example>
 /// </remarks>
 /// <param name="serviceCollection">The service collection to register services into.</param>
-public class OfXRegister(IServiceCollection serviceCollection)
+public class OfXConfigurator(IServiceCollection serviceCollection)
 {
     /// <summary>
     /// Gets the underlying service collection for advanced registration scenarios.
@@ -45,7 +45,7 @@ public class OfXRegister(IServiceCollection serviceCollection)
     public void AddHandlersFromNamespaceContaining<TAssemblyMarker>()
     {
         var mappableRequestHandlerType = typeof(IClientRequestHandler<>);
-        var deepestClassesWithInterface = GenericDeepestImplementationFinder
+        var deepestClassesWithInterface = LeafImplementationFinder
             .GetDeepestClassesWithInterface(typeof(TAssemblyMarker).Assembly, mappableRequestHandlerType);
 
         deepestClassesWithInterface.GroupBy(a => a.ImplementedClosedInterface)
@@ -94,11 +94,11 @@ public class OfXRegister(IServiceCollection serviceCollection)
     /// <summary>
     /// Sets the maximum depth for nested object mapping to prevent infinite recursion.
     /// </summary>
-    /// <param name="maxObjectSpawnTimes">The maximum nesting depth. Must be non-negative.</param>
-    public void SetMaxObjectSpawnTimes(int maxObjectSpawnTimes)
+    /// <param name="maxNestingDepth">The maximum nesting depth. Must be non-negative.</param>
+    public void SetMaxNestingDepth(int maxNestingDepth)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(maxObjectSpawnTimes);
-        OfXStatics.MaxObjectSpawnTimes = maxObjectSpawnTimes;
+        ArgumentOutOfRangeException.ThrowIfNegative(maxNestingDepth);
+        OfXStatics.MaxNestingDepth = maxNestingDepth;
     }
 
     /// <summary>

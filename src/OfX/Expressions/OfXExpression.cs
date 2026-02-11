@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using OfX.Accessors.TypeAccessors;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Expressions.Building;
 using OfX.Expressions.Nodes;
 using OfX.Expressions.Parsing;

@@ -10,7 +10,7 @@ namespace OfX.Serializable;
 /// This class wraps the native .NET JSON serialization to provide a consistent serialization
 /// interface across the framework. All OfX data is serialized as JSON strings for transport.
 /// </remarks>
-public static class SerializeObjects
+public static class OfXJsonSerializer
 {
     /// <summary>
     /// Serializes an object to a JSON string.
@@ -29,6 +29,6 @@ public static class SerializeObjects
         JsonSerializer.Deserialize(objSerialized, objectType);
 
 
-    internal static readonly MethodInfo SerializeObjectMethod = typeof(SerializeObjects)
+    internal static readonly MethodInfo SerializeObjectMethod = typeof(OfXJsonSerializer)
         .GetMethod(nameof(SerializeObject), [typeof(object)]);
 }

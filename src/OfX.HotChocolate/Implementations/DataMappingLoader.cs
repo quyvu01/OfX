@@ -1,7 +1,7 @@
 using System.Text.Json;
 using OfX.Abstractions;
 using OfX.Extensions;
-using OfX.Externals;
+using OfX.PublicContracts;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.Queries;
 

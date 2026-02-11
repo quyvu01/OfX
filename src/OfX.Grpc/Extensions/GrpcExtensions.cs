@@ -14,7 +14,7 @@ using OfX.Grpc.Delegates;
 using OfX.Grpc.Implementations;
 using OfX.Registries;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Grpc.Extensions;
 
@@ -52,7 +52,7 @@ public static class GrpcExtensions
     /// });
     /// </code>
     /// </example>
-    public static void AddGrpcClients(this OfXRegister ofXRegister, Action<GrpcClientsRegister> options)
+    public static void AddGrpcClients(this OfXConfigurator ofXRegister, Action<GrpcClientsRegister> options)
     {
         ArgumentNullException.ThrowIfNull(options);
         var clientsRegister = new GrpcClientsRegister();

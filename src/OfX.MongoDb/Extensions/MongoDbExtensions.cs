@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.MongoDb.ApplicationModels;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Wrappers;
 
 namespace OfX.MongoDb.Extensions;
@@ -36,14 +36,14 @@ public static class MongoDbExtensions
     /// });
     /// </code>
     /// </example>
-    public static OfXRegisterWrapped AddMongoDb(this OfXRegisterWrapped ofXServiceInjector,
+    public static OfXConfiguratorWrapped AddMongoDb(this OfXConfiguratorWrapped ofXServiceInjector,
         Action<OfXMongoDbRegistrar> registrarAction)
     {
         if (OfXStatics.ModelConfigurationAssembly is null) throw new OfXException.ModelConfigurationMustBeSet();
-        var registrar = new OfXMongoDbRegistrar(ofXServiceInjector.OfXRegister.ServiceCollection);
+        var registrar = new OfXMongoDbRegistrar(ofXServiceInjector.OfXConfigurator.ServiceCollection);
         registrarAction.Invoke(registrar);
         var mongoModelTypes = registrar.MongoModelTypes;
-        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        var serviceCollection = ofXServiceInjector.OfXConfigurator.ServiceCollection;
         OfXStatics.ModelConfigurations.Value
             .Where(m => mongoModelTypes.Contains(m.ModelType))
             .ForEach(m =>

@@ -5,7 +5,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Delegates;
 using OfX.Expressions.Building;
 
@@ -56,7 +56,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
     /// Generates: x => ids.Contains(x.Id)
     /// Uses cached MethodInfo and ParameterExpression for better performance.
     /// </remarks>
-    protected Expression<Func<TModel, bool>> BuildFilter(RequestOf<TAttribute> query)
+    protected Expression<Func<TModel, bool>> BuildFilter(OfXQueryRequest<TAttribute> query)
     {
         var cache = FilterCache.Value;
         // Initialize cache on first use (lazy, thread-safe)
@@ -73,7 +73,7 @@ public abstract class QueryHandlerBuilder<TModel, TAttribute>(IServiceProvider s
     /// <param name="request">The request containing expression strings.</param>
     /// <returns>A projection expression and the list of expressions for transformation.</returns>
     protected (Expression<Func<TModel, object[]>> Projection, IReadOnlyList<string> Expressions) BuildProjection(
-        RequestOf<TAttribute> request)
+        OfXQueryRequest<TAttribute> request)
     {
         var expressionList = request.Expressions.ToList();
 

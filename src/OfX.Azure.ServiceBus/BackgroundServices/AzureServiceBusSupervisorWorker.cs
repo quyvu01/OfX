@@ -6,7 +6,7 @@ using OfX.Abstractions.Transporting;
 using OfX.Azure.ServiceBus.Abstractions;
 using OfX.Azure.ServiceBus.Extensions;
 using OfX.Azure.ServiceBus.Wrappers;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Supervision;
 
 namespace OfX.Azure.ServiceBus.BackgroundServices;

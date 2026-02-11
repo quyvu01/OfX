@@ -1,6 +1,6 @@
 using System.Reflection;
 using OfX.Attributes;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Extensions;
 using OfX.HotChocolate.Constants;
 using OfX.HotChocolate.GraphQlContext;

@@ -7,7 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using OfX.Abstractions;
 using OfX.Attributes;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Delegates;
 using OfX.MongoDb.Abstractions;
 using OfX.MongoDb.Extensions;
@@ -128,7 +128,7 @@ internal class MongoDbQueryHandler<TModel, TAttribute>(IServiceProvider serviceP
     /// <summary>
     /// Builds a MongoDB filter expression.
     /// </summary>
-    private FilterDefinition<TModel> BuildFilter(RequestOf<TAttribute> query)
+    private FilterDefinition<TModel> BuildFilter(OfXQueryRequest<TAttribute> query)
     {
         var cache = FilterCacheInstance.Value;
         cache.EnsureInitialized(_ofXConfigAttribute.IdProperty, serviceProvider);

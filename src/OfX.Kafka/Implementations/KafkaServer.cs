@@ -15,7 +15,7 @@ using OfX.Kafka.Extensions;
 using OfX.Kafka.Statics;
 using OfX.Kafka.Wrappers;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Kafka.Implementations;
@@ -31,7 +31,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
     private readonly ILogger<KafkaServer<TModel, TAttribute>> _logger;
     private const string TransportName = "kafka";
 
-    // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
+    // Backpressure: limit concurrent processing (configurable via OfXConfigurator.SetMaxConcurrentProcessing)
     private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
         OfXStatics.MaxConcurrentProcessing);
 
@@ -174,7 +174,7 @@ internal class KafkaServer<TModel, TAttribute> : IKafkaServer<TModel, TAttribute
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
 
             var message = messageUnWrapped.Message;
-            var query = new RequestOf<TAttribute>(message.SelectorIds, message.Expressions);
+            var query = new OfXQueryRequest<TAttribute>(message.SelectorIds, message.Expressions);
             var headers = consumeResult.Message.Headers?
                 .ToDictionary(a => a.Key, h => Encoding.UTF8.GetString(h.GetValueBytes())) ?? [];
 

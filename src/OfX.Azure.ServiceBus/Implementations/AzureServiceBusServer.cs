@@ -14,7 +14,7 @@ using OfX.Azure.ServiceBus.Statics;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Implementations;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Azure.ServiceBus.Implementations;
@@ -108,7 +108,7 @@ internal class AzureServiceBusServer<TModel, TAttribute>(
 
             var headers = request.ApplicationProperties?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestOf = new RequestOf<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expressions);
+            var requestOf = new OfXQueryRequest<TAttribute>(requestDeserialize.SelectorIds, requestDeserialize.Expressions);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
             var data = await pipeline.ExecuteAsync(requestContext);
             var response = Result.Success(data);

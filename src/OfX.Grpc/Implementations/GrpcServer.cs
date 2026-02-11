@@ -9,7 +9,7 @@ using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Grpc.Exceptions;
 using OfX.Implementations;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Grpc.Implementations;

@@ -10,7 +10,7 @@ namespace OfX.Nats.Messages;
 public class NatsMessageRequestWrapped<TAttribute> where TAttribute : OfXAttribute
 {
     public Dictionary<string, string> Headers { get; set; }
-    public RequestOf<TAttribute> Query { get; set; }
+    public OfXQueryRequest<TAttribute> Query { get; set; }
     public byte[] GetMessageSerialize() => Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this));
 
     public RequestContext<TAttribute> GetMessageDeserialize(byte[] message)

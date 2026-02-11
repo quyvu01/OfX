@@ -1,7 +1,7 @@
 using System.Reflection;
 using OfX.Attributes;
 using OfX.Extensions;
-using OfX.ObjectContexts;
+using OfX.PropertyMappingContexts;
 
 namespace OfX.Accessors.PropertyAccessors;
 
@@ -23,7 +23,7 @@ namespace OfX.Accessors.PropertyAccessors;
 /// of property resolution when properties depend on values from other properties.
 /// </para>
 /// </remarks>
-public class TypeModelAccessor
+public class TypeMetadataAccessor
 {
     /// <summary>
     /// Gets the CLR type that this model represents.
@@ -43,10 +43,10 @@ public class TypeModelAccessor
     public IReadOnlyDictionary<PropertyInfo, PropertyContext[]> DependencyGraphs { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TypeModelAccessor"/> class for the specified CLR type.
+    /// Initializes a new instance of the <see cref="TypeMetadataAccessor"/> class for the specified CLR type.
     /// </summary>
     /// <param name="clrType">The CLR type to analyze and build accessors for.</param>
-    public TypeModelAccessor(Type clrType)
+    public TypeMetadataAccessor(Type clrType)
     {
         ClrType = clrType;
         var properties = clrType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -60,13 +60,13 @@ public class TypeModelAccessor
             .Distinct()
             .ToArray();
 
-        var propertiesIsNotPrimitive = properties
+        var nonPrimitiveProperties = properties
             .Where(a => !a.PropertyType.IsPrimitiveType())
             .Except(propertiesWithinAttribute)
             .ToArray();
 
         Accessors = propertiesWithinAttribute
-            .Concat(propertiesIsNotPrimitive)
+            .Concat(nonPrimitiveProperties)
             .ToDictionary(p => p, p => CreateAccessor(clrType, p));
 
         DependencyGraphs = BuildDependencyGraph(properties);

@@ -42,7 +42,7 @@ public static class ProjectionTransformer
             values[i] = new ValueResponse
             {
                 Expression = expressions[i],
-                Value = SerializeObjects.SerializeObject(value)
+                Value = OfXJsonSerializer.SerializeObject(value)
             };
         }
 
@@ -88,7 +88,7 @@ public static class ProjectionTransformer
             values[i] = new ValueResponse
             {
                 Expression = meta.Expression,
-                Value = meta.HasError ? null : SerializeObjects.SerializeObject(value)
+                Value = meta.HasError ? null : OfXJsonSerializer.SerializeObject(value)
             };
         }
 

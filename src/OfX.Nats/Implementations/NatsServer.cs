@@ -10,7 +10,7 @@ using OfX.Nats.Abstractions;
 using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Nats.Implementations;
@@ -27,7 +27,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
     private readonly NatsClientWrapper _natsClientWrapped = serviceProvider
         .GetRequiredService<NatsClientWrapper>();
 
-    // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
+    // Backpressure: limit concurrent processing (configurable via OfXConfigurator.SetMaxConcurrentProcessing)
     private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
         OfXStatics.MaxConcurrentProcessing);
 
@@ -102,7 +102,7 @@ internal sealed class NatsServer<TModel, TAttribute>(IServiceProvider servicePro
                 .GetRequiredService<ReceivedPipelinesOrchestrator<TModel, TAttribute>>();
             var headers = message.Headers?
                 .ToDictionary(a => a.Key, b => b.Value.ToString()) ?? [];
-            var requestOf = new RequestOf<TAttribute>(message.Data.SelectorIds, message.Data.Expressions);
+            var requestOf = new OfXQueryRequest<TAttribute>(message.Data.SelectorIds, message.Data.Expressions);
             var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers, cancellationToken);
 
             var data = await pipeline.ExecuteAsync(requestContext);

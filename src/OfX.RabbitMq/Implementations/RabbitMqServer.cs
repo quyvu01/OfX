@@ -12,7 +12,7 @@ using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -24,7 +24,7 @@ internal class RabbitMqServer(IServiceProvider serviceProvider) : IRabbitMqServe
     private static readonly ConcurrentDictionary<string, Type> AttributeAssemblyCached = new();
     private readonly ILogger<RabbitMqServer> _logger = serviceProvider.GetService<ILogger<RabbitMqServer>>();
 
-    // Backpressure: limit concurrent processing (configurable via OfXRegister.SetMaxConcurrentProcessing)
+    // Backpressure: limit concurrent processing (configurable via OfXConfigurator.SetMaxConcurrentProcessing)
     private readonly SemaphoreSlim _semaphore = new(OfXStatics.MaxConcurrentProcessing,
         OfXStatics.MaxConcurrentProcessing);
 

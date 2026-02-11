@@ -6,10 +6,10 @@ using OfX.Delegates;
 using OfX.Exceptions;
 using OfX.Handlers;
 using OfX.Implementations;
-using OfX.InternalPipelines;
+using OfX.BuiltInPipelines;
 using OfX.Registries;
 using OfX.Services;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Wrappers;
 
 namespace OfX.Extensions;
@@ -38,14 +38,14 @@ public static class OfXExtensions
     /// .AddOfXEFCore(cfg => cfg.AddDbContexts(typeof(Service1Context)));
     /// </code>
     /// </example>
-    public static OfXRegisterWrapped AddOfX(this IServiceCollection services, Action<OfXRegister> options)
+    public static OfXConfiguratorWrapped AddOfX(this IServiceCollection services, Action<OfXConfigurator> options)
     {
         OfXStatics.Clear();
-        var newOfRegister = new OfXRegister(services);
+        var newOfRegister = new OfXConfigurator(services);
         options.Invoke(newOfRegister);
         if (OfXStatics.AttributesRegister is not { Count: > 0 }) throw new OfXException.OfXAttributesMustBeSet();
 
-        var defaultClientRequestHandlerType = typeof(DefaultClientRequestHandler<>);
+        var defaultClientRequestHandlerType = typeof(NoOpClientRequestHandler<>);
 
         var modelConfigurations = OfXStatics.ModelConfigurations.Value;
         var attributeTypes = OfXStatics.OfXAttributeTypes.Value;
@@ -77,7 +77,7 @@ public static class OfXExtensions
 
         services.AddTransient(typeof(SendPipelinesOrchestrator<>));
 
-        services.AddTransient(typeof(DefaultQueryOfHandler<,>));
+        services.AddTransient(typeof(NoOpQueryOfHandler<,>));
 
         services.TryAddSingleton<GetOfXConfiguration>(_ => (mt, at) =>
         {
@@ -99,6 +99,6 @@ public static class OfXExtensions
             OfXStatics.InternalAttributeMapHandlers.TryAdd(m.OfXAttributeType, serviceInterfaceType);
         });
 
-        return new OfXRegisterWrapped(newOfRegister);
+        return new OfXConfiguratorWrapped(newOfRegister);
     }
 }

@@ -6,7 +6,7 @@ using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Supervision;
 
-namespace OfX.Statics;
+namespace OfX.Configuration;
 
 /// <summary>
 /// Provides static configuration and cached metadata for the OfX framework.
@@ -22,14 +22,14 @@ namespace OfX.Statics;
 /// </remarks>
 public static class OfXStatics
 {
-    private const int ObjectSpawnTimes = 128;
+    private const int DefaultNestingDepth = 128;
     private const int ConcurrentProcessing = 128;
     public static TimeSpan DefaultRequestTimeout { get; internal set; } = TimeSpan.FromSeconds(30);
 
     internal static void Clear()
     {
         AttributesRegister = [];
-        MaxObjectSpawnTimes = ObjectSpawnTimes;
+        MaxNestingDepth = DefaultNestingDepth;
         MaxConcurrentProcessing = ConcurrentProcessing;
         SupervisorOptions = null;
         ThrowIfExceptions = false;
@@ -38,7 +38,7 @@ public static class OfXStatics
     }
 
     internal static List<Assembly> AttributesRegister { get; set; } = [];
-    internal static int MaxObjectSpawnTimes { get; set; } = ObjectSpawnTimes;
+    internal static int MaxNestingDepth { get; set; } = DefaultNestingDepth;
     public static int MaxConcurrentProcessing { get; internal set; } = ConcurrentProcessing;
     public static bool ThrowIfExceptions { get; internal set; }
     internal static RetryPolicy RetryPolicy { get; set; }
@@ -51,7 +51,7 @@ public static class OfXStatics
 
     public static readonly Type QueryOfHandlerType = typeof(IQueryOfHandler<,>);
 
-    public static readonly Type DefaultQueryOfHandlerType = typeof(DefaultQueryOfHandler<,>);
+    public static readonly Type NoOpQueryOfHandlerType = typeof(NoOpQueryOfHandler<,>);
     public static Assembly ModelConfigurationAssembly { get; internal set; }
 
     public static readonly Lazy<IReadOnlyCollection<OfXModelData>> ModelConfigurations = new(() =>

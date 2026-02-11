@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using OfX.Accessors.TypeAccessors;
 
-namespace OfX.Cached;
+namespace OfX.MetadataCache;
 
 public static class OfXTypeCache
 {

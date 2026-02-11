@@ -5,7 +5,7 @@ using Xunit;
 
 namespace OfX.Tests.UnitTests.Accessors;
 
-public class TypeModelAccessorTests
+public class TypeMetadataAccessorTests
 {
     private class TestAttribute(string propertyName) : OfXAttribute(propertyName);
 
@@ -42,7 +42,7 @@ public class TypeModelAccessorTests
     public void TypeModel_Should_Create_Accessors_For_Attributed_Properties()
     {
         // Arrange & Act - Use model with OfXAttributes to ensure accessors are created
-        var typeModel = new TypeModelAccessor(typeof(ModelWithDependencies));
+        var typeModel = new TypeMetadataAccessor(typeof(ModelWithDependencies));
 
         // Assert - Accessors should be created for properties with OfXAttribute
         typeModel.Accessors.Count.ShouldBeGreaterThan(0);
@@ -57,7 +57,7 @@ public class TypeModelAccessorTests
     public void TypeModel_Should_Build_Dependency_Graph()
     {
         // Arrange & Act
-        var typeModel = new TypeModelAccessor(typeof(ModelWithDependencies));
+        var typeModel = new TypeMetadataAccessor(typeof(ModelWithDependencies));
         var userNameProp = typeof(ModelWithDependencies).GetProperty(nameof(ModelWithDependencies.UserName))!;
 
         // Assert
@@ -71,7 +71,7 @@ public class TypeModelAccessorTests
     public void TypeModel_Should_Calculate_Correct_Dependency_Order()
     {
         // Arrange & Act
-        var typeModel = new TypeModelAccessor(typeof(NestedDependencyModel));
+        var typeModel = new TypeMetadataAccessor(typeof(NestedDependencyModel));
         var provinceNameProp = typeof(NestedDependencyModel).GetProperty(nameof(NestedDependencyModel.ProvinceName))!;
         var provinceIdProp = typeof(NestedDependencyModel).GetProperty(nameof(NestedDependencyModel.ProvinceId))!;
 
@@ -87,7 +87,7 @@ public class TypeModelAccessorTests
     public void TypeModel_Should_Store_Expression_In_PropertyInformation()
     {
         // Arrange & Act
-        var typeModel = new TypeModelAccessor(typeof(ModelWithDependencies));
+        var typeModel = new TypeMetadataAccessor(typeof(ModelWithDependencies));
         var userEmailProp = typeof(ModelWithDependencies).GetProperty(nameof(ModelWithDependencies.UserEmail))!;
         var propertyInfo = typeModel.GetInformation(userEmailProp);
 
@@ -99,7 +99,7 @@ public class TypeModelAccessorTests
     public void TypeModel_Should_Handle_Models_Without_OfXAttributes()
     {
         // Arrange & Act
-        var typeModel = new TypeModelAccessor(typeof(SimpleModel));
+        var typeModel = new TypeMetadataAccessor(typeof(SimpleModel));
         var idProp = typeof(SimpleModel).GetProperty(nameof(SimpleModel.Id))!;
         var propertyInfo = typeModel.GetInformation(idProp);
 
@@ -112,7 +112,7 @@ public class TypeModelAccessorTests
     public void TypeModel_GetAccessor_Should_Return_Null_For_NonExistent_Property()
     {
         // Arrange
-        var typeModel = new TypeModelAccessor(typeof(SimpleModel));
+        var typeModel = new TypeMetadataAccessor(typeof(SimpleModel));
         var fakeProperty = typeof(ModelWithDependencies).GetProperty(nameof(ModelWithDependencies.UserName))!;
 
         // Act
@@ -127,7 +127,7 @@ public class TypeModelAccessorTests
     {
         // This test ensures the algorithm doesn't infinite loop on circular refs
         // Arrange & Act
-        var typeModel = new TypeModelAccessor(typeof(NestedDependencyModel));
+        var typeModel = new TypeMetadataAccessor(typeof(NestedDependencyModel));
 
         // Assert - Should complete without stack overflow
         typeModel.DependencyGraphs.ShouldNotBeNull();

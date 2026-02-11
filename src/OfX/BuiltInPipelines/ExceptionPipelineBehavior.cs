@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 
-namespace OfX.InternalPipelines;
+namespace OfX.BuiltInPipelines;
 
 /// <summary>
 /// Internal send pipeline behavior that handles exception suppression based on configuration.

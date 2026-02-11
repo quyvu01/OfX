@@ -11,7 +11,7 @@ using OfX.RabbitMq.Constants;
 using OfX.RabbitMq.Extensions;
 using OfX.RabbitMq.Statics;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;

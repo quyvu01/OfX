@@ -36,5 +36,5 @@ public interface RequestContext<TAttribute> : IOfXBase<TAttribute>, IContext whe
     /// <summary>
     /// The request payload and metadata for the given <typeparamref name="TAttribute"/>.
     /// </summary>
-    RequestOf<TAttribute> Query { get; }
+    OfXQueryRequest<TAttribute> Query { get; }
 }

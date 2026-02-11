@@ -15,7 +15,7 @@ namespace OfX.Implementations;
 /// through both send and received pipeline behaviors.
 /// </remarks>
 public class RequestContextImpl<TAttribute>(
-    RequestOf<TAttribute> query,
+    OfXQueryRequest<TAttribute> query,
     Dictionary<string, string> headers,
     CancellationToken token)
     : RequestContext<TAttribute> where TAttribute : OfXAttribute
@@ -24,7 +24,7 @@ public class RequestContextImpl<TAttribute>(
     public Dictionary<string, string> Headers { get; } = headers ?? [];
 
     /// <inheritdoc />
-    public RequestOf<TAttribute> Query { get; } = query;
+    public OfXQueryRequest<TAttribute> Query { get; } = query;
 
     /// <inheritdoc />
     public CancellationToken CancellationToken { get; } = token;

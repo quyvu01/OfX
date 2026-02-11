@@ -7,14 +7,14 @@ using OfX.Nats.BackgroundServices;
 using OfX.Nats.Implementations;
 using OfX.Nats.Wrappers;
 using OfX.Registries;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Supervision;
 
 namespace OfX.Nats.Extensions;
 
 public static class NatsExtensions
 {
-    public static void AddNats(this OfXRegister ofXRegister, Action<NatsClientSetting> options)
+    public static void AddNats(this OfXConfigurator ofXRegister, Action<NatsClientSetting> options)
     {
         var natsSetting = new NatsClientSetting();
         options.Invoke(natsSetting);

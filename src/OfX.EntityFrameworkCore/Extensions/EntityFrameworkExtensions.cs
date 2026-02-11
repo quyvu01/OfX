@@ -5,7 +5,7 @@ using OfX.EntityFrameworkCore.ApplicationModels;
 using OfX.EntityFrameworkCore.Implementations;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Wrappers;
 
 namespace OfX.EntityFrameworkCore.Extensions;
@@ -37,12 +37,12 @@ public static class EntityFrameworkExtensions
     /// });
     /// </code>
     /// </example>
-    public static OfXRegisterWrapped AddOfXEFCore(this OfXRegisterWrapped ofXServiceInjector,
+    public static OfXConfiguratorWrapped AddOfXEFCore(this OfXConfiguratorWrapped ofXServiceInjector,
         Action<OfXEfCoreRegistrar> registrarAction)
     {
         if (OfXStatics.ModelConfigurationAssembly is null) throw new OfXException.ModelConfigurationMustBeSet();
 
-        var serviceCollection = ofXServiceInjector.OfXRegister.ServiceCollection;
+        var serviceCollection = ofXServiceInjector.OfXConfigurator.ServiceCollection;
         var newOfXEfCoreRegistrar = new OfXEfCoreRegistrar(serviceCollection);
         registrarAction.Invoke(newOfXEfCoreRegistrar);
 
@@ -50,8 +50,8 @@ public static class EntityFrameworkExtensions
 
         serviceCollection.AddScoped(typeof(IDbContextResolver<>), typeof(DbContextResolverInternal<>));
 
-        // var efQueryHandler = typeof(EfQueryHandler<,>);
-        var efQueryHandler = typeof(EfQueryHandler<,>);
+        // var efQueryHandler = typeof(EntityFrameworkQueryHandler<,>);
+        var efQueryHandler = typeof(EntityFrameworkQueryHandler<,>);
         serviceCollection.AddScoped(efQueryHandler);
 
         OfXStatics.ModelConfigurations.Value
@@ -61,7 +61,7 @@ public static class EntityFrameworkExtensions
                 var attributeType = m.OfXAttributeType;
                 var serviceType = OfXStatics.QueryOfHandlerType.MakeGenericType(modelType, attributeType);
                 var implementedType = efQueryHandler.MakeGenericType(modelType, attributeType);
-                var defaultHandlerType = OfXStatics.DefaultQueryOfHandlerType.MakeGenericType(modelType, attributeType);
+                var defaultHandlerType = OfXStatics.NoOpQueryOfHandlerType.MakeGenericType(modelType, attributeType);
                 serviceCollection.AddScoped(serviceType, sp =>
                 {
                     var modelCached = modelCacheLookup.GetOrAdd(modelType, mt =>

@@ -12,7 +12,7 @@ using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Azure.ServiceBus.Implementations;

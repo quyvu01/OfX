@@ -1,6 +1,6 @@
 using System.Reflection;
 using OfX.Abstractions;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Exceptions;
 
@@ -42,9 +42,9 @@ public static class OfXException
         : Exception(
             $"OfXAttribute: {attributeType.FullName} has been configured for {modelType.FullName} at least twice!");
 
-    public sealed class OfXMappingObjectsSpawnReachableTimes()
+    public sealed class MaxNestingDepthReached()
         : Exception(
-            $"OfX mapping engine has been reach out the current max deep: {OfXStatics.MaxObjectSpawnTimes}! Set the MaxObjectSpawnTimes on method `SetMaxObjectSpawnTimes`");
+            $"OfX mapping engine has reached the maximum nesting depth: {OfXStatics.MaxNestingDepth}! Use `SetMaxNestingDepth` to increase the limit.");
 
     public sealed class ModelConfigurationMustBeSet()
         : Exception(

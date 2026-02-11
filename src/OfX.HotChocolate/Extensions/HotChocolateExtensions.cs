@@ -31,7 +31,7 @@ public static class HotChocolateExtensions
     ///     });
     /// </code>
     /// </example>
-    public static OfXRegisterWrapped AddHotChocolate(this OfXRegisterWrapped ofXServiceInjector,
+    public static OfXConfiguratorWrapped AddHotChocolate(this OfXConfiguratorWrapped ofXServiceInjector,
         Action<OfXHotChocolateRegister> action)
     {
         var hotChocolateRegister = new OfXHotChocolateRegister();

@@ -1,7 +1,7 @@
 #nullable enable
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Telemetry;
 

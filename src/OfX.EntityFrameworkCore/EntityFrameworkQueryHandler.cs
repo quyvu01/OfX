@@ -34,7 +34,7 @@ namespace OfX.EntityFrameworkCore;
 ///   <item>Better EF Core compatibility</item>
 /// </list>
 /// </remarks>
-internal class EfQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvider)
+internal class EntityFrameworkQueryHandler<TModel, TAttribute>(IServiceProvider serviceProvider)
     : QueryHandlerBuilder<TModel, TAttribute>(serviceProvider), IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute

@@ -1,6 +1,6 @@
 using System.Reflection;
 using OfX.Helpers;
-using OfX.ObjectContexts;
+using OfX.PropertyMappingContexts;
 
 namespace OfX.Extensions;
 

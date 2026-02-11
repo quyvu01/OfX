@@ -8,7 +8,7 @@ using OfX.Extensions;
 using OfX.Nats.Extensions;
 using OfX.Nats.Wrappers;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Nats.Implementations;
@@ -59,7 +59,7 @@ internal sealed class NatsRequestClient(NatsClientWrapper natsClientWrapper) : I
             OfXMetrics.UpdateActiveRequests(1);
 
             var reply = await natsClientWrapper.NatsClient
-                .RequestAsync<RequestOf<TAttribute>, Result>(
+                .RequestAsync<OfXQueryRequest<TAttribute>, Result>(
                     typeof(TAttribute).GetNatsSubject(),
                     requestContext.Query, natsHeaders,
                     replyOpts: new NatsSubOpts { Timeout = OfXStatics.DefaultRequestTimeout },

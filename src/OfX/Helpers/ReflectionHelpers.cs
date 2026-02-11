@@ -1,10 +1,10 @@
 using System.Collections;
 using OfX.ApplicationModels;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Extensions;
 using OfX.Responses;
 using OfX.Serializable;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Helpers;
 
@@ -67,7 +67,7 @@ internal static class ReflectionHelpers
             .Join(attributeTypes, gr => gr.Key.AttributeType, at => at,
                 (d, x) =>
                     new AttributeTypeInfo(x, d
-                        .Select(a => new PropertyAssessorData(a.Model, a.PropertyInformation)), d.Key.Order));
+                        .Select(a => new PropertyMappingData(a.Model, a.PropertyInformation)), d.Key.Order));
 
     internal static void MapResponseData(IEnumerable<PropertyDescriptor> mappableProperties,
         IEnumerable<(Type OfXAttributeType, ItemsResponse<DataResponse> ItemsResponse)> dataFetched)
@@ -89,7 +89,7 @@ internal static class ReflectionHelpers
                 if (value is null || ap.PropertyInfo is not { } propertyInfo) return value;
                 try
                 {
-                    var valueSet = SerializeObjects.DeserializeObject(value, propertyInfo.PropertyType);
+                    var valueSet = OfXJsonSerializer.DeserializeObject(value, propertyInfo.PropertyType);
                     var modelAccessor = OfXModelCache.GetModelAccessor(ap.Model.GetType());
                     var propertyAccessor = modelAccessor.GetAccessor(ap.PropertyInfo);
                     propertyAccessor?.Set(ap.Model, valueSet);

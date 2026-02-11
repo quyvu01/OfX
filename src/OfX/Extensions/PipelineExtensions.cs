@@ -9,9 +9,9 @@ namespace OfX.Extensions;
 public static class PipelineExtensions
 {
     /// <summary>
-    /// Extension methods for OfXRegister to configure pipelines.
+    /// Extension methods for OfXConfigurator to configure pipelines.
     /// </summary>
-    extension(OfXRegister ofXRegister)
+    extension(OfXConfigurator ofXRegister)
     {
         /// <summary>
         /// Registers server-side (received) pipeline behaviors.

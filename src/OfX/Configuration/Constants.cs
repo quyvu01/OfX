@@ -1,4 +1,4 @@
-namespace OfX.Statics;
+namespace OfX.Configuration;
 
 public static class Constants
 {

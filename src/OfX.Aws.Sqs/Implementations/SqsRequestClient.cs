@@ -14,7 +14,7 @@ using OfX.Aws.Sqs.Statics;
 using OfX.Exceptions;
 using OfX.Extensions;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Telemetry;
 
 namespace OfX.Aws.Sqs.Implementations;

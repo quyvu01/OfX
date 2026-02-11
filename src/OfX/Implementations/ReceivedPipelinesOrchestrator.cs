@@ -56,7 +56,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     public async Task<ItemsResponse<DataResponse>> ExecuteAsync(RequestContext<TAttribute> requestContext)
     {
         var executableHandlers = handlers
-            .Where(x => x is not DefaultQueryOfHandler)
+            .Where(x => x is not NoOpQueryOfHandler)
             .ToArray();
         var handler = executableHandlers.Length switch
         {
@@ -115,7 +115,7 @@ public class ReceivedPipelinesOrchestrator<TModel, TAttribute>(
     public override Task<ItemsResponse<DataResponse>> ExecuteAsync(OfXRequest message,
         Dictionary<string, string> headers, CancellationToken cancellationToken)
     {
-        var requestOf = new RequestOf<TAttribute>(message.SelectorIds, message.Expressions);
+        var requestOf = new OfXQueryRequest<TAttribute>(message.SelectorIds, message.Expressions);
         var requestContext = new RequestContextImpl<TAttribute>(requestOf, headers ?? [], cancellationToken);
         return ExecuteAsync(requestContext);
     }

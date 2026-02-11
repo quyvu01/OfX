@@ -7,4 +7,4 @@ namespace OfX.ApplicationModels;
 /// </summary>
 /// <param name="Model">The object instance containing the property to be mapped.</param>
 /// <param name="PropertyInformation">The OfX mapping metadata for the property.</param>
-internal sealed record PropertyAssessorData(object Model, PropertyInformation PropertyInformation);
+internal sealed record PropertyMappingData(object Model, PropertyInformation PropertyInformation);

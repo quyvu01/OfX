@@ -5,14 +5,14 @@ using OfX.Kafka.ApplicationModels;
 using OfX.Kafka.BackgroundServices;
 using OfX.Kafka.Implementations;
 using OfX.Registries;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Supervision;
 
 namespace OfX.Kafka.Extensions;
 
 public static class KafkaExtensions
 {
-    public static void AddKafka(this OfXRegister ofXRegister, Action<KafkaConfigurator> options)
+    public static void AddKafka(this OfXConfigurator ofXRegister, Action<KafkaConfigurator> options)
     {
         var config = new KafkaConfigurator();
         options.Invoke(config);

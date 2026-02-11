@@ -1,5 +1,5 @@
 using OfX.Attributes;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Exceptions;
 using Shouldly;
 using Xunit;

@@ -8,14 +8,14 @@ using OfX.Azure.ServiceBus.BackgroundServices;
 using OfX.Azure.ServiceBus.Implementations;
 using OfX.Azure.ServiceBus.Wrappers;
 using OfX.Registries;
-using OfX.Statics;
+using OfX.Configuration;
 using OfX.Supervision;
 
 namespace OfX.Azure.ServiceBus.Extensions;
 
 public static class AzureServiceBusExtensions
 {
-    public static void AddAzureServiceBus(this OfXRegister ofXRegister, Action<AzureServiceBusClientSetting> options)
+    public static void AddAzureServiceBus(this OfXConfigurator ofXRegister, Action<AzureServiceBusClientSetting> options)
     {
         var setting = new AzureServiceBusClientSetting();
         options.Invoke(setting);

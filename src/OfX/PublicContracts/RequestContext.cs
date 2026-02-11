@@ -1,6 +1,6 @@
 using OfX.Abstractions;
 
-namespace OfX.Externals;
+namespace OfX.PublicContracts;
 
 /// <summary>
 /// Provides a concrete implementation of request context for external consumers of the OfX framework.

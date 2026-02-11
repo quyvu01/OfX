@@ -2,7 +2,7 @@ using System.Collections;
 using System.Linq.Expressions;
 using System.Reflection;
 using OfX.Accessors.TypeAccessors;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Expressions.Nodes;
 
 namespace OfX.Expressions.Building;

@@ -5,7 +5,7 @@ using OfX.EntityFrameworkCore.Exceptions;
 using OfX.EntityFrameworkCore.Implementations;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.EntityFrameworkCore.ApplicationModels;
 

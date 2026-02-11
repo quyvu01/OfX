@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace OfX.ObjectContexts;
+namespace OfX.PropertyMappingContexts;
 
 /// <summary>
 /// Represents the context for a property that participates in OfX mapping,

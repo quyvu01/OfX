@@ -2,9 +2,9 @@ using OfX.Abstractions;
 using OfX.Attributes;
 using OfX.Implementations;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 
-namespace OfX.InternalPipelines;
+namespace OfX.BuiltInPipelines;
 
 /// <summary>
 /// Internal send pipeline behavior that routes requests to local handlers when available.

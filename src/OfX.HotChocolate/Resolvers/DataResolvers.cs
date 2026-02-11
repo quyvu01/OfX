@@ -1,6 +1,6 @@
 using System.Text.Json;
 using HotChocolate.Resolvers;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Extensions;
 using OfX.HotChocolate.ApplicationModels;
 using OfX.HotChocolate.Constants;

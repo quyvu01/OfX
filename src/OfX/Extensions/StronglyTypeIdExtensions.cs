@@ -25,7 +25,7 @@ public static class StronglyTypeIdExtensions
     /// });
     /// </code>
     /// </example>
-    public static void AddStronglyTypeIdConverter(this OfXRegister ofXRegister, Action<StronglyTypeIdRegister> options)
+    public static void AddStronglyTypeIdConverter(this OfXConfigurator ofXRegister, Action<StronglyTypeIdRegister> options)
     {
         if (options is null) throw new OfXException.StronglyTypeConfigurationMustNotBeNull();
         var stronglyTypeIdRegister = new StronglyTypeIdRegister(ofXRegister.ServiceCollection);

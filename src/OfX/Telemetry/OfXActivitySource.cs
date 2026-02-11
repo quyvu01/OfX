@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using OfX.Attributes;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Telemetry;
 

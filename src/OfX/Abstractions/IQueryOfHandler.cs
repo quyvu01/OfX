@@ -40,7 +40,7 @@ public interface IQueryOfHandler<TModel, TAttribute> where TModel : class where 
 /// <remarks>
 /// This type is primarily used for type resolution and should not be used directly.
 /// </remarks>
-internal class DefaultQueryOfHandler;
+internal class NoOpQueryOfHandler;
 
 /// <summary>
 /// Provides a default no-op implementation of <see cref="IQueryOfHandler{TModel, TAttribute}"/>.
@@ -55,8 +55,8 @@ internal class DefaultQueryOfHandler;
 /// This default implementation always returns an empty <see cref="ItemsResponse{OfXDataResponse}"/>.
 /// It is typically used as a fallback when no specific query handler is registered.
 /// </remarks>
-internal sealed class DefaultQueryOfHandler<TModel, TAttribute>
-    : DefaultQueryOfHandler, IQueryOfHandler<TModel, TAttribute>
+internal sealed class NoOpQueryOfHandler<TModel, TAttribute>
+    : NoOpQueryOfHandler, IQueryOfHandler<TModel, TAttribute>
     where TModel : class
     where TAttribute : OfXAttribute
 {

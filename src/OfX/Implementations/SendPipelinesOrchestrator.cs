@@ -5,7 +5,7 @@ using OfX.Attributes;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Implementations;
 
@@ -66,7 +66,7 @@ internal sealed class SendPipelinesOrchestrator<TAttribute>(IServiceProvider ser
                 return acc;
             });
 
-        var request = new RequestOf<TAttribute>(message.SelectorIds, [..resolvedExpressions]);
+        var request = new OfXQueryRequest<TAttribute>(message.SelectorIds, [..resolvedExpressions]);
         var requestContext = new RequestContextImpl<TAttribute>(request, context?.Headers ?? [], cts.Token);
         var result = await serviceProvider
             .GetServices<ISendPipelineBehavior<TAttribute>>()

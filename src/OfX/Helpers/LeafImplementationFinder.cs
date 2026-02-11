@@ -7,7 +7,7 @@ namespace OfX.Helpers;
 /// </summary>
 /// <param name="ClassType">The concrete class type that implements the interface.</param>
 /// <param name="ImplementedClosedInterface">The closed generic interface type as implemented by the class.</param>
-public record ImplementedResult(Type ClassType, Type ImplementedClosedInterface);
+public record GenericInterfaceMatch(Type ClassType, Type ImplementedClosedInterface);
 
 /// <summary>
 /// Provides methods for finding the most derived (deepest) classes implementing a generic interface.
@@ -17,7 +17,7 @@ public record ImplementedResult(Type ClassType, Type ImplementedClosedInterface)
 /// duplicate registrations when inheritance hierarchies exist. It ensures only the most derived
 /// (leaf) implementations are registered.
 /// </remarks>
-public static class GenericDeepestImplementationFinder
+public static class LeafImplementationFinder
 {
     /// <summary>
     /// Finds all "leaf" classes in an assembly that implement a specified open generic interface.
@@ -30,7 +30,7 @@ public static class GenericDeepestImplementationFinder
     /// A "leaf" class is one that has no other candidate class deriving from it.
     /// This prevents registering both a base handler and its derived handlers.
     /// </remarks>
-    public static ImplementedResult[] GetDeepestClassesWithInterface(Assembly assembly, Type openGenericInterface,
+    public static GenericInterfaceMatch[] GetDeepestClassesWithInterface(Assembly assembly, Type openGenericInterface,
         bool interfaceContainsGenericParameters = false)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -106,7 +106,7 @@ public static class GenericDeepestImplementationFinder
         var leafCandidates = candidates
             .Where(t => !hasDescendant[t.Class] &&
                         t.ClosedInterface.ContainsGenericParameters == interfaceContainsGenericParameters)
-            .Select(t => new ImplementedResult(t.Class, t.ClosedInterface))
+            .Select(t => new GenericInterfaceMatch(t.Class, t.ClosedInterface))
             .ToArray();
 
         return leafCandidates;
@@ -117,10 +117,9 @@ public static class GenericDeepestImplementationFinder
     private static Type FindClosedInterfaceForType(Type type, Type openGeneric)
     {
         // GetInterfaces() returns all interfaces implemented by the type, including via base classes
-        foreach (var iface in type.GetInterfaces())
-        {
-            if (iface.IsGenericType && iface.GetGenericTypeDefinition() == openGeneric) return iface;
-        }
+        foreach (var interfaceType in type.GetInterfaces())
+            if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == openGeneric)
+                return interfaceType;
 
         // As a fallback (shouldn't be necessary since GetInterfaces is comprehensive),
         // check declared base classes if any explicit closed generic base class matches the definition.

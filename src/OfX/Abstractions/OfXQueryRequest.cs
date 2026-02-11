@@ -18,7 +18,7 @@ namespace OfX.Abstractions;
 /// </param>
 /// <remarks>
 /// <para>
-/// The <see cref="RequestOf{TAttribute}"/> is a lightweight, immutable record that holds the 
+/// The <see cref="OfXQueryRequest{TAttribute}"/> is a lightweight, immutable record that holds the 
 /// **essential request data** (selector IDs and expression).  
 /// </para>
 /// <para>
@@ -26,4 +26,4 @@ namespace OfX.Abstractions;
 /// such as headers and <see cref="CancellationToken"/> for end-to-end request processing.
 /// </para>
 /// </remarks>
-public sealed record RequestOf<TAttribute>(string[] SelectorIds, string[] Expressions) where TAttribute : OfXAttribute;
+public sealed record OfXQueryRequest<TAttribute>(string[] SelectorIds, string[] Expressions) where TAttribute : OfXAttribute;

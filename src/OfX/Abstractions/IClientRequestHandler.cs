@@ -50,7 +50,7 @@ public interface IClientRequestHandler<TAttribute> : IOfXBase<TAttribute>, IClie
 /// This default implementation always returns an empty <see cref="ItemsResponse{OfXDataResponse}"/>.
 /// It is typically used when no specific handler has been registered for a given <typeparamref name="TAttribute"/>.
 /// </remarks>
-internal class DefaultClientRequestHandler<TAttribute> : IClientRequestHandler<TAttribute>
+internal class NoOpClientRequestHandler<TAttribute> : IClientRequestHandler<TAttribute>
     where TAttribute : OfXAttribute
 {
     /// <inheritdoc />

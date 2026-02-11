@@ -2,14 +2,14 @@ using System.Collections.Concurrent;
 using OfX.Abstractions;
 using OfX.ApplicationModels;
 using OfX.Attributes;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Exceptions;
 using OfX.Extensions;
-using OfX.Externals;
+using OfX.PublicContracts;
 using OfX.Helpers;
 using OfX.Queries;
 using OfX.Responses;
-using OfX.Statics;
+using OfX.Configuration;
 
 namespace OfX.Implementations;
 
@@ -29,7 +29,7 @@ namespace OfX.Implementations;
 /// <param name="serviceProvider">The service provider for resolving transport handlers and pipelines.</param>
 internal sealed class DistributedMapper(IServiceProvider serviceProvider) : IDistributedMapper
 {
-    private int _currentObjectSpawnTimes;
+    private int _currentNestingLevel;
 
     private static readonly ConcurrentDictionary<Type, Type> SendOrchestratorTypes = new();
 
@@ -37,10 +37,10 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider) : IDis
     {
         while (true)
         {
-            if (_currentObjectSpawnTimes >= OfXStatics.MaxObjectSpawnTimes)
+            if (_currentNestingLevel >= OfXStatics.MaxNestingDepth)
             {
                 if (OfXStatics.ThrowIfExceptions)
-                    throw new OfXException.OfXMappingObjectsSpawnReachableTimes();
+                    throw new OfXException.MaxNestingDepthReached();
                 return;
             }
 
@@ -96,7 +96,7 @@ internal sealed class DistributedMapper(IServiceProvider serviceProvider) : IDis
                     return acc;
                 });
             if (nextMappableData is not { Count: > 0 }) break;
-            _currentObjectSpawnTimes += 1;
+            _currentNestingLevel += 1;
             value = nextMappableData;
         }
     }

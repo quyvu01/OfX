@@ -1,7 +1,7 @@
 using HotChocolate.Execution;
 using HotChocolate.Execution.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OfX.Cached;
+using OfX.MetadataCache;
 using OfX.Extensions;
 using OfX.Helpers;
 using OfX.HotChocolate.Extensions;
