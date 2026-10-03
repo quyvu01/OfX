@@ -1,5 +1,15 @@
 # OfX
 
+> [!IMPORTANT]
+> **OfX has been succeeded by [FxMap](https://github.com/quyvu01/FxMap).** FxMap keeps the same expression language, transports and
+> data providers, and replaces attributes with a FluentAPI (`ProfileOf<T>` and `EntityConfigureOf<T>`), so your DTOs and models stay free of
+> mapping code. New projects should start with FxMap.
+>
+> - Documentation: https://fxmapper.net
+> - **Migration guide (OfX to FxMap): https://fxmapper.net/docs/migrate-from-ofx/**
+> - Community: https://discord.gg/XJNzPbqg7
+
+
 ```csharp
 public string XId { get; set; }
 [XOf(nameof(XId))] public string X { get; set; }
